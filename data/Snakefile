@@ -1,0 +1,80 @@
+import pandas as pd
+
+
+configfile: "config.yaml"
+
+
+track_urls = config["track_urls"]
+track_names = [track_url.split("/")[-1].split(".")[0] for track_url in track_urls]
+tracks = pd.DataFrame(dict(track_name=track_names, track_url=track_urls)).set_index("track_name")
+print(tracks)
+
+REGION_SIZE = 200
+FLANK_SIZE = 400
+
+split_chromosomes = {
+    "train": ["Chr1", "Chr3", "Chr5"],
+    "val": ["Chr4"],
+    "test": ["Chr2"],
+}
+splits = split_chromosomes.keys()
+
+rule all:
+    input:
+        #"windows.bed",
+        #expand("peaks/{track_name}.bed", track_name=tracks.index),
+        #expand("clean_peaks/{track_name}.bed", track_name=tracks.index),
+        #expand("pos_regions/{track_name}/all.bed", track_name=tracks.index),
+        expand("pos_regions/{track_name}/{split}.bed", track_name=tracks.index, split=splits),
+
+
+rule download_track:
+    output:
+        "peaks/{track_name}.bed",
+    params:
+        track_url = lambda wildcards: tracks.loc[wildcards["track_name"]].track_url
+    shell:
+        "wget {params.track_url} -O {output}"
+
+
+rule clean_track:
+    input:
+        "peaks/{track_name}.bed",
+    output:
+        "clean_peaks/{track_name}.bed",
+    shell:
+        "cut -f 1-3 {input} | grep -v ChrC | grep -v ChrM > {output}"
+
+
+rule make_windows:
+    input:
+        "chrom.sizes"
+    output:
+        "windows.bed"
+    shell:
+        "bedtools makewindows -g {input} -w {REGION_SIZE} > {output}"
+
+
+rule bedtools_intersect_and_slop:
+    input:
+        "windows.bed",
+        "clean_peaks/{track_name}.bed",
+        "chrom.sizes",
+    output:
+        "pos_regions/{track_name}/all.bed",
+    shell:
+        "bedtools intersect -a {input[0]} -b {input[1]} -f 0.5 -sorted -u | bedtools slop -i stdin -g {input[2]} -b {FLANK_SIZE} > {output}"
+
+
+rule split_regions:
+    input:
+        "pos_regions/{track_name}/all.bed",
+    output:
+        expand("pos_regions/{{track_name}}/{split}.bed", split=splits),
+    run:
+        df = pd.read_csv(input[0], "\t", header=None)
+        for i, split in enumerate(splits):
+            df[df[0].isin(split_chromosomes[split])].to_csv(output[i], "\t", header=False, index=False)
+
+
+# library("BSgenome.Athaliana.TAIR.TAIR9")
