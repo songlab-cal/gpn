@@ -11,6 +11,7 @@ print(tracks)
 
 REGION_SIZE = 200
 FLANK_SIZE = 400
+TOTAL_SIZE = REGION_SIZE + 2 * FLANK_SIZE
 
 split_chromosomes = {
     "train": ["Chr1", "Chr3", "Chr5"],
@@ -25,7 +26,8 @@ rule all:
         #expand("peaks/{track_name}.bed", track_name=tracks.index),
         #expand("clean_peaks/{track_name}.bed", track_name=tracks.index),
         #expand("pos_regions/{track_name}/all.bed", track_name=tracks.index),
-        expand("pos_regions/{track_name}/{split}.bed", track_name=tracks.index, split=splits),
+        #expand("neg_regions/{track_name}/{split}.bed", track_name=tracks.index, split=splits),
+        expand("neg_regions/{track_name}/val.bed", track_name=tracks.index,),
 
 
 rule download_track:
@@ -48,7 +50,7 @@ rule clean_track:
 
 rule make_windows:
     input:
-        "chrom.sizes"
+        config["chrom_sizes_path"],
     output:
         "windows.bed"
     shell:
@@ -59,7 +61,7 @@ rule bedtools_intersect_and_slop:
     input:
         "windows.bed",
         "clean_peaks/{track_name}.bed",
-        "chrom.sizes",
+        config["chrom_sizes_path"],
     output:
         "pos_regions/{track_name}/all.bed",
     shell:
@@ -73,8 +75,17 @@ rule split_regions:
         expand("pos_regions/{{track_name}}/{split}.bed", split=splits),
     run:
         df = pd.read_csv(input[0], "\t", header=None)
+        df = df[df[2]-df[1]==TOTAL_SIZE]
         for i, split in enumerate(splits):
             df[df[0].isin(split_chromosomes[split])].to_csv(output[i], "\t", header=False, index=False)
 
 
-# library("BSgenome.Athaliana.TAIR.TAIR9")
+rule sample_negative_seqs:
+    input:
+        "pos_regions/{track_name}/{split}.bed",
+    output:
+        "neg_regions/{track_name}/{split}.bed",
+        "pos_regions/{track_name}/{split}.fa",
+        "neg_regions/{track_name}/{split}.fa",
+    shell:
+        "Rscript sample_negative_seqs.R {genome_name} {input} {output}"
