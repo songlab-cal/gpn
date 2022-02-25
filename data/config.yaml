@@ -1,4 +1,2 @@
-track_urls:
-- http://plantregmap.gao-lab.org/download_ftp.php?filepath=08-download/Arabidopsis_thaliana/TFBS/TFBS_AT1G24260_Ath_inflorescence_5-7_weeks_old_rep1.bed
-#- http://plantregmap.gao-lab.org/download_ftp.php?filepath=08-download/Arabidopsis_thaliana/TFBS/TFBS_AT4G18960_Ath_inflorescence_normal_rep1.bed
-#- http://plantregmap.gao-lab.org/download_ftp.php?filepath=08-download/Arabidopsis_thaliana/TFBS/TFBS_AT4G18960_Ath_inflorescence_normal_rep2.bed
+tracks_path: tracks.tsv
+chrom_sizes_path: "chrom.sizes"

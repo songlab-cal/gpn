@@ -3,10 +3,7 @@ import pandas as pd
 
 configfile: "config.yaml"
 
-
-track_urls = config["track_urls"]
-track_names = [track_url.split("/")[-1].split(".")[0] for track_url in track_urls]
-tracks = pd.DataFrame(dict(track_name=track_names, track_url=track_urls)).set_index("track_name")
+tracks = pd.read_csv(config["tracks_path"], sep="\t", index_col=0)
 print(tracks)
 
 REGION_SIZE = 200
@@ -22,12 +19,11 @@ splits = split_chromosomes.keys()
 
 rule all:
     input:
-        #"windows.bed",
-        #expand("peaks/{track_name}.bed", track_name=tracks.index),
+        expand("peaks/{track_name}.bed", track_name=tracks.index),
         #expand("clean_peaks/{track_name}.bed", track_name=tracks.index),
         #expand("pos_regions/{track_name}/all.bed", track_name=tracks.index),
         #expand("neg_regions/{track_name}/{split}.bed", track_name=tracks.index, split=splits),
-        expand("neg_regions/{track_name}/val.bed", track_name=tracks.index,),
+        #expand("neg_regions/{track_name}/val.bed", track_name=tracks.index,),
 
 
 rule download_track:
