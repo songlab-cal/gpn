@@ -85,11 +85,29 @@ rule plot_track_stats:
         #plt.savefig(output[2], bbox_inches='tight')
         #plt.close()
 
-        sns.displot(data=df2, col="feature_type", x="n_peaks", kind="kde", height=3, facet_kws=dict(sharex=False, sharey=False))
+        #sns.displot(data=df2, col="feature_type", x="n_peaks", kind="kde", height=3, facet_kws=dict(sharex=False, sharey=False))
+        #plt.savefig(output[1], bbox_inches='tight')
+        #plt.close()
+
+        #sns.displot(data=df1, col="feature_type", x="peak_width", kind="kde", height=3, aspect=2, facet_kws=dict(sharex=False, sharey=False))
+        #plt.savefig(output[2], bbox_inches='tight')
+        #plt.close()
+
+        #sns.boxplot(data=df2, y="feature_type", x="n_peaks")
+        #plt.savefig(output[1], bbox_inches='tight')
+        #plt.close()
+
+        #sns.boxplot(data=df1, y="feature_type", x="peak_width")
+        #plt.savefig(output[2], bbox_inches='tight')
+        #plt.close()
+
+        g = sns.catplot(data=df2, row="feature_type", y="n_peaks", kind="box", height=3, sharex=False, sharey=False, showfliers=False)
+        g.set_titles(col_template="{col_name}", row_template="{row_name}")
         plt.savefig(output[1], bbox_inches='tight')
         plt.close()
 
-        sns.displot(data=df1, col="feature_type", x="peak_width", kind="kde", height=3, aspect=2, facet_kws=dict(sharex=False, sharey=False))
+        g = sns.catplot(data=df1, row="feature_type", y="peak_width", kind="box", height=3, sharex=False, sharey=False, showfliers=False)
+        g.set_titles(col_template="{col_name}", row_template="{row_name}")
         plt.savefig(output[2], bbox_inches='tight')
         plt.close()
 
