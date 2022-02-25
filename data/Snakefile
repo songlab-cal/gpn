@@ -1,7 +1,13 @@
+import matplotlib.pyplot as plt
 import pandas as pd
+import seaborn as sns
+
+import matplotlib
+matplotlib.use('pdf')
 
 
 configfile: "config.yaml"
+
 
 tracks = pd.read_csv(config["tracks_path"], sep="\t", index_col=0)
 print(tracks)
@@ -19,7 +25,8 @@ splits = split_chromosomes.keys()
 
 rule all:
     input:
-        expand("peaks/{track_name}.bed", track_name=tracks.index),
+        "plots/n_tracks_per_feature_type.pdf",
+        #expand("peaks/{track_name}.bed", track_name=tracks.index),
         #expand("clean_peaks/{track_name}.bed", track_name=tracks.index),
         #expand("pos_regions/{track_name}/all.bed", track_name=tracks.index),
         #expand("neg_regions/{track_name}/{split}.bed", track_name=tracks.index, split=splits),
@@ -35,53 +42,104 @@ rule download_track:
         "wget {params.track_url} -O {output}"
 
 
-rule clean_track:
+rule plot_track_stats:
     input:
-        "peaks/{track_name}.bed",
+        expand("peaks/{track_name}.bed", track_name=tracks.index),
     output:
-        "clean_peaks/{track_name}.bed",
-    shell:
-        "cut -f 1-3 {input} | grep -v ChrC | grep -v ChrM > {output}"
-
-
-rule make_windows:
-    input:
-        config["chrom_sizes_path"],
-    output:
-        "windows.bed"
-    shell:
-        "bedtools makewindows -g {input} -w {REGION_SIZE} > {output}"
-
-
-rule bedtools_intersect_and_slop:
-    input:
-        "windows.bed",
-        "clean_peaks/{track_name}.bed",
-        config["chrom_sizes_path"],
-    output:
-        "pos_regions/{track_name}/all.bed",
-    shell:
-        "bedtools intersect -a {input[0]} -b {input[1]} -f 0.5 -sorted -u | bedtools slop -i stdin -g {input[2]} -b {FLANK_SIZE} > {output}"
-
-
-rule split_regions:
-    input:
-        "pos_regions/{track_name}/all.bed",
-    output:
-        expand("pos_regions/{{track_name}}/{split}.bed", split=splits),
+        "plots/n_tracks_per_feature_type.pdf",
+        "plots/n_peaks_per_track.pdf",
+        "plots/peak_width.pdf",
     run:
-        df = pd.read_csv(input[0], "\t", header=None)
-        df = df[df[2]-df[1]==TOTAL_SIZE]
-        for i, split in enumerate(splits):
-            df[df[0].isin(split_chromosomes[split])].to_csv(output[i], "\t", header=False, index=False)
+        df1s = []
+        df2s = []
+        for i, track_name in enumerate(tracks.index):
+            if i % 10 == 0: print(i)
+            df = pd.read_csv(input[i], sep="\t", header=None, usecols=[0, 1, 2])
+            df["peak_width"] = df[2] - df[1]
+            df["track_name"] = track_name
+            df = df[["track_name", "peak_width"]]
+            df1s.append(df)
+            df2s.append(df.groupby("track_name").size().to_frame("n_peaks").reset_index())
+        df1 = pd.concat(df1s, ignore_index=True)
+        df2 = pd.concat(df2s, ignore_index=True)
+        for df in [df1, df2]:
+            df["feature_type"] = df.track_name.str.split("_").str[0]
+            df.feature_type.replace({
+                "DHS": "DNase I hypersensitive site",
+                "DGF": "DNase I digital genomic footprinting",
+                "HM": "Histone modification",
+                "TFBS": "TF binding site",
+               }, inplace=True)
+        print(df1)
+        print(df2)
 
+        sns.countplot(data=df2, y="feature_type")
+        plt.savefig(output[0], bbox_inches='tight')
+        plt.close()
 
-rule sample_negative_seqs:
-    input:
-        "pos_regions/{track_name}/{split}.bed",
-    output:
-        "neg_regions/{track_name}/{split}.bed",
-        "pos_regions/{track_name}/{split}.fa",
-        "neg_regions/{track_name}/{split}.fa",
-    shell:
-        "Rscript sample_negative_seqs.R {genome_name} {input} {output}"
+        #sns.displot(data=df2, col="feature_type", x="n_peaks", bins=20, facet_kws=dict(sharex=False, sharey=False))
+        #plt.savefig(output[1], bbox_inches='tight')
+        #plt.close()
+
+        #sns.displot(data=df1, col="feature_type", x="peak_width", bins=20,  facet_kws=dict(sharex=False, sharey=False))
+        #plt.savefig(output[2], bbox_inches='tight')
+        #plt.close()
+
+        sns.displot(data=df2, col="feature_type", x="n_peaks", kind="kde", height=3, facet_kws=dict(sharex=False, sharey=False))
+        plt.savefig(output[1], bbox_inches='tight')
+        plt.close()
+
+        sns.displot(data=df1, col="feature_type", x="peak_width", kind="kde", height=3, aspect=2, facet_kws=dict(sharex=False, sharey=False))
+        plt.savefig(output[2], bbox_inches='tight')
+        plt.close()
+
+#rule clean_track:
+#    input:
+#        "peaks/{track_name}.bed",
+#    output:
+#        "clean_peaks/{track_name}.bed",
+#    shell:
+#        "cut -f 1-3 {input} | grep -v ChrC | grep -v ChrM > {output}"
+#
+#
+#rule make_windows:
+#    input:
+#        config["chrom_sizes_path"],
+#    output:
+#        "windows.bed"
+#    shell:
+#        "bedtools makewindows -g {input} -w {REGION_SIZE} > {output}"
+#
+#
+#rule bedtools_intersect_and_slop:
+#    input:
+#        "windows.bed",
+#        "clean_peaks/{track_name}.bed",
+#        config["chrom_sizes_path"],
+#    output:
+#        "pos_regions/{track_name}/all.bed",
+#    shell:
+#        "bedtools intersect -a {input[0]} -b {input[1]} -f 0.5 -sorted -u | bedtools slop -i stdin -g {input[2]} -b {FLANK_SIZE} > {output}"
+#
+#
+#rule split_regions:
+#    input:
+#        "pos_regions/{track_name}/all.bed",
+#    output:
+#        expand("pos_regions/{{track_name}}/{split}.bed", split=splits),
+#    run:
+#        df = pd.read_csv(input[0], "\t", header=None)
+#        df = df[df[2]-df[1]==TOTAL_SIZE]
+#        for i, split in enumerate(splits):
+#            df[df[0].isin(split_chromosomes[split])].to_csv(output[i], "\t", header=False, index=False)
+#
+#
+#rule sample_negative_seqs:
+#    input:
+#        "pos_regions/{track_name}/{split}.bed",
+#    output:
+#        "neg_regions/{track_name}/{split}.bed",
+#        "pos_regions/{track_name}/{split}.fa",
+#        "neg_regions/{track_name}/{split}.fa",
+#    shell:
+#        "Rscript sample_negative_seqs.R {genome_name} {input} {output}"
