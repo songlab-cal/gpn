@@ -1,0 +1,42 @@
+from Bio import SeqIO
+# conda install -c bioconda trf
+
+
+rule all:
+    input:
+        "tair10.fa",
+
+
+rule download_reference:
+    output:
+        "tair10.raw.fa",
+    shell:
+        "wget https://www.arabidopsis.org/download_files/Genes/TAIR10_genome_release/TAIR10_chromosome_files/TAIR10_chr_all.fas -O {output}"
+
+
+rule clean_fasta:
+    input:
+        "tair10.raw.fa",
+    output:
+        "tair10.fa",
+    run:
+        records = []
+        with open(input[0]) as input_handle:
+            for record in SeqIO.parse(input_handle, "fasta"):
+                print(record.id)
+                if record.id in ["M", "chloroplast"]: continue
+                record.id = "Chr" + record.id
+                print(record.id)
+                records.append(record)
+
+        with open(output[0], "w") as output_handle:
+            SeqIO.write(records, output_handle, "fasta")
+
+
+rule run_trf:
+    input:
+        "tair10.fa",
+    output:
+        "tair10.fa.2.7.7.80.10.30.12.dat",
+    shell:
+        "trf {input} 2 7 7 80 10 30 12 -h -d"
