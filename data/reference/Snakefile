@@ -1,4 +1,5 @@
 from Bio import SeqIO
+import os
 import pandas as pd
 
 # conda install -c bioconda trf
@@ -8,6 +9,7 @@ rule all:
     input:
         "tair10.fa",
         "trf.bed",
+        "first_seed/seqs/",
 
 
 rule download_reference:
@@ -64,3 +66,26 @@ rule reformat_trf:
         df = pd.DataFrame(rows)
         print(df)
         df.to_csv(output[0], sep="\t", header=False, index=False)
+
+
+rule prepare_fasta:
+    input:
+        "tair10.fa",
+    output:
+        directory("first_seed/seqs/"),
+    run:
+        if not os.path.exists(output[0]):
+            os.makedirs(output[0])
+        with open(input[0]) as input_handle:
+            for record in SeqIO.parse(input_handle, "fasta"):
+                print(record.id)
+                with open(os.path.join(output[0], record.id + ".fa"), "w") as output_handle:
+                    SeqIO.write([record], output_handle, "fasta")
+
+# cd first_seed
+# R
+# library(BSgenome)
+# forgeBSgenomeDataPkg("BSgenome.Athaliana.TAIR.TAIR10FILT-seed")
+# exit
+# R CMD build BSgenome.Athaliana.TAIR.TAIR10FILT
+# R CMD check BSgenome.Athaliana.TAIR.TAIR10FILT
