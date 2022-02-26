@@ -1,10 +1,13 @@
 from Bio import SeqIO
+import pandas as pd
+
 # conda install -c bioconda trf
 
 
 rule all:
     input:
         "tair10.fa",
+        "trf.bed",
 
 
 rule download_reference:
@@ -37,6 +40,27 @@ rule run_trf:
     input:
         "tair10.fa",
     output:
-        "tair10.fa.2.7.7.80.10.30.12.dat",
+        "trf.dat",
     shell:
-        "trf {input} 2 7 7 80 10 30 12 -h -d"
+        "trf {input} 2 7 7 80 10 30 12 -h -d -ngs > {output}"
+
+
+rule reformat_trf:
+    input:
+        "trf.dat",
+    output:
+        "trf.bed",
+    run:
+        chromosome = None
+        rows = []
+        with open(input[0]) as f:
+            for line in f:
+                if line.startswith("@"):
+                    chromosome = line.split(" ")[0].split("@")[1]
+                    print(chromosome)
+                    continue
+                cols = line.split(" ")[:-3]
+                rows.append([chromosome] + cols[:2] + ["trf"] + cols[2:])
+        df = pd.DataFrame(rows)
+        print(df)
+        df.to_csv(output[0], sep="\t", header=False, index=False)
