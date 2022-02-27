@@ -88,4 +88,12 @@ rule prepare_fasta:
 # forgeBSgenomeDataPkg("BSgenome.Athaliana.TAIR.TAIR10FILT-seed")
 # exit
 # R CMD build BSgenome.Athaliana.TAIR.TAIR10FILT
-# R CMD check BSgenome.Athaliana.TAIR.TAIR10FILT
+# R CMD INSTALL BSgenome.Athaliana.TAIR.TAIR10FILT_1.5.0.tar.gz
+
+# cd second_seed
+# R
+# library(BSgenome)
+# forgeMaskedBSgenomeDataPkg("BSgenome.Athaliana.TAIR.TAIR10FILT.masked-seed")
+# exit
+# R CMD build BSgenome.Athaliana.TAIR.TAIR10FILT.masked
+# R CMD INSTALL BSgenome.Athaliana.TAIR.TAIR10FILT.masked_1.5.0.tar.gz
