@@ -10,11 +10,13 @@ configfile: "config.yaml"
 
 
 tracks = pd.read_csv(config["tracks_path"], sep="\t", index_col=0)
+tracks = tracks[~tracks.index.str.startswith("DGF")]
 print(tracks)
 
 REGION_SIZE = 200
 FLANK_SIZE = 400
 TOTAL_SIZE = REGION_SIZE + 2 * FLANK_SIZE
+genome_name = "BSgenome.Athaliana.TAIR.TAIR10FILT.masked"
 
 split_chromosomes = {
     "train": ["Chr1", "Chr3", "Chr5"],
@@ -25,9 +27,12 @@ splits = split_chromosomes.keys()
 
 rule all:
     input:
-        "plots/n_tracks_per_feature_type.pdf",
+        #"pos_regions/intersection.bed",
+        expand("pos_regions/{split}/intersection.bed", split=splits),
+        #"all.bed",
+        #"plots/n_tracks_per_feature_type.pdf",
         #expand("peaks/{track_name}.bed", track_name=tracks.index),
-        #expand("clean_peaks/{track_name}.bed", track_name=tracks.index),
+        #expand("processed_peaks/{track_name}.bed", track_name=tracks.index),
         #expand("pos_regions/{track_name}/all.bed", track_name=tracks.index),
         #expand("neg_regions/{track_name}/{split}.bed", track_name=tracks.index, split=splits),
         #expand("neg_regions/{track_name}/val.bed", track_name=tracks.index,),
@@ -111,45 +116,79 @@ rule plot_track_stats:
         plt.savefig(output[2], bbox_inches='tight')
         plt.close()
 
-#rule clean_track:
-#    input:
-#        "peaks/{track_name}.bed",
-#    output:
-#        "clean_peaks/{track_name}.bed",
-#    shell:
-#        "cut -f 1-3 {input} | grep -v ChrC | grep -v ChrM > {output}"
-#
-#
-#rule make_windows:
-#    input:
-#        config["chrom_sizes_path"],
-#    output:
-#        "windows.bed"
-#    shell:
-#        "bedtools makewindows -g {input} -w {REGION_SIZE} > {output}"
-#
-#
-#rule bedtools_intersect_and_slop:
-#    input:
-#        "windows.bed",
-#        "clean_peaks/{track_name}.bed",
-#        config["chrom_sizes_path"],
-#    output:
-#        "pos_regions/{track_name}/all.bed",
-#    shell:
-#        "bedtools intersect -a {input[0]} -b {input[1]} -f 0.5 -sorted -u | bedtools slop -i stdin -g {input[2]} -b {FLANK_SIZE} > {output}"
-#
-#
-#rule split_regions:
-#    input:
-#        "pos_regions/{track_name}/all.bed",
-#    output:
-#        expand("pos_regions/{{track_name}}/{split}.bed", split=splits),
-#    run:
-#        df = pd.read_csv(input[0], "\t", header=None)
-#        df = df[df[2]-df[1]==TOTAL_SIZE]
-#        for i, split in enumerate(splits):
-#            df[df[0].isin(split_chromosomes[split])].to_csv(output[i], "\t", header=False, index=False)
+
+rule process_peaks:
+    input:
+        "peaks/{track_name}.bed",
+        config["chrom_sizes_path"],
+    output:
+        "processed_peaks/{track_name}.bed",
+    run:
+        bed = pd.read_csv(input[0], sep="\t", header=None, usecols=[0, 1, 2]).rename(columns={0: "chromosome", 1: "start", 2: "end"})
+        chrom_sizes = pd.read_csv(input[1], sep="\t", header=None, index_col=0)
+        bed = bed[bed.chromosome.isin(chrom_sizes.index.values)]
+        bed["track_name"] = wildcards["track_name"]
+        center = (bed.start + bed.end) // 2
+        bed.start = center - REGION_SIZE // 2
+        bed.end = center + REGION_SIZE // 2
+        bed.to_csv(output[0], sep="\t", header=False, index=False)
+
+
+rule merge_tracks:
+    input:
+        expand("processed_peaks/{track_name}.bed", track_name=tracks.index),
+    output:
+        "all.unsorted.bed",
+    shell:
+        "cat {input} > {output}"
+
+
+rule sort_track:
+    input:
+        "all.unsorted.bed",
+    output:
+        "all.bed",
+    shell:
+        "bedtools sort -i {input} > {output}"
+
+
+rule make_windows:
+    input:
+        config["chrom_sizes_path"],
+    output:
+        "windows.bed"
+    shell:
+        "bedtools makewindows -g {input} -w {REGION_SIZE} > {output}"
+
+
+rule bedtools_intersect_and_slop:
+    input:
+        "windows.bed",
+        "all.bed",
+        config["chrom_sizes_path"],
+    output:
+        "pos_regions/all/intersection.bed",
+    shell:
+        """bedtools map -a {input[0]} -b {input[1]} -f 0.5 -o distinct -c 4 | bedtools slop -i stdin -g {input[2]} -b {FLANK_SIZE} | awk '$3-$2 == {TOTAL_SIZE}' | awk '$4 != "."' > {output}"""
+
+
+rule split_regions:
+    input:
+        "pos_regions/all/intersection.bed",
+    output:
+        expand("pos_regions/{split}/intersection.bed", split=splits),
+    run:
+        df = pd.read_csv(input[0], sep="\t", header=None, names=["chromosome", "start", "end", "features"])
+        print(df)
+        for i, split in enumerate(splits):
+            if split == "train":
+                mask = (df.chromosome.isin(["Chr1", "Chr3", "Chr5"]) | ((df.chromosome=="Chr2") & (df.start < 15000000)))
+            elif split == "val":
+                mask = ((df.chromosome=="Chr2") & (df.start >= 15000000))
+            elif split == "test":
+                mask = (df.chromosome=="Chr4")
+            print(split, mask.mean())
+            df[mask].to_csv(output[i], sep="\t", header=False, index=False)
 #
 #
 #rule sample_negative_seqs:
