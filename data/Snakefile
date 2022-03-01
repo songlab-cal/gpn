@@ -1,6 +1,10 @@
+from Bio import SeqIO
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
+from tqdm import tqdm
+tqdm.pandas(desc="my bar!")
 
 import matplotlib
 matplotlib.use('pdf')
@@ -27,6 +31,7 @@ splits = split_chromosomes.keys()
 
 rule all:
     input:
+        expand("datasets/{split}.parquet", split=splits),
         #"pos_regions/intersection.bed",
         #expand("pos_regions/{split}/intersection.bed", split=splits),
         #"all.bed",
@@ -35,7 +40,7 @@ rule all:
         #expand("processed_peaks/{track_name}.bed", track_name=tracks.index),
         #expand("pos_regions/{track_name}/all.bed", track_name=tracks.index),
         #expand("neg_regions/{track_name}/{split}.bed", track_name=tracks.index, split=splits),
-        "neg_regions/all/intersection.bed",
+        #"neg_regions/all/intersection.bed",
 
 
 rule download_track:
@@ -211,5 +216,51 @@ rule make_dataset:
     output:
         expand("datasets/{split}.parquet", split=splits),
     run:
-        features = tracks.index.values
+        track_list = tracks.index.values.tolist()
+
         pos_regions = pd.read_csv(input[0], sep="\t", header=None, names=["chromosome", "start", "end", "features"])
+        pos_regions["strand"] = "+"
+
+        pos_seq = []
+        pos_seq_rc = []
+        for record in SeqIO.parse(input[2], "fasta"):
+            pos_seq.append(str(record.seq))
+            pos_seq_rc.append(str(record.seq.reverse_complement()))
+        pos_regions["seq"] = pos_seq
+
+        pos_regions.loc[:, track_list] = np.uint8(0)
+        pos_regions.features = pos_regions.features.apply(lambda x: x.split(','))
+        for index, row in tqdm(pos_regions.iterrows(), total=pos_regions.shape[0]):
+            pos_regions.loc[index, row.features] = np.uint8(1)
+        pos_regions.drop(columns="features", inplace=True)
+
+
+        neg_regions = pd.read_csv(input[1], sep="\t", header=None, names=["chromosome", "start", "end"])
+        neg_regions["strand"] = "+"
+
+        neg_seq = []
+        neg_seq_rc = []
+        for record in SeqIO.parse(input[3], "fasta"):
+            neg_seq.append(str(record.seq))
+            neg_seq_rc.append(str(record.seq.reverse_complement()))
+        neg_regions["seq"] = neg_seq
+        neg_regions.loc[:, track_list] = np.uint8(0)
+
+        regions = pd.concat([pos_regions, neg_regions], ignore_index=True)
+        print(regions)
+        regions_rc = regions.copy()
+        regions_rc["strand"] = "-"
+        regions_rc["seq"] = pos_seq_rc + neg_seq_rc
+
+        regions = pd.concat([regions, regions_rc], ignore_index=True)
+        print(regions)
+
+        for i, split in enumerate(splits):
+            if split == "train":
+                mask = (regions.chromosome.isin(["Chr1", "Chr3", "Chr5"]) | ((regions.chromosome=="Chr2") & (regions.start < 15000000)))
+            elif split == "val":
+                mask = ((regions.chromosome=="Chr2") & (regions.start >= 15000000))
+            elif split == "test":
+                mask = (regions.chromosome=="Chr4")
+            print(split, mask.mean())
+            regions[mask].to_parquet(output[i], index=False)
