@@ -10,7 +10,13 @@ from torch.optim import AdamW
 import torchmetrics
 
 
-def calculate_auroc(outputs, n_output, output_classes):
+def calculate_auroc(outputs, feature_names):
+    feature_classes = {
+        "dnase": np.where([f.startswith("DHS") for f in feature_names])[0],
+        "tf": np.where([f.startswith("TFBS") for f in feature_names])[0],
+        "histone": np.where([f.startswith("HM") for f in feature_names])[0],
+    }
+
     preds = torch.cat([output["logits"] for output in outputs])
     targets = torch.cat([output["Y"] for output in outputs])
     n_regions = len(preds) // 2
@@ -19,18 +25,27 @@ def calculate_auroc(outputs, n_output, output_classes):
     if len(outputs) > 2:  # except for the sanity check
         assert(torch.allclose(targets[:n_regions], targets[n_regions:]))
     targets = targets[:n_regions]
-    aurocs = torch.empty(n_output)
-    for i in range(n_output):
-        if targets[:, i].sum() < 30:
+    aurocs = torch.empty(len(feature_names))
+    auprcs = torch.empty(len(feature_names))
+    pr_curve = torchmetrics.PrecisionRecallCurve()
+    for i in range(len(feature_names)):
+        if targets[:, i].sum() < 50:
             aurocs[i] = float("nan")
+            auprcs[i] = float("nan")
         else:
             aurocs[i] = torchmetrics.functional.auroc(preds[:, i], targets[:, i])
+            auprcs[i] = torchmetrics.functional.auc(*(pr_curve(preds[:, i], targets[:, i])[:2]), reorder=True)
     res = (
         aurocs.nanmedian(),
-        aurocs[output_classes["dnase"]].nanmedian(),
-        aurocs[output_classes["tf"]].nanmedian(),
-        aurocs[output_classes["histone"]].nanmedian(),
-        {f"feature_{i}": auroc for i, auroc in enumerate(aurocs)}
+        aurocs[feature_classes["dnase"]].nanmedian(),
+        aurocs[feature_classes["tf"]].nanmedian(),
+        aurocs[feature_classes["histone"]].nanmedian(),
+        {f"auroc_{feature_name}": auroc for feature_name, auroc in zip(feature_names, aurocs)},
+        auprcs.nanmedian(),
+        auprcs[feature_classes["dnase"]].nanmedian(),
+        auprcs[feature_classes["tf"]].nanmedian(),
+        auprcs[feature_classes["histone"]].nanmedian(),
+        {f"auprc_{feature_name}": auprc for feature_name, auprc in zip(feature_names, auprcs)},
     )
     return res
 
@@ -42,7 +57,8 @@ class DeepSEAModel(pl.LightningModule):
         n_output=None,
         lr=None,
         reduce_lr_on_plateau_patience=None,
-        output_classes=None,
+        feature_names=None,
+        pos_weight=None,
         **kwargs,
     ):
         super().__init__()
@@ -52,7 +68,7 @@ class DeepSEAModel(pl.LightningModule):
         self.n_output = n_output
         self.lr = lr
         self.reduce_lr_on_plateau_patience = reduce_lr_on_plateau_patience
-        self.output_classes = output_classes
+        self.feature_names = feature_names
 
         self.Conv1 = nn.Conv1d(in_channels=self.n_input, out_channels=320, kernel_size=8)
         self.Conv2 = nn.Conv1d(in_channels=320, out_channels=480, kernel_size=8)
@@ -63,7 +79,7 @@ class DeepSEAModel(pl.LightningModule):
         self.Linear1 = nn.Linear(53*960, 925)
         self.Linear2 = nn.Linear(925, self.n_output)
 
-        self.register_buffer("pos_weight", torch.full((self.n_output,), 8.0, dtype=torch.float))
+        self.register_buffer("pos_weight", torch.tensor(pos_weight, dtype=torch.float))
 
     def forward(self, x):
         x = one_hot(x, num_classes=self.n_input).float()
@@ -105,11 +121,15 @@ class DeepSEAModel(pl.LightningModule):
         return outputs
 
     def validation_epoch_end(self, outputs):
-        m1, m2, m3, m4, _ = calculate_auroc(outputs, self.n_output, self.output_classes)
-        self.log("val_neg_median_auroc", -m1)  # negative so it's a minimization problem
-        self.log("val_median_auroc_dnase", m2)
-        self.log("val_median_auroc_tf", m3)
-        self.log("val_median_auroc_histone", m4)
+        auroc1, auroc2, auroc3, auroc4, _, auprc1, auprc2, auprc3, auprc4, _ = calculate_auroc(outputs, self.feature_names)
+        self.log("val_neg_median_auroc", -auroc1)
+        self.log("val_median_auroc_dnase", auroc2)
+        self.log("val_median_auroc_tf", auroc3)
+        self.log("val_median_auroc_histone", auroc4)
+        self.log("val_neg_median_auprc", -auprc1)
+        self.log("val_median_auprc_dnase", auprc2)
+        self.log("val_median_auprc_tf", auprc3)
+        self.log("val_median_auprc_histone", auprc4)
 
     def test_step(self, batch, batch_idx):
         X, Y = batch
@@ -120,12 +140,17 @@ class DeepSEAModel(pl.LightningModule):
         return outputs
 
     def test_epoch_end(self, outputs):
-        m1, m2, m3, m4, aurocs = calculate_auroc(outputs, self.n_output, self.output_classes)
-        self.log("test_neg_median_auroc", -m1)  # negative so it's a minimization problem
-        self.log("test_median_auroc_dnase", m2)
-        self.log("test_median_auroc_tf", m3)
-        self.log("test_median_auroc_histone", m4)
+        auroc1, auroc2, auroc3, auroc4, aurocs, auprc1, auprc2, auprc3, auprc4, auprcs = calculate_auroc(outputs, self.feature_names)
+        self.log("test_neg_median_auroc", -auroc1)
+        self.log("test_median_auroc_dnase", auroc2)
+        self.log("test_median_auroc_tf", auroc3)
+        self.log("test_median_auroc_histone", auroc4)
         self.log_dict(aurocs)
+        self.log("test_neg_median_auprc", -auprc1)
+        self.log("test_median_auprc_dnase", auprc2)
+        self.log("test_median_auprc_tf", auprc3)
+        self.log("test_median_auprc_histone", auprc4)
+        self.log_dict(auprcs)
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)

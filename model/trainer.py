@@ -32,13 +32,7 @@ def main(hparams):
         )
         data_module.prepare_data()
 
-        features = data_module.train_dataset.features
-        output_classes = {
-            "dnase": np.where([f.startswith("DHS") for f in features])[0],
-            "tf": np.where([f.startswith("TFBS") for f in features])[0],
-            "histone": np.where([f.startswith("HM") for f in features])[0],
-        }
-        print(output_classes)
+        feature_names = data_module.train_dataset.features
 
         # this calculates number of steps defined as optimizer steps
         #tb_size = model_args["batch_size"] * max(1, int(hparams.gpus))
@@ -55,8 +49,16 @@ def main(hparams):
         model_args["n_input"] = 4
         model_args["n_output"] = 109
         model_args["lr"] = 1e-3
-        model_args["reduce_lr_on_plateau_patience"] = 4
-        model_args["output_classes"] = output_classes
+        model_args["reduce_lr_on_plateau_patience"] = 1
+        model_args["feature_names"] = feature_names
+        model_args["pos_weight_strategy"] = "eights"#"inv_freq"
+        if model_args["pos_weight_strategy"] == "ones":
+            model_args["pos_weight"] = np.ones(len(feature_names), dtype=float)
+        elif model_args["pos_weight_strategy"] == "eights":
+            model_args["pos_weight"] = 8.0 * np.ones(len(feature_names), dtype=float)
+        elif model_args["pos_weight_strategy"] == "inv_freq":
+            p = data_module.train_dataset.df[feature_names].mean().values
+            model_args["pos_weight"] = (1-p) / p
         print(model_args)
 
         print("Loading model...")
@@ -66,7 +68,7 @@ def main(hparams):
         #lr_monitor = LearningRateMonitor(logging_interval='step')
         lr_monitor = LearningRateMonitor(logging_interval='epoch')
         early_stop_callback = EarlyStopping(
-            monitor="val_neg_median_auroc", min_delta=0.00, patience=2*model_args["reduce_lr_on_plateau_patience"], verbose=True, mode="min",
+            monitor="val_neg_median_auroc", min_delta=0.00, patience=2*(1+model_args["reduce_lr_on_plateau_patience"]), verbose=True, mode="min",
         )
 
         trainer = pl.Trainer(

@@ -45,10 +45,11 @@ def seq2kmer(seq, k):
 class DeepSEADataset(Dataset):
     def __init__(self, data_path):
         self.df = pd.read_parquet(data_path)
+        print(data_path, self.df)
         self.features = [col for col in self.df.columns if col not in ["chromosome", "start", "end", "strand", "seq"]]
 
         #n = len(self.df)
-        #idx = np.concatenate([np.arange(100), np.arange(100) + n//2])
+        #idx = np.concatenate([np.arange(1000), np.arange(1000) + n//2])
         #self.df = self.df.iloc[idx]
 
     def __len__(self):
