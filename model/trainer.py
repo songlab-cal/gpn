@@ -14,7 +14,7 @@ from model import DeepSEAModel
 pl.utilities.seed.seed_everything(seed=42)
 
 
-language_model_name = "armheb/DNA_bert_6"
+#language_model_name = "armheb/DNA_bert_6"
 
 
 def main(hparams):
@@ -22,16 +22,23 @@ def main(hparams):
 
     def objective(trial):
         model_args = {}
-        model_args["batch_size"] = 10
-        model_args["accumulate_grad_batches"] = 10
-        n_epochs = 2
+        model_args["batch_size"] = 256
+        model_args["accumulate_grad_batches"] = 1
+        n_epochs = 100
 
         data_module = DeepSEADataModule(
-            "../../../deepsea-dataset/",
+            "../data/datasets/",
             model_args["batch_size"],
-            language_model_name,
         )
         data_module.prepare_data()
+
+        features = data_module.train_dataset.features
+        output_classes = {
+            "dnase": np.where([f.startswith("DHS") for f in features])[0],
+            "tf": np.where([f.startswith("TFBS") for f in features])[0],
+            "histone": np.where([f.startswith("HM") for f in features])[0],
+        }
+        print(output_classes)
 
         # this calculates number of steps defined as optimizer steps
         #tb_size = model_args["batch_size"] * max(1, int(hparams.gpus))
@@ -41,16 +48,26 @@ def main(hparams):
         # this calculates number of steps defined as number of minibatches
         # unfortunately, need to use this to define the learning rate scheduler, since .step() is called
         # on every minibatch. well not sure how accumulate_grad_batches is working
-        model_args["num_training_steps"] = n_epochs * len(data_module.train_dataloader())
-        model_args["num_warmup_steps"] = 0 #model_args["num_training_steps"] // 100
-        model_args["lr"] = 5e-5
+        #model_args["num_training_steps"] = n_epochs * len(data_module.train_dataloader())
+        #model_args["num_warmup_steps"] = 0 #model_args["num_training_steps"] // 100
+        #model_args["lr"] = 5e-5
+
+        model_args["n_input"] = 4
+        model_args["n_output"] = 109
+        model_args["lr"] = 1e-3
+        model_args["reduce_lr_on_plateau_patience"] = 4
+        model_args["output_classes"] = output_classes
         print(model_args)
 
         print("Loading model...")
-        model = DeepSEAModel(language_model_name, n_output=919, **model_args)
+        model = DeepSEAModel(**model_args)
         print("Done.")
 
-        lr_monitor = LearningRateMonitor(logging_interval='step')
+        #lr_monitor = LearningRateMonitor(logging_interval='step')
+        lr_monitor = LearningRateMonitor(logging_interval='epoch')
+        early_stop_callback = EarlyStopping(
+            monitor="val_neg_median_auroc", min_delta=0.00, patience=2*model_args["reduce_lr_on_plateau_patience"], verbose=True, mode="min",
+        )
 
         trainer = pl.Trainer(
             max_epochs=n_epochs,
@@ -58,8 +75,8 @@ def main(hparams):
             precision=16,
             strategy="dp",
             accumulate_grad_batches=model_args["accumulate_grad_batches"],
-            val_check_interval=0.1,
-            callbacks=[lr_monitor],
+            #val_check_interval=0.1,
+            callbacks=[lr_monitor, early_stop_callback],
         )
         ckpt_path = None
         trainer.fit(model, data_module, ckpt_path=ckpt_path)

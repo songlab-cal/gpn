@@ -46,9 +46,10 @@ class DeepSEADataset(Dataset):
     def __init__(self, data_path):
         self.df = pd.read_parquet(data_path)
         self.features = [col for col in self.df.columns if col not in ["chromosome", "start", "end", "strand", "seq"]]
-        n = len(self.df)
-        idx = np.concatenate([np.arange(100), np.arange(100) + n//2])
-        self.df = self.df.iloc[idx]
+
+        #n = len(self.df)
+        #idx = np.concatenate([np.arange(100), np.arange(100) + n//2])
+        #self.df = self.df.iloc[idx]
 
     def __len__(self):
         return len(self.df)
@@ -56,7 +57,7 @@ class DeepSEADataset(Dataset):
     def __getitem__(self, idx):
         row = self.df.iloc[idx]
         x = row.seq
-        x = encode_dna_seq(x)
+        x = encode_dna_seq(x).astype(int)
         y = row[self.features].values.astype(np.uint8)
         return x, y
 

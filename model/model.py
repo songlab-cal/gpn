@@ -40,7 +40,7 @@ class DeepSEAModel(pl.LightningModule):
         self,
         n_input=None,
         n_output=None,
-        learning_rate=None,
+        lr=None,
         reduce_lr_on_plateau_patience=None,
         output_classes=None,
         **kwargs,
@@ -63,6 +63,8 @@ class DeepSEAModel(pl.LightningModule):
         self.Linear1 = nn.Linear(53*960, 925)
         self.Linear2 = nn.Linear(925, self.n_output)
 
+        self.register_buffer("pos_weight", torch.full((self.n_output,), 8.0, dtype=torch.float))
+
     def forward(self, x):
         x = one_hot(x, num_classes=self.n_input).float()
         x = torch.transpose(x, 1, 2)
@@ -84,7 +86,7 @@ class DeepSEAModel(pl.LightningModule):
         return x
 
     def loss(self, logits, Y):
-        res = F.binary_cross_entropy_with_logits(logits, Y.float(), pos_weight=torch.full(Y.shape[1], 8.0))
+        res = F.binary_cross_entropy_with_logits(logits, Y.float(), pos_weight=self.pos_weight)
         return res
 
     def training_step(self, batch, batch_idx):
@@ -96,7 +98,7 @@ class DeepSEAModel(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         X, Y = batch
-        logits = self(**X)
+        logits = self(X)
         return {"logits": logits, "Y": Y}
 
     def validation_step_end(self, outputs):
@@ -111,7 +113,7 @@ class DeepSEAModel(pl.LightningModule):
 
     def test_step(self, batch, batch_idx):
         X, Y = batch
-        logits = self(**X)
+        logits = self(X)
         return {"logits": logits, "Y": Y}
 
     def test_step_end(self, outputs):
