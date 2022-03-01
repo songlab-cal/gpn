@@ -28,14 +28,14 @@ splits = split_chromosomes.keys()
 rule all:
     input:
         #"pos_regions/intersection.bed",
-        expand("pos_regions/{split}/intersection.bed", split=splits),
+        #expand("pos_regions/{split}/intersection.bed", split=splits),
         #"all.bed",
         #"plots/n_tracks_per_feature_type.pdf",
         #expand("peaks/{track_name}.bed", track_name=tracks.index),
         #expand("processed_peaks/{track_name}.bed", track_name=tracks.index),
         #expand("pos_regions/{track_name}/all.bed", track_name=tracks.index),
         #expand("neg_regions/{track_name}/{split}.bed", track_name=tracks.index, split=splits),
-        #expand("neg_regions/{track_name}/val.bed", track_name=tracks.index,),
+        "neg_regions/all/intersection.bed",
 
 
 rule download_track:
@@ -172,31 +172,44 @@ rule bedtools_intersect_and_slop:
         """bedtools map -a {input[0]} -b {input[1]} -f 0.5 -o distinct -c 4 | bedtools slop -i stdin -g {input[2]} -b {FLANK_SIZE} | awk '$3-$2 == {TOTAL_SIZE}' | awk '$4 != "."' > {output}"""
 
 
-rule split_regions:
+#rule split_regions:
+#    input:
+#        "pos_regions/all/intersection.bed",
+#    output:
+#        expand("pos_regions/{split}/intersection.bed", split=splits),
+#    run:
+#        df = pd.read_csv(input[0], sep="\t", header=None, names=["chromosome", "start", "end", "features"])
+#        print(df)
+#        for i, split in enumerate(splits):
+#            if split == "train":
+#                mask = (df.chromosome.isin(["Chr1", "Chr3", "Chr5"]) | ((df.chromosome=="Chr2") & (df.start < 15000000)))
+#            elif split == "val":
+#                mask = ((df.chromosome=="Chr2") & (df.start >= 15000000))
+#            elif split == "test":
+#                mask = (df.chromosome=="Chr4")
+#            print(split, mask.mean())
+#            df[mask].to_csv(output[i], sep="\t", header=False, index=False)
+
+
+rule sample_negative_seqs:
     input:
         "pos_regions/all/intersection.bed",
     output:
-        expand("pos_regions/{split}/intersection.bed", split=splits),
+        "neg_regions/all/intersection.bed",
+        "pos_regions/all/seq.fa",
+        "neg_regions/all/seq.fa",
+    shell:
+        "Rscript sample_negative_seqs.R {genome_name} {input} {output}"
+
+
+rule make_dataset:
+    input:
+        "pos_regions/all/intersection.bed",
+        "neg_regions/all/intersection.bed",
+        "pos_regions/all/seq.fa",
+        "neg_regions/all/seq.fa",
+    output:
+        expand("datasets/{split}.parquet", split=splits),
     run:
-        df = pd.read_csv(input[0], sep="\t", header=None, names=["chromosome", "start", "end", "features"])
-        print(df)
-        for i, split in enumerate(splits):
-            if split == "train":
-                mask = (df.chromosome.isin(["Chr1", "Chr3", "Chr5"]) | ((df.chromosome=="Chr2") & (df.start < 15000000)))
-            elif split == "val":
-                mask = ((df.chromosome=="Chr2") & (df.start >= 15000000))
-            elif split == "test":
-                mask = (df.chromosome=="Chr4")
-            print(split, mask.mean())
-            df[mask].to_csv(output[i], sep="\t", header=False, index=False)
-#
-#
-#rule sample_negative_seqs:
-#    input:
-#        "pos_regions/{track_name}/{split}.bed",
-#    output:
-#        "neg_regions/{track_name}/{split}.bed",
-#        "pos_regions/{track_name}/{split}.fa",
-#        "neg_regions/{track_name}/{split}.fa",
-#    shell:
-#        "Rscript sample_negative_seqs.R {genome_name} {input} {output}"
+        features = tracks.index.values
+        pos_regions = pd.read_csv(input[0], sep="\t", header=None, names=["chromosome", "start", "end", "features"])
