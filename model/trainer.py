@@ -7,14 +7,14 @@ from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 import torch
 
-from data import DeepSEADataModule
-from model import DeepSEAModel
+from data import DeepSEADataModule, DNABERTDataModule
+from model import DeepSEAModel, DNABERTModel
 
 
 pl.utilities.seed.seed_everything(seed=42)
 
 
-#language_model_name = "armheb/DNA_bert_6"
+language_model_name = "armheb/DNA_bert_6"
 
 
 def main(hparams):
@@ -22,34 +22,42 @@ def main(hparams):
 
     def objective(trial):
         model_args = {}
-        model_args["batch_size"] = 256
-        model_args["accumulate_grad_batches"] = 1
-        n_epochs = 100
-
-        data_module = DeepSEADataModule(
-            "../data/datasets/",
-            model_args["batch_size"],
-        )
-        data_module.prepare_data()
-
-        feature_names = data_module.train_dataset.features
-
-        # this calculates number of steps defined as optimizer steps
-        #tb_size = model_args["batch_size"] * max(1, int(hparams.gpus))
-        #ab_size = model_args["accumulate_grad_batches"] * float(n_epochs)
-        #model_args["num_training_steps"] = (len(data_module.train_dataset) // tb_size) // ab_size
-
-        # this calculates number of steps defined as number of minibatches
-        # unfortunately, need to use this to define the learning rate scheduler, since .step() is called
-        # on every minibatch. well not sure how accumulate_grad_batches is working
-        #model_args["num_training_steps"] = n_epochs * len(data_module.train_dataloader())
-        #model_args["num_warmup_steps"] = 0 #model_args["num_training_steps"] // 100
-        #model_args["lr"] = 5e-5
-
         model_args["n_input"] = 4
         model_args["n_output"] = 109
-        model_args["lr"] = 1e-3
-        model_args["reduce_lr_on_plateau_patience"] = 1
+        model_args["module"] = "DNABERT"
+
+        if model_args["module"] == "DNABERT":
+            model_class = DNABERTModel
+            model_args["language_model_name"] = language_model_name
+            model_args["batch_size"] = 12
+            model_args["accumulate_grad_batches"] = 256 // model_args["batch_size"]
+            model_args["num_workers"] = 0
+            n_epochs = 100
+            data_module = DNABERTDataModule(
+                "../data/datasets/",
+                model_args["batch_size"],
+                language_model_name,
+                model_args["num_workers"],
+            )
+            data_module.prepare_data()
+            model_args["lr"] = 5e-5
+            model_args["reduce_lr_on_plateau_patience"] = 0
+        elif model_args["module"] == "DeepSEA":
+            model_class = DeepSEAModel
+            model_args["batch_size"] = 256
+            model_args["accumulate_grad_batches"] = 1
+            model_args["num_workers"] = 6
+            n_epochs = 100
+            data_module = DeepSEADataModule(
+                "../data/datasets/",
+                model_args["batch_size"],
+                model_args["num_workers"],
+            )
+            data_module.prepare_data()
+            model_args["lr"] = 1e-3
+            model_args["reduce_lr_on_plateau_patience"] = 1
+
+        feature_names = data_module.train_dataset.features
         model_args["feature_names"] = feature_names
         model_args["pos_weight_strategy"] = "sqrt_inv_freq"
         if model_args["pos_weight_strategy"] == "ones":
@@ -62,7 +70,7 @@ def main(hparams):
         print(model_args)
 
         print("Loading model...")
-        model = DeepSEAModel(**model_args)
+        model = model_class(**model_args)
         print("Done.")
 
         #lr_monitor = LearningRateMonitor(logging_interval='step')
