@@ -34,7 +34,8 @@ def calculate_auroc(outputs, feature_names):
             auprcs[i] = float("nan")
         else:
             aurocs[i] = torchmetrics.functional.auroc(preds[:, i], targets[:, i])
-            auprcs[i] = torchmetrics.functional.auc(*(pr_curve(preds[:, i], targets[:, i])[:2]), reorder=True)
+            precision, recall, _ = pr_curve(preds[:, i], targets[:, i])
+            auprcs[i] = torchmetrics.functional.auc(recall, precision)
     res = (
         aurocs.nanmedian(),
         aurocs[feature_classes["dnase"]].nanmedian(),

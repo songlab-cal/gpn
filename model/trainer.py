@@ -51,14 +51,14 @@ def main(hparams):
         model_args["lr"] = 1e-3
         model_args["reduce_lr_on_plateau_patience"] = 1
         model_args["feature_names"] = feature_names
-        model_args["pos_weight_strategy"] = "eights"#"inv_freq"
+        model_args["pos_weight_strategy"] = "sqrt_inv_freq"
         if model_args["pos_weight_strategy"] == "ones":
             model_args["pos_weight"] = np.ones(len(feature_names), dtype=float)
         elif model_args["pos_weight_strategy"] == "eights":
             model_args["pos_weight"] = 8.0 * np.ones(len(feature_names), dtype=float)
-        elif model_args["pos_weight_strategy"] == "inv_freq":
+        elif model_args["pos_weight_strategy"] == "sqrt_inv_freq":
             p = data_module.train_dataset.df[feature_names].mean().values
-            model_args["pos_weight"] = (1-p) / p
+            model_args["pos_weight"] = np.sqrt((1-p) / p)
         print(model_args)
 
         print("Loading model...")
