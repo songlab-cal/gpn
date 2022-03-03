@@ -16,6 +16,6 @@ genNullSeqs(
   repeat_match_tol = 0.02,
   GC_match_tol = 0.02,
   length_match_tol = 0.0,
-  batchsize = 5000,
-  nMaxTrials = 20,
+  batchsize = 20000,
+  nMaxTrials = 100,
   genome = genome)

@@ -1,12 +1,15 @@
 from Bio import SeqIO
 import os
 import pandas as pd
+import re
+from tqdm import tqdm
 
 # conda install -c bioconda trf
 
 
 rule all:
     input:
+        "tair10.contigs.fa",
         "tair10.fa",
         "trf.bed",
         "first_seed/seqs/",
@@ -97,3 +100,19 @@ rule prepare_fasta:
 # exit
 # R CMD build BSgenome.Athaliana.TAIR.TAIR10FILT.masked
 # R CMD INSTALL BSgenome.Athaliana.TAIR.TAIR10FILT.masked_1.5.0.tar.gz
+
+
+rule split_into_contigs:
+    input:
+        "tair10.fa",
+    output:
+        "tair10.contigs.fa",
+    run:
+        #sequence = ''.join([str(record.seq).strip() for record in SeqIO.parse(input[0], "fasta")])
+        sequence = '\n'.join([str(record.seq).strip() for record in SeqIO.parse(input[0], "fasta")])
+        out = open(output[0], 'w')
+        #m = re.sub('[nN]+','\n',sequence).split('\n')
+        m = re.sub('[^ACGT]+','\n',sequence).split('\n')
+        for i in tqdm(range(len(m))):
+            out.write('>contig_'+str(i)+'\n')
+            out.write(m[i]+'\n')
