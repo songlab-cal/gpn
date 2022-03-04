@@ -31,7 +31,8 @@ splits = split_chromosomes.keys()
 
 rule all:
     input:
-        expand("datasets/{split}.parquet", split=splits),
+        "plots/positive_proportion.pdf",
+        #expand("datasets/{split}.parquet", split=splits),
         #"pos_regions/intersection.bed",
         #expand("pos_regions/{split}/intersection.bed", split=splits),
         #"all.bed",
@@ -264,3 +265,35 @@ rule make_dataset:
                 mask = (regions.chromosome=="Chr4")
             print(split, mask.mean())
             regions[mask].to_parquet(output[i], index=False)
+
+
+rule plot_class_balance:
+    input:
+        "datasets/test.parquet",
+    output:
+        "plots/positive_proportion.pdf",
+        "plots/log10_positive_proportion.pdf",
+    run:
+        d = pd.read_parquet(input[0])
+        features = [col for col in d.columns.values if col not in ["chromosome", "start", "end", "strand", "seq"]]
+        p = d[features].mean().to_frame("positive_proportion")
+        print(p)
+        p["feature_type"] = p.index.str.split("_").str[0]
+        p.feature_type.replace({
+            "DHS": "DNase I hypersensitive site",
+            "DGF": "DNase I digital genomic footprinting",
+            "HM": "Histone modification",
+            "TFBS": "TF binding site",
+        }, inplace=True)
+        print(p)
+        p["log10_positive_proportion"] = p.positive_proportion.apply(np.log10)
+        print(p)
+
+        g = sns.catplot(data=p, row="feature_type", y="positive_proportion", kind="box", height=3, sharex=False, sharey=False, showfliers=False)
+        g.set_titles(col_template="{col_name}", row_template="{row_name}")
+        plt.savefig(output[0], bbox_inches='tight')
+        plt.close()
+
+        g = sns.catplot(data=p, row="feature_type", y="log10_positive_proportion", kind="box", height=3, sharex=False, sharey=False, showfliers=False)
+        g.set_titles(col_template="{col_name}", row_template="{row_name}")
+        plt.savefig(output[1], bbox_inches='tight')
