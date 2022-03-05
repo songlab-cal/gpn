@@ -28,7 +28,7 @@ splits = ["train", "val", "test"]
 rule all:
     input:
         #"intersection.seq.bed",
-        #"plots/positive_proportion.pdf",
+        "plots/positive_proportion.pdf",
         expand("datasets/{split}.parquet", split=splits),
         #"pos_regions/intersection.bed",
         #expand("pos_regions/{split}/intersection.bed", split=splits),
@@ -190,10 +190,10 @@ rule make_dataset:
         regions["strand"] = "+"
         regions = regions[["chromosome", "start", "end", "strand", "seq", "features"]]
         regions.loc[:, track_list] = np.uint8(0)
-        regions.features.replace({".": ""}, inplace=True)
         regions.features = regions.features.apply(lambda x: x.split(','))
         for index, row in tqdm(regions.iterrows(), total=regions.shape[0]):
-            regions.loc[index, row.features] = np.uint8(1)
+            if not '.' in row.features:  # this means not empty
+                regions.loc[index, row.features] = np.uint8(1)
         regions.drop(columns="features", inplace=True)
         print(regions)
 
