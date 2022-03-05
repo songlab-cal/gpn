@@ -1,3 +1,4 @@
+from Bio.Seq import Seq
 from Bio import SeqIO
 import matplotlib.pyplot as plt
 import numpy as np
@@ -22,17 +23,13 @@ FLANK_SIZE = 400
 TOTAL_SIZE = REGION_SIZE + 2 * FLANK_SIZE
 genome_name = "BSgenome.Athaliana.TAIR.TAIR10FILT.masked"
 
-split_chromosomes = {
-    "train": ["Chr1", "Chr3", "Chr5"],
-    "val": ["Chr4"],
-    "test": ["Chr2"],
-}
-splits = split_chromosomes.keys()
+splits = ["train", "val", "test"]
 
 rule all:
     input:
-        "plots/positive_proportion.pdf",
-        #expand("datasets/{split}.parquet", split=splits),
+        #"intersection.seq.bed",
+        #"plots/positive_proportion.pdf",
+        expand("datasets/{split}.parquet", split=splits),
         #"pos_regions/intersection.bed",
         #expand("pos_regions/{split}/intersection.bed", split=splits),
         #"all.bed",
@@ -134,9 +131,6 @@ rule process_peaks:
         chrom_sizes = pd.read_csv(input[1], sep="\t", header=None, index_col=0)
         bed = bed[bed.chromosome.isin(chrom_sizes.index.values)]
         bed["track_name"] = wildcards["track_name"]
-        center = (bed.start + bed.end) // 2
-        bed.start = center - REGION_SIZE // 2
-        bed.end = center + REGION_SIZE // 2
         bed.to_csv(output[0], sep="\t", header=False, index=False)
 
 
@@ -144,18 +138,9 @@ rule merge_tracks:
     input:
         expand("processed_peaks/{track_name}.bed", track_name=tracks.index),
     output:
-        "all.unsorted.bed",
+        "processed_peaks/all.bed",
     shell:
-        "cat {input} > {output}"
-
-
-rule sort_track:
-    input:
-        "all.unsorted.bed",
-    output:
-        "all.bed",
-    shell:
-        "bedtools sort -i {input} > {output}"
+        "cat {input} | bedtools sort -i stdin > {output}"
 
 
 rule make_windows:
@@ -170,99 +155,63 @@ rule make_windows:
 rule bedtools_intersect_and_slop:
     input:
         "windows.bed",
-        "all.bed",
+        "processed_peaks/all.bed",
         config["chrom_sizes_path"],
     output:
-        "pos_regions/all/intersection.bed",
+        "intersection.bed",
     shell:
-        """bedtools map -a {input[0]} -b {input[1]} -f 0.5 -o distinct -c 4 | bedtools slop -i stdin -g {input[2]} -b {FLANK_SIZE} | awk '$3-$2 == {TOTAL_SIZE}' | awk '$4 != "."' > {output}"""
+        """bedtools map -a {input[0]} -b {input[1]} -f 0.5 -o distinct -c 4 | bedtools slop -i stdin -g {input[2]} -b {FLANK_SIZE} | awk '$3-$2 == {TOTAL_SIZE}' > {output}"""
 
-
-#rule split_regions:
-#    input:
-#        "pos_regions/all/intersection.bed",
-#    output:
-#        expand("pos_regions/{split}/intersection.bed", split=splits),
-#    run:
-#        df = pd.read_csv(input[0], sep="\t", header=None, names=["chromosome", "start", "end", "features"])
-#        print(df)
-#        for i, split in enumerate(splits):
-#            if split == "train":
-#                mask = (df.chromosome.isin(["Chr1", "Chr3", "Chr5"]) | ((df.chromosome=="Chr2") & (df.start < 15000000)))
-#            elif split == "val":
-#                mask = ((df.chromosome=="Chr2") & (df.start >= 15000000))
-#            elif split == "test":
-#                mask = (df.chromosome=="Chr4")
-#            print(split, mask.mean())
-#            df[mask].to_csv(output[i], sep="\t", header=False, index=False)
-
-
-rule sample_negative_seqs:
+rule add_seq:
     input:
-        "pos_regions/all/intersection.bed",
+        "intersection.bed",
+        "reference/tair10.fa",
     output:
-        "neg_regions/all/intersection.bed",
-        "pos_regions/all/seq.fa",
-        "neg_regions/all/seq.fa",
+        "intersection.seq.bed",
     shell:
-        "Rscript sample_negative_seqs.R {genome_name} {input} {output}"
+        "bedtools getfasta -fi {input[1]} -bed {input[0]} -tab -bedOut > {output}"
 
+
+# TODO: should shuffle the dataset row order before adding the reverse complements
 
 rule make_dataset:
     input:
-        "pos_regions/all/intersection.bed",
-        "neg_regions/all/intersection.bed",
-        "pos_regions/all/seq.fa",
-        "neg_regions/all/seq.fa",
+        "intersection.seq.bed",
     output:
         expand("datasets/{split}.parquet", split=splits),
     run:
         track_list = tracks.index.values.tolist()
 
-        pos_regions = pd.read_csv(input[0], sep="\t", header=None, names=["chromosome", "start", "end", "features"])
-        pos_regions["strand"] = "+"
-
-        pos_seq = []
-        pos_seq_rc = []
-        for record in SeqIO.parse(input[2], "fasta"):
-            pos_seq.append(str(record.seq))
-            pos_seq_rc.append(str(record.seq.reverse_complement()))
-        pos_regions["seq"] = pos_seq
-
-        pos_regions.loc[:, track_list] = np.uint8(0)
-        pos_regions.features = pos_regions.features.apply(lambda x: x.split(','))
-        for index, row in tqdm(pos_regions.iterrows(), total=pos_regions.shape[0]):
-            pos_regions.loc[index, row.features] = np.uint8(1)
-        pos_regions.drop(columns="features", inplace=True)
-
-
-        neg_regions = pd.read_csv(input[1], sep="\t", header=None, names=["chromosome", "start", "end"])
-        neg_regions["strand"] = "+"
-
-        neg_seq = []
-        neg_seq_rc = []
-        for record in SeqIO.parse(input[3], "fasta"):
-            neg_seq.append(str(record.seq))
-            neg_seq_rc.append(str(record.seq.reverse_complement()))
-        neg_regions["seq"] = neg_seq
-        neg_regions.loc[:, track_list] = np.uint8(0)
-
-        regions = pd.concat([pos_regions, neg_regions], ignore_index=True)
+        regions = pd.read_csv(input[0], sep="\t", header=None, names=["chromosome", "start", "end", "features", "seq"])
+        print(regions.shape)
+        regions = regions[~(regions.seq.str.contains("[^ACTG]"))]
+        print(regions.shape)
+        regions = regions.sample(frac=1, random_state=42)
+        regions["strand"] = "+"
+        regions = regions[["chromosome", "start", "end", "strand", "seq", "features"]]
+        regions.loc[:, track_list] = np.uint8(0)
+        regions.features.replace({".": ""}, inplace=True)
+        regions.features = regions.features.apply(lambda x: x.split(','))
+        for index, row in tqdm(regions.iterrows(), total=regions.shape[0]):
+            regions.loc[index, row.features] = np.uint8(1)
+        regions.drop(columns="features", inplace=True)
         print(regions)
+
         regions_rc = regions.copy()
         regions_rc["strand"] = "-"
-        regions_rc["seq"] = pos_seq_rc + neg_seq_rc
+        regions_rc["seq"] = regions_rc.seq.apply(lambda x: str(Seq(x).reverse_complement()))
 
         regions = pd.concat([regions, regions_rc], ignore_index=True)
         print(regions)
+        print(regions.columns)
 
         for i, split in enumerate(splits):
             if split == "train":
-                mask = (regions.chromosome.isin(["Chr1", "Chr3", "Chr5"]) | ((regions.chromosome=="Chr2") & (regions.start < 15000000)))
+                mask = (regions.chromosome.isin(["Chr1", "Chr2", "Chr3"]) | ((regions.chromosome=="Chr4") & (regions.start < 12000000)))
             elif split == "val":
-                mask = ((regions.chromosome=="Chr2") & (regions.start >= 15000000))
+                mask = ((regions.chromosome=="Chr4") & (regions.start >= 12000000))
             elif split == "test":
-                mask = (regions.chromosome=="Chr4")
+                mask = (regions.chromosome=="Chr5")
             print(split, mask.mean())
             regions[mask].to_parquet(output[i], index=False)
 
