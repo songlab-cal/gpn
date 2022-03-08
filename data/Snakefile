@@ -246,3 +246,58 @@ rule plot_class_balance:
         g = sns.catplot(data=p, row="feature_type", y="log10_positive_proportion", kind="box", height=3, sharex=False, sharey=False, showfliers=False)
         g.set_titles(col_template="{col_name}", row_template="{row_name}")
         plt.savefig(output[1], bbox_inches='tight')
+
+
+rule filter_chrom_sizes:
+    input:
+        config["chrom_sizes_path"],
+    output:
+        "chrom.sizes.lm.train",
+    shell:
+        "grep -v Chr5 {input} > {output}"
+
+
+rule make_windows_lm_raw:
+    input:
+        "chrom.sizes.lm.train",
+    output:
+        "windows.lm.train.raw.bed"
+    shell:
+        "bedtools makewindows -g {input} -w 1000 -s 200 > {output}"
+
+
+rule make_windows_lm_pos:
+    input:
+        "windows.lm.train.raw.bed"
+    output:
+        "windows.lm.train.pos.bed"
+    shell:
+        """awk '{{print $0 "\t.\t.\t+"}}' {input} > {output}"""
+
+
+rule make_windows_lm_neg:
+    input:
+        "windows.lm.train.raw.bed"
+    output:
+        "windows.lm.train.neg.bed"
+    shell:
+        """awk '{{print $0 "\t.\t.\t-"}}' {input} > {output}"""
+
+
+rule make_windows_lm:
+    input:
+        "windows.lm.train.pos.bed",
+        "windows.lm.train.neg.bed",
+    output:
+        "windows.lm.train.bed",
+    shell:
+        "cat {input} > {output}"
+
+
+rule extract_seq_lm:
+    input:
+        "windows.lm.train.bed",
+    output:
+        "lm.train.seqs.txt",
+    shell:
+        """bedtools getfasta -fi reference/tair10.fa -bed {input} -s | grep -v "[^ACTG]" > {output}"""
