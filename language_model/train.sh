@@ -1,0 +1,20 @@
+python run_mlm.py \
+    --do_train \
+    --do_eval \
+    --output_dir results \
+    --model_type bert \
+    --tokenizer_name ./tokenizer_unigram_4091 \
+    --train_file ./lm.train.seqs.txt \
+    --max_seq_length 185 \
+    --preprocessing_num_workers 12 \
+    --line_by_line True \
+    --pad_to_max_length True \
+    --evaluation_strategy epoch \
+    --per_device_train_batch_size 50 \
+    --per_device_eval_batch_size 50 \
+    --gradient_accumulation_steps 10 \
+    --num_train_epochs 3.0 \
+    --save_strategy epoch \
+    --seed 42 \
+    --fp16 \
+    --dataloader_num_workers 12
