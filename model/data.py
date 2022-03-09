@@ -158,3 +158,53 @@ class DNABERTDataModule(DataModule):
         print("Loading test dataset")
         self.test_dataset = DNABERTDataset(os.path.join(self.data_dir, "test.parquet"), self.language_model_name)
         print(len(self.train_dataset), len(self.val_dataset), len(self.test_dataset))
+
+
+class PlantBertDataset(Dataset):
+    def __init__(self, data_path, language_model_path, max_length):
+        self.df = pd.read_parquet(data_path)
+        self.tokenizer = AutoTokenizer.from_pretrained(language_model_path)
+        self.max_length = max_length
+        self.features = [col for col in self.df.columns if col not in ["chromosome", "start", "end", "strand", "seq"]]
+
+        #n = len(self.df)
+        #idx = np.concatenate([np.arange(100), np.arange(100) + n//2])
+        #self.df = self.df.iloc[idx]
+
+    def __len__(self):
+        return len(self.df)
+
+    def __getitem__(self, idx):
+        row = self.df.iloc[idx]
+        x = row.seq
+        x = self.tokenizer(x, padding="max_length", max_length=self.max_length, return_token_type_ids=False, return_tensors="pt", truncation=True)
+        x["input_ids"] = x["input_ids"].flatten()
+        x["attention_mask"] = x["attention_mask"].flatten()
+        y = row[self.features].values.astype(np.uint8)
+        return x, y
+
+
+class PlantBertDataModule(DataModule):
+    def __init__(
+        self,
+        data_dir,
+        batch_size,
+        language_model_path,
+        num_workers,
+        max_length,
+    ):
+        super().__init__()
+        self.data_dir = data_dir
+        self.batch_size = batch_size
+        self.language_model_path = language_model_path
+        self.num_workers = num_workers
+        self.max_length = max_length
+
+    def prepare_data(self):
+        print("Loading train dataset")
+        self.train_dataset = PlantBertDataset(os.path.join(self.data_dir, "train.parquet"), self.language_model_path, self.max_length)
+        print("Loading val dataset")
+        self.val_dataset = PlantBertDataset(os.path.join(self.data_dir, "val.parquet"), self.language_model_path, self.max_length)
+        print("Loading test dataset")
+        self.test_dataset = PlantBertDataset(os.path.join(self.data_dir, "test.parquet"), self.language_model_path, self.max_length)
+        print(len(self.train_dataset), len(self.val_dataset), len(self.test_dataset))

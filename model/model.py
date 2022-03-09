@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 from torch.nn.functional import one_hot, cross_entropy
 import torch.nn.functional as F
-from transformers import get_scheduler, AutoModel, PretrainedConfig
+from transformers import get_scheduler, AutoModel, PretrainedConfig, BertModel
 from torch.optim import AdamW
 import torchmetrics
 
@@ -241,3 +241,80 @@ class DNABERTModel(Module):
         )
         monitor = "val_neg_median_auroc"
         return dict(optimizer=optimizer, lr_scheduler=lr_scheduler, monitor=monitor)
+
+
+class PlantBertModel(Module):
+    def __init__(
+        self,
+        language_model_path=None,
+        n_input=None,
+        n_output=None,
+        lr=None,
+        reduce_lr_on_plateau_patience=None,
+        feature_names=None,
+        pos_weight=None,
+        **kwargs,
+    ):
+        super().__init__()
+        self.save_hyperparameters()
+
+        self.language_model_path = language_model_path
+        self.n_input = n_input
+        self.n_output = n_output
+        self.lr = lr
+        self.reduce_lr_on_plateau_patience = reduce_lr_on_plateau_patience
+        self.feature_names = feature_names
+
+        self.language_model = AutoModel.from_pretrained(language_model_path, add_pooling_layer=False)
+        #config = PretrainedConfig.get_config_dict(language_model_name)
+        #self.language_model = AutoModel.from_config(config)
+        self.hidden_size = PretrainedConfig.get_config_dict(language_model_path)[0]["hidden_size"]
+        self.pooler = BertAvgPooler(self.hidden_size)
+        self.dropout = nn.Dropout(0.1)
+        self.classifier = nn.Linear(self.hidden_size, n_output)
+
+        self.register_buffer("pos_weight", torch.tensor(pos_weight, dtype=torch.float))
+
+    def forward(self, x):
+        input_ids = x["input_ids"]
+        attention_mask = x["attention_mask"]
+        x = self.language_model(input_ids=input_ids, attention_mask=attention_mask)["last_hidden_state"]
+        x = self.pooler(x)
+        x = self.dropout(x)
+        x = self.classifier(x)
+        return x
+
+    def configure_optimizers(self):
+        #optimizer = AdamW(self.parameters(), lr=self.lr)
+        #lr_scheduler = get_scheduler("linear", optimizer=optimizer, num_warmup_steps=self.num_warmup_steps, num_training_steps=self.num_training_steps)
+        #scheduler = {
+        #    "scheduler": lr_scheduler,
+        #    "interval": "step",
+        #    "frequency": 1,
+        #}
+        #return dict(optimizer=optimizer, lr_scheduler=scheduler)
+
+        optimizer = AdamW(self.parameters(), lr=self.lr)
+        lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer,
+            patience=self.reduce_lr_on_plateau_patience,
+            factor=0.1,
+            threshold=0.0,
+            threshold_mode="abs",
+            verbose=True,
+        )
+        monitor = "val_neg_median_auroc"
+        return dict(optimizer=optimizer, lr_scheduler=lr_scheduler, monitor=monitor)
+
+
+class BertAvgPooler(nn.Module):
+    def __init__(self, hidden_size):
+        super().__init__()
+        self.dense = nn.Linear(hidden_size, hidden_size)
+        self.activation = nn.Tanh()
+
+    def forward(self, hidden_states):
+        pooled_output = hidden_states.mean(dim=1)
+        pooled_output = self.dense(pooled_output)
+        pooled_output = self.activation(pooled_output)
+        return pooled_output

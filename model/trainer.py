@@ -7,14 +7,14 @@ from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 import torch
 
-from data import DeepSEADataModule, DNABERTDataModule
-from model import DeepSEAModel, DNABERTModel
+from data import DeepSEADataModule, DNABERTDataModule, PlantBertDataModule
+from model import DeepSEAModel, DNABERTModel, PlantBertModel
 
 
 pl.utilities.seed.seed_everything(seed=42)
 
 
-language_model_name = "armheb/DNA_bert_6"
+dnabert_language_model_name = "armheb/DNA_bert_6"
 
 
 def main(hparams):
@@ -24,11 +24,13 @@ def main(hparams):
         model_args = {}
         model_args["n_input"] = 4
         model_args["n_output"] = 109
-        model_args["module"] = "DNABERT"
+        model_args["module"] = "PlantBert"
+        #model_args["module"] = "DNABERT"
+        #model_args["module"] = "DeepSEA"
 
         if model_args["module"] == "DNABERT":
             model_class = DNABERTModel
-            model_args["language_model_name"] = language_model_name
+            model_args["language_model_name"] = dnabert_language_model_name
             model_args["batch_size"] = 12
             model_args["accumulate_grad_batches"] = 256 // model_args["batch_size"]
             model_args["num_workers"] = 0
@@ -36,8 +38,25 @@ def main(hparams):
             data_module = DNABERTDataModule(
                 "../data/datasets/",
                 model_args["batch_size"],
-                language_model_name,
+                dnabert_language_model_name,
                 model_args["num_workers"],
+            )
+            data_module.prepare_data()
+            model_args["lr"] = 5e-5
+            model_args["reduce_lr_on_plateau_patience"] = 0
+        elif model_args["module"] == "PlantBert":
+            model_class = PlantBertModel
+            model_args["language_model_path"] = "../language_model/results/checkpoint-17440/"
+            model_args["batch_size"] = 116
+            model_args["accumulate_grad_batches"] = 256 // model_args["batch_size"]
+            model_args["num_workers"] = 4
+            n_epochs = 100
+            data_module = PlantBertDataModule(
+                "../data/datasets/",
+                model_args["batch_size"],
+                model_args["language_model_path"],
+                model_args["num_workers"],
+                185,
             )
             data_module.prepare_data()
             model_args["lr"] = 5e-5
