@@ -259,45 +259,46 @@ rule filter_chrom_sizes:
 
 rule make_windows_lm_raw:
     input:
-        "chrom.sizes.lm.train",
+        #"chrom.sizes.lm.train",
+        config["chrom_sizes_path"],
     output:
-        "windows.lm.train.raw.bed"
+        "windows/{window_size}/{step_size}/lm.train.raw.bed"
     shell:
-        "bedtools makewindows -g {input} -w 1000 -s 200 > {output}"
+        "bedtools makewindows -g {input} -w {wildcards.window_size} -s {wildcards.step_size} > {output}"
 
 
 rule make_windows_lm_pos:
     input:
-        "windows.lm.train.raw.bed"
+        "{anything}/lm.train.raw.bed"
     output:
-        "windows.lm.train.pos.bed"
+        "{anything}/lm.train.pos.bed"
     shell:
         """awk '{{print $0 "\t.\t.\t+"}}' {input} > {output}"""
 
 
 rule make_windows_lm_neg:
     input:
-        "windows.lm.train.raw.bed"
+        "{anything}/lm.train.raw.bed"
     output:
-        "windows.lm.train.neg.bed"
+        "{anything}/lm.train.neg.bed"
     shell:
         """awk '{{print $0 "\t.\t.\t-"}}' {input} > {output}"""
 
 
 rule make_windows_lm:
     input:
-        "windows.lm.train.pos.bed",
-        "windows.lm.train.neg.bed",
+        "{anything}/lm.train.pos.bed",
+        "{anything}/lm.train.neg.bed",
     output:
-        "windows.lm.train.bed",
+        "{anything}/lm.train.bed",
     shell:
         "cat {input} > {output}"
 
 
 rule extract_seq_lm:
     input:
-        "windows.lm.train.bed",
+        "{anything}/lm.train.bed",
     output:
-        "lm.train.seqs.txt",
+        "{anything}/lm.train.seqs.txt",
     shell:
-        """bedtools getfasta -fi reference/tair10.fa -bed {input} -s | grep -v "[^ACTG]" > {output}"""
+        """bedtools getfasta -fi reference/tair10.fa -bed {input} -s | grep -v "[^ACTGactg]" > {output}"""

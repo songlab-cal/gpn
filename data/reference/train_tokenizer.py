@@ -1,4 +1,4 @@
-from Bio import SeqIO
+import numpy as np
 import pandas as pd
 from tokenizers import decoders, models, normalizers, pre_tokenizers, processors, trainers, Tokenizer
 from transformers import BertTokenizerFast
@@ -7,30 +7,17 @@ import sys
 # based on examples here:
 # https://colab.research.google.com/github/huggingface/notebooks/blob/master/examples/tokenizer_training.ipynb
 
-#chunk_size = 4192
-chunk_size = 1000
-
-record_lengths = []
-
-dataset = []
-for record in SeqIO.parse("tair10.contigs.fa", "fasta"):
-    record_lengths.append(len(record))
-    if len(record) < 100: continue
-    for seq in (str(record.seq), str(record.seq.reverse_complement())):
-        chunks = [seq[i:i+chunk_size] for i in range(0, len(seq), chunk_size)]
-        dataset += chunks
+with open(sys.argv[1]) as file:
+    dataset = file.readlines()
+#dataset = dataset[np.random.choice()]
 print(len(dataset))
-#dataset = dataset[:1000]
-#print(len(dataset))
-#
-print(record_lengths)
+print(dataset[0])
+
+
+model = sys.argv[2]
+vocab_size = int(sys.argv[3])
 
 batch_size = 1000
-
-#vocab_size = 20000
-#vocab_size = 32000
-model = sys.argv[1]
-vocab_size = int(sys.argv[2])
 
 def batch_iterator():
     for i in range(0, len(dataset), batch_size):
@@ -40,11 +27,11 @@ def batch_iterator():
 if model == "bpe":
     tokenizer = Tokenizer(models.BPE())
     tokenizer.normalizer = normalizers.Lowercase()
-    trainer = trainers.BpeTrainer(vocab_size=vocab_size, special_tokens=["[CLS]", "[SEP]", "<unk>", "<pad>", "[MASK]"])
+    trainer = trainers.BpeTrainer(vocab_size=vocab_size, special_tokens=["[CLS]", "[SEP]", "[UNK]", "[PAD]", "[MASK]"])
 elif model == "unigram":
     tokenizer = Tokenizer(models.Unigram())
     tokenizer.normalizer = normalizers.Lowercase()
-    trainer = trainers.UnigramTrainer(vocab_size=vocab_size, special_tokens=["[CLS]", "[SEP]", "<unk>", "<pad>", "[MASK]"], unk_token="<unk>")
+    trainer = trainers.UnigramTrainer(vocab_size=vocab_size, special_tokens=["[CLS]", "[SEP]", "[UNK]", "[PAD]", "[MASK]"], unk_token="[UNK]")
 
 
 tokenizer.train_from_iterator(batch_iterator(), trainer=trainer, length=len(dataset))
