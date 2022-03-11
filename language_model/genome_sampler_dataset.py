@@ -18,10 +18,11 @@ class GenomeSamplerDataset(IterableDataset):
 
     def __iter__(self):
         print("Loading fasta.")
-        contigs = list(SeqIO.parse(self.fasta_path, "fasta"))
+        contigs = [contig for contig in SeqIO.parse(self.fasta_path, "fasta") if len(contig) > self.window_size]
         print("Done.")
         contig_sizes = np.array([len(contig) for contig in contigs])
         contig_probs = contig_sizes / contig_sizes.sum()
+        print(contig_sizes)
         n_contigs = len(contigs)
 
         print("Loading tokenizer.")
