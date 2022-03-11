@@ -21,15 +21,16 @@ print(tracks)
 REGION_SIZE = 200
 FLANK_SIZE = 400
 TOTAL_SIZE = REGION_SIZE + 2 * FLANK_SIZE
-genome_name = "BSgenome.Athaliana.TAIR.TAIR10FILT.masked"
 
 splits = ["train", "val", "test"]
 
 rule all:
     input:
+        "windows/val/1000/200/seqs.txt",
+        "tair10.train.contigs.fa",
         #"intersection.seq.bed",
-        "plots/positive_proportion.pdf",
-        expand("datasets/{split}.parquet", split=splits),
+        #"plots/positive_proportion.pdf",
+        #expand("datasets/{split}.parquet", split=splits),
         #"pos_regions/intersection.bed",
         #expand("pos_regions/{split}/intersection.bed", split=splits),
         #"all.bed",
@@ -162,17 +163,42 @@ rule bedtools_intersect_and_slop:
     shell:
         """bedtools map -a {input[0]} -b {input[1]} -f 0.5 -o distinct -c 4 | bedtools slop -i stdin -g {input[2]} -b {FLANK_SIZE} | awk '$3-$2 == {TOTAL_SIZE}' > {output}"""
 
+
+rule download_reference:
+    output:
+        "tair10.raw.fa",
+    shell:
+        "wget https://www.arabidopsis.org/download_files/Genes/TAIR10_genome_release/TAIR10_chromosome_files/TAIR10_chr_all.fas -O {output}"
+
+
+rule clean_fasta:
+    input:
+        "tair10.raw.fa",
+    output:
+        "tair10.fa",
+    run:
+        records = []
+        with open(input[0]) as input_handle:
+            for record in SeqIO.parse(input_handle, "fasta"):
+                print(record.id)
+                if record.id in ["M", "chloroplast"]: continue
+                record.id = "Chr" + record.id
+                print(record.id)
+                records.append(record)
+
+        with open(output[0], "w") as output_handle:
+            SeqIO.write(records, output_handle, "fasta")
+
+
 rule add_seq:
     input:
         "intersection.bed",
-        "reference/tair10.fa",
+        "tair10.fa",
     output:
         "intersection.seq.bed",
     shell:
         "bedtools getfasta -fi {input[1]} -bed {input[0]} -tab -bedOut > {output}"
 
-
-# TODO: should shuffle the dataset row order before adding the reverse complements
 
 rule make_dataset:
     input:
@@ -248,57 +274,81 @@ rule plot_class_balance:
         plt.savefig(output[1], bbox_inches='tight')
 
 
-rule filter_chrom_sizes:
-    input:
-        config["chrom_sizes_path"],
-    output:
-        "chrom.sizes.lm.train",
-    shell:
-        "grep -v Chr5 {input} > {output}"
-
-
 rule make_windows_lm_raw:
     input:
-        #"chrom.sizes.lm.train",
-        config["chrom_sizes_path"],
+       "intervals/{split}.bed"
     output:
-        "windows/{window_size}/{step_size}/lm.train.raw.bed"
+        "windows/{split}/{window_size}/{step_size}/raw.bed"
     shell:
-        "bedtools makewindows -g {input} -w {wildcards.window_size} -s {wildcards.step_size} > {output}"
+        "bedtools makewindows -b {input} -w {wildcards.window_size} -s {wildcards.step_size} > {output}"
 
 
 rule make_windows_lm_pos:
     input:
-        "{anything}/lm.train.raw.bed"
+        "{anything}/raw.bed"
     output:
-        "{anything}/lm.train.pos.bed"
+        "{anything}/pos.bed"
     shell:
         """awk '{{print $0 "\t.\t.\t+"}}' {input} > {output}"""
 
 
 rule make_windows_lm_neg:
     input:
-        "{anything}/lm.train.raw.bed"
+        "{anything}/raw.bed"
     output:
-        "{anything}/lm.train.neg.bed"
+        "{anything}/neg.bed"
     shell:
         """awk '{{print $0 "\t.\t.\t-"}}' {input} > {output}"""
 
 
 rule make_windows_lm:
     input:
-        "{anything}/lm.train.pos.bed",
-        "{anything}/lm.train.neg.bed",
+        "{anything}/pos.bed",
+        "{anything}/neg.bed",
     output:
-        "{anything}/lm.train.bed",
+        "{anything}/all.bed",
     shell:
         "cat {input} > {output}"
 
 
 rule extract_seq_lm:
     input:
-        "{anything}/lm.train.bed",
+        "{anything}/all.bed",
+        "tair10.fa",
     output:
-        "{anything}/lm.train.seqs.txt",
+        "{anything}/seqs.txt",
     shell:
-        """bedtools getfasta -fi reference/tair10.fa -bed {input} -s | grep -v "[^ACTGactg]" > {output}"""
+        """bedtools getfasta -fi {input[1]} -bed {input[0]} -s | grep -v "[^ACTG]" > {output}"""
+
+
+rule split_into_contigs:
+    input:
+        "{anything}.fa",
+    output:
+        "{anything}.contigs.fa",
+    run:
+        sequence = '\n'.join([str(record.seq).strip() for record in SeqIO.parse(input[0], "fasta")])
+        out = open(output[0], 'w')
+        m = re.sub('[^ACGT]+','\n',sequence).split('\n')
+        m = [x for x in m if len(x) > 0]
+        for i in tqdm(range(len(m))):
+            out.write('>contig_'+str(i)+'\n')
+            out.write(m[i]+'\n')
+
+
+rule filter_fasta_train:
+    input:
+        "tair10.fa",
+        "intervals/train.bed",
+    output:
+        "tair10.train.fa",
+    run:
+        intervals = pd.read_csv(input[1], sep="\t", header=None, names=["chromosome", "start", "end"]).set_index("chromosome")
+
+        records = []
+        with open(input[0]) as input_handle:
+            for record in SeqIO.parse(input_handle, "fasta"):
+                records.append(record[intervals.loc[record.id, "start"]:intervals.loc[record.id, "end"]])
+
+        with open(output[0], "w") as output_handle:
+            SeqIO.write(records, output_handle, "fasta")
