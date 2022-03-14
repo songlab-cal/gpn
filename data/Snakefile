@@ -1,5 +1,7 @@
 from Bio.Seq import Seq
-from Bio import SeqIO
+from Bio.SeqRecord import SeqRecord
+from Bio import SeqIO, bgzf
+import gzip
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -24,10 +26,15 @@ TOTAL_SIZE = REGION_SIZE + 2 * FLANK_SIZE
 
 splits = ["train", "val", "test"]
 
+genomes = pd.read_csv("genome_list.tsv", header=None).values.ravel()
+print(genomes)
+
 rule all:
     input:
-        "windows/val/1000/200/seqs.txt",
-        "tair10.train.contigs.fa",
+        "genomes/all.contigs.fa.gz",
+        #"windows/val/1000/200/seqs.txt",
+        #"tair10.train.contigs.fa",
+        #expand("genomes/{genome}.contigs.fa.gz", genome=genomes),
         #"intersection.seq.bed",
         #"plots/positive_proportion.pdf",
         #expand("datasets/{split}.parquet", split=splits),
@@ -321,21 +328,6 @@ rule extract_seq_lm:
         """bedtools getfasta -fi {input[1]} -bed {input[0]} -s | grep -v "[^ACTG]" > {output}"""
 
 
-rule split_into_contigs:
-    input:
-        "{anything}.fa",
-    output:
-        "{anything}.contigs.fa",
-    run:
-        sequence = '\n'.join([str(record.seq).strip() for record in SeqIO.parse(input[0], "fasta")])
-        out = open(output[0], 'w')
-        m = re.sub('[^ACGT]+','\n',sequence).split('\n')
-        m = [x for x in m if len(x) > 0]
-        for i in tqdm(range(len(m))):
-            out.write('>contig_'+str(i)+'\n')
-            out.write(m[i]+'\n')
-
-
 rule filter_fasta_train:
     input:
         "tair10.fa",
@@ -352,3 +344,28 @@ rule filter_fasta_train:
 
         with open(output[0], "w") as output_handle:
             SeqIO.write(records, output_handle, "fasta")
+
+
+rule split_into_contigs:
+    input:
+        "{anything}.fa.gz",
+    output:
+        "{anything}.contigs.fa.gz",
+    run:
+        with gzip.open(input[0], "rt") as handle:
+            sequence = '\n'.join([str(record.seq).strip() for record in SeqIO.parse(handle, "fasta")])
+        m = re.sub('[^ACGTacgt]+', '\n', sequence).split('\n')
+
+        m = [x for x in m if len(x) > 0]
+        records = [SeqRecord(Seq(m[i]), id=f'contig_{i}', annotations={"molecule_type": "DNA"}) for i in range(len(m))]
+        with bgzf.BgzfWriter(output[0], "wb") as outgz:
+            SeqIO.write(sequences=records, handle=outgz, format="fasta")
+
+
+rule concat_genomes:
+    input:
+        expand("genomes/{genome}.contigs.fa.gz", genome=genomes),
+    output:
+        "genomes/all.contigs.fa.gz",
+    shell:
+        "cat {input} > {output}"
