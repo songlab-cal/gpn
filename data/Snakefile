@@ -32,8 +32,8 @@ print(genomes)
 rule all:
     input:
         "genomes/all.contigs.fa.gz",
-        #"windows/val/1000/200/seqs.txt",
-        #"tair10.train.contigs.fa",
+        "windows/val/1000/1000/seqs.txt",
+        "tair10.train.fa",
         #expand("genomes/{genome}.contigs.fa.gz", genome=genomes),
         #"intersection.seq.bed",
         #"plots/positive_proportion.pdf",
@@ -340,7 +340,8 @@ rule filter_fasta_train:
         records = []
         with open(input[0]) as input_handle:
             for record in SeqIO.parse(input_handle, "fasta"):
-                records.append(record[intervals.loc[record.id, "start"]:intervals.loc[record.id, "end"]])
+                if record.id in intervals.index.values:
+                    records.append(record[intervals.loc[record.id, "start"]:intervals.loc[record.id, "end"]])
 
         with open(output[0], "w") as output_handle:
             SeqIO.write(records, output_handle, "fasta")
