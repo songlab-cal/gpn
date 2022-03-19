@@ -50,6 +50,9 @@ from transformers.utils import check_min_version
 from transformers.utils.versions import require_version
 
 
+from genome_sampler_dataset import GenomeSamplerDataset
+
+
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
 check_min_version("4.18.0.dev0")
 
@@ -129,6 +132,12 @@ class DataTrainingArguments:
     dataset_config_name: Optional[str] = field(
         default=None, metadata={"help": "The configuration name of the dataset to use (via the datasets library)."}
     )
+    train_fasta_path: Optional[str] = field(
+        default=None, metadata={"help": "The path to the training fasta file."}
+    )
+    window_size: Optional[int] = field(
+        default=None, metadata={"help": "Genomic window size (base pairs)"}
+    )
     train_file: Optional[str] = field(default=None, metadata={"help": "The input training data file (a text file)."})
     validation_file: Optional[str] = field(
         default=None,
@@ -182,19 +191,6 @@ class DataTrainingArguments:
             "value if set."
         },
     )
-
-    def __post_init__(self):
-        if self.dataset_name is None and self.train_file is None and self.validation_file is None:
-            raise ValueError("Need either a dataset name or a training/validation file.")
-        else:
-            if self.train_file is not None:
-                extension = self.train_file.split(".")[-1]
-                if extension not in ["csv", "json", "txt"]:
-                    raise ValueError("`train_file` should be a csv, a json or a txt file.")
-            if self.validation_file is not None:
-                extension = self.validation_file.split(".")[-1]
-                if extension not in ["csv", "json", "txt"]:
-                    raise ValueError("`validation_file` should be a csv, a json or a txt file.")
 
 
 def main():
@@ -362,10 +358,7 @@ def main():
 
     # Preprocessing the datasets.
     # First we tokenize all the texts.
-    if training_args.do_train:
-        column_names = raw_datasets["train"].column_names
-    else:
-        column_names = raw_datasets["validation"].column_names
+    column_names = raw_datasets["validation"].column_names
     text_column_name = "text" if "text" in column_names else column_names[0]
 
     if data_args.max_seq_length is None:
@@ -463,11 +456,14 @@ def main():
             )
 
     if training_args.do_train:
-        if "train" not in tokenized_datasets:
-            raise ValueError("--do_train requires a train dataset")
-        train_dataset = tokenized_datasets["train"]
-        if data_args.max_train_samples is not None:
-            train_dataset = train_dataset.select(range(data_args.max_train_samples))
+        train_dataset = GenomeSamplerDataset(
+            fasta_path=data_args.train_fasta_path,
+            tokenizer_path=model_args.tokenizer_name,
+            window_size=data_args.window_size,
+            max_length=data_args.max_seq_length,
+            random_seed=training_args.seed,
+            min_contig_size=500,
+        )
 
     if training_args.do_eval:
         if "validation" not in tokenized_datasets:
@@ -494,6 +490,9 @@ def main():
             mask = labels != -100
             labels = labels[mask]
             preds = preds[mask]
+            #from collections import Counter
+            #print(Counter(labels))
+            #print(Counter(preds))
             return metric.compute(predictions=preds, references=labels)
 
     # Data collator
