@@ -5,8 +5,7 @@ python ./run_mlm.py \
     --validation_file ./val_seqs.txt \
     --window_size 1000 \
     --model_type bert \
-    --learning_rate 6e-4 \
-    --weight_decay 0.01 \
+    --learning_rate 5e-4 \
     --pad_to_max_length True \
     --save_strategy steps \
     --save_steps 5000 \
@@ -14,7 +13,6 @@ python ./run_mlm.py \
     --evaluation_strategy steps \
     --eval_steps 1000 \
     --seed 42 \
-    --fp16 \
     --dataloader_num_workers 4 \
     --preprocessing_num_workers 12 \
     --warmup_steps 10000 \
@@ -27,6 +25,10 @@ python ./run_mlm.py \
     --per_device_train_batch_size 120 \
     --per_device_eval_batch_size 120 \
     --gradient_accumulation_steps 8 \
+    --fp16 \
+    --weight_decay 0.01 \
+    --optim adamw_torch \
+    --adam_epsilon 1e-6 \
 
 
 #    --tokenizer_name ./tokenizer_unigram_251_v2/ \
