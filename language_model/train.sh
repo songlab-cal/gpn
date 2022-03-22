@@ -5,7 +5,7 @@ python ./run_mlm.py \
     --validation_file ./val_seqs.txt \
     --window_size 1000 \
     --model_type bert \
-    --learning_rate 5e-4 \
+    --learning_rate 1e-4 \
     --pad_to_max_length True \
     --save_strategy steps \
     --save_steps 5000 \
@@ -29,7 +29,6 @@ python ./run_mlm.py \
     --weight_decay 0.01 \
     --optim adamw_torch \
     --adam_epsilon 1e-6 \
-
 
 #    --tokenizer_name ./tokenizer_unigram_251_v2/ \
 #    --max_seq_length 280
