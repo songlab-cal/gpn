@@ -1,1 +1,3 @@
+- datasets
 # pip install git+https://github.com/huggingface/transformers
+# mamba install -c bioconda htslib

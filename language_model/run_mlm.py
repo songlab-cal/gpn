@@ -480,6 +480,7 @@ def main():
             return logits.argmax(dim=-1)
 
         metric = load_metric("accuracy")
+        #metric = load_metric("accuracy", cache_dir="/global/scratch/projects/fc_songlab/gbenegas/.hf_datasets_cache")
 
         def compute_metrics(eval_preds):
             preds, labels = eval_preds

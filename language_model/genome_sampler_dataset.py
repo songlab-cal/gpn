@@ -2,6 +2,7 @@ from Bio import SeqIO
 import gzip
 import numpy as np
 import pandas as pd
+import torch
 from torch.utils.data import DataLoader, IterableDataset, get_worker_info
 from transformers import AutoTokenizer
 
@@ -58,6 +59,8 @@ class GenomeSamplerDataset(IterableDataset):
             x = tokenizer(seq, padding="max_length", max_length=self.max_length, return_token_type_ids=False, return_tensors="pt", truncation=True)
             x["input_ids"] = x["input_ids"].flatten()
             x["attention_mask"] = x["attention_mask"].flatten()
+            x["global_attention_mask"] = torch.zeros_like(x["input_ids"])
+            x["global_attention_mask"][0] = 1
             yield x
 
 

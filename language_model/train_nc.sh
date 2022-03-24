@@ -4,7 +4,7 @@ python ./run_mlm.py \
     --do_eval \
     --validation_file ./val_seqs.txt \
     --window_size 1000 \
-    --model_type bert \
+    --model_type longformer \
     --learning_rate 1e-4 \
     --pad_to_max_length True \
     --save_strategy steps \
@@ -13,18 +13,18 @@ python ./run_mlm.py \
     --evaluation_strategy steps \
     --eval_steps 5000 \
     --seed 42 \
-    --dataloader_num_workers 24 \
+    --dataloader_num_workers 16 \
     --preprocessing_num_workers 12 \
     --warmup_steps 10000 \
     --logging_steps 5000 \
     --save_total_limit 20 \
-    --output_dir results \
-    --tokenizer_name ./tokenizer_unigram_8192_50000_v5/ \
-    --config_overrides vocab_size=8192 \
-    --max_seq_length 170 \
-    --per_device_train_batch_size 250 \
-    --per_device_eval_batch_size 250 \
-    --gradient_accumulation_steps 1 \
+    --output_dir results_nc \
+    --tokenizer_name ../data/tokenizer_bpe_9_10_v7/ \
+    --config_overrides vocab_size=9,max_position_embeddings=1030,attention_window=32,sep_token_id=1,pad_token_id=3,eos_token_id=1 \
+    --max_seq_length 1024 \
+    --per_device_train_batch_size 128 \
+    --per_device_eval_batch_size 128 \
+    --gradient_accumulation_steps 2 \
     --fp16 \
     --weight_decay 0.01 \
     --optim adamw_torch \
@@ -53,3 +53,6 @@ python ./run_mlm.py \
 
 #    --resume_from_checkpoint ./results/checkpoint-20000 \
 #    --ignore_data_skip
+
+#    --model_type big_bird \
+# --config_overrides vocab_size=9,num_random_blocks=1,block_size=16,attention_type=original_full \
