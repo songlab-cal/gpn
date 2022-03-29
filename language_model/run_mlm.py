@@ -50,6 +50,7 @@ from transformers.utils import check_min_version
 from transformers.utils.versions import require_version
 
 
+from data_collator_mask_span import DataCollatorForLanguageModelingSpan
 from genome_sampler_dataset import GenomeSamplerDataset
 
 
@@ -491,6 +492,8 @@ def main():
             mask = labels != -100
             labels = labels[mask]
             preds = preds[mask]
+            #print(labels.type(), preds.type())
+            #print(labels.dtype, preds.dtype)
             #from collections import Counter
             #print(Counter(labels))
             #print(Counter(preds))
@@ -499,7 +502,8 @@ def main():
     # Data collator
     # This one will take care of randomly masking the tokens.
     pad_to_multiple_of_8 = data_args.line_by_line and training_args.fp16 and not data_args.pad_to_max_length
-    data_collator = DataCollatorForLanguageModeling(
+    #data_collator = DataCollatorForLanguageModeling(
+    data_collator = DataCollatorForLanguageModelingSpan(
         tokenizer=tokenizer,
         mlm_probability=data_args.mlm_probability,
         pad_to_multiple_of=8 if pad_to_multiple_of_8 else None,
@@ -547,12 +551,14 @@ def main():
         metrics["eval_samples"] = min(max_eval_samples, len(eval_dataset))
         try:
             perplexity = math.exp(metrics["eval_loss"])
+            print("perplexity: ", perplexity)
         except OverflowError:
             perplexity = float("inf")
         metrics["perplexity"] = perplexity
 
         trainer.log_metrics("eval", metrics)
         trainer.save_metrics("eval", metrics)
+        print(metrics)
 
     kwargs = {"finetuned_from": model_args.model_name_or_path, "tasks": "fill-mask"}
     if data_args.dataset_name is not None:
