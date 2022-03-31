@@ -46,17 +46,24 @@ def main(hparams):
             model_args["reduce_lr_on_plateau_patience"] = 0
         elif model_args["module"] == "PlantBert":
             model_class = PlantBertModel
-            model_args["language_model_path"] = "../language_model/results/checkpoint-17440/"
-            model_args["batch_size"] = 116
-            model_args["accumulate_grad_batches"] = 256 // model_args["batch_size"]
-            model_args["num_workers"] = 4
+            #model_args["language_model_path"] = "../language_model/results/checkpoint-17440/"
+            #model_args["language_model_path"] = "../language_model/results/checkpoint-34000/"
+            #model_args["language_model_path"] = "../language_model/checkpoint-100000/"
+            #model_args["language_model_path"] = "../language_model/results_nc_first_pass/checkpoint-10000/"
+            model_args["language_model_path"] = "../language_model/nc_small_span_64/checkpoint-45000/"
+            model_args["max_length"] = 1024 # 1000 #1024
+            #model_args["batch_size"] = 116
+            #model_args["accumulate_grad_batches"] = 256 // model_args["batch_size"]
+            model_args["batch_size"] = 85
+            model_args["accumulate_grad_batches"] = 3
+            model_args["num_workers"] = 12
             n_epochs = 100
             data_module = PlantBertDataModule(
                 "../data/datasets/",
                 model_args["batch_size"],
                 model_args["language_model_path"],
                 model_args["num_workers"],
-                185,
+                model_args["max_length"],
             )
             data_module.prepare_data()
             model_args["lr"] = 5e-5

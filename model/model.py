@@ -276,9 +276,7 @@ class PlantBertModel(Module):
         self.register_buffer("pos_weight", torch.tensor(pos_weight, dtype=torch.float))
 
     def forward(self, x):
-        input_ids = x["input_ids"]
-        attention_mask = x["attention_mask"]
-        x = self.language_model(input_ids=input_ids, attention_mask=attention_mask)["last_hidden_state"]
+        x = self.language_model(**x)["last_hidden_state"]
         x = self.pooler(x)
         x = self.dropout(x)
         x = self.classifier(x)
