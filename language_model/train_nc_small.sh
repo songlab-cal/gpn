@@ -12,23 +12,27 @@ python ./run_mlm.py \
     --max_steps 100000 \
     --evaluation_strategy steps \
     --eval_steps 1000 \
-    --seed 42 \
+    --seed 43 \
     --dataloader_num_workers 8 \
     --preprocessing_num_workers 8 \
-    --warmup_steps 10000 \
+    --warmup_steps 1000 \
     --logging_steps 1000 \
     --save_total_limit 20 \
-    --output_dir results_nc_small_span \
+    --output_dir results_nc_large_span_64_experiments \
     --tokenizer_name ../data/tokenizer_bpe_9_10_v7/ \
-    --config_overrides vocab_size=9,max_position_embeddings=1024,attention_window=20,sep_token_id=1,pad_token_id=3,eos_token_id=1,hidden_size=256,num_hidden_layers=8,num_attention_heads=8,intermediate_size=1024 \
-    --max_seq_length 1000 \
-    --per_device_train_batch_size 256 \
-    --per_device_eval_batch_size 256 \
-    --gradient_accumulation_steps 2 \
+    --config_overrides vocab_size=9,max_position_embeddings=1030,attention_window=64,sep_token_id=1,pad_token_id=3,eos_token_id=1 \
+    --max_seq_length 1024 \
+    --per_device_train_batch_size 32 \
+    --per_device_eval_batch_size 32 \
+    --gradient_accumulation_steps 16 \
     --fp16 \
     --weight_decay 0.01 \
     --optim adamw_torch \
-    --adam_epsilon 1e-6 \
+    --adam_epsilon 1e-2 \
+    --resume_from_checkpoint ./results_nc_large_span_64_experiments/checkpoint-5000 \
+    --ignore_data_skip
+
+#    --config_overrides vocab_size=9,max_position_embeddings=1024,attention_window=20,sep_token_id=1,pad_token_id=3,eos_token_id=1,hidden_size=256,num_hidden_layers=8,num_attention_heads=8,intermediate_size=1024 \
 
 #    --tokenizer_name ./tokenizer_unigram_251_v2/ \
 #    --max_seq_length 280

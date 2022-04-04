@@ -1,11 +1,11 @@
 python ./run_mlm.py \
     --do_train \
-    --train_fasta_path ./all.contigs.fa.gz \
+    --train_fasta_path ../data/genomes/all.contigs.fa.gz \
     --do_eval \
-    --validation_file ./val_seqs.txt \
+    --validation_file ../data/windows/val/1000/100/seqs.txt \
     --window_size 1000 \
     --model_type bert \
-    --learning_rate 1e-4 \
+    --learning_rate 6e-4 \
     --pad_to_max_length True \
     --save_strategy steps \
     --save_steps 5000 \
@@ -13,23 +13,26 @@ python ./run_mlm.py \
     --evaluation_strategy steps \
     --eval_steps 5000 \
     --seed 42 \
-    --dataloader_num_workers 24 \
-    --preprocessing_num_workers 12 \
+    --dataloader_num_workers 8 \
+    --preprocessing_num_workers 8 \
     --warmup_steps 10000 \
     --logging_steps 5000 \
     --save_total_limit 20 \
     --output_dir results \
-    --tokenizer_name ./tokenizer_unigram_8192_50000_v5/ \
+    --tokenizer_name ../data/tokenizer_bpe_8192_v5/ \
     --config_overrides vocab_size=8192 \
-    --max_seq_length 170 \
-    --per_device_train_batch_size 250 \
-    --per_device_eval_batch_size 250 \
-    --gradient_accumulation_steps 1 \
+    --max_seq_length 200 \
+    --per_device_train_batch_size 170 \
+    --per_device_eval_batch_size 170 \
+    --gradient_accumulation_steps 3 \
     --fp16 \
     --weight_decay 0.01 \
     --optim adamw_torch \
-    --adam_epsilon 1e-6 \
+    --adam_epsilon 1e-4 \
 
+#    --tokenizer_name ../data/tokenizer_unigram_8192_50000_v5/ \
+#    --config_overrides vocab_size=8192 \
+#    --max_seq_length 170 \
 #    --tokenizer_name ./tokenizer_unigram_251_v2/ \
 #    --max_seq_length 280
 #    --per_device_train_batch_size 500 \

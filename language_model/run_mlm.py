@@ -50,7 +50,7 @@ from transformers.utils import check_min_version
 from transformers.utils.versions import require_version
 
 
-from data_collator_mask_span import DataCollatorForLanguageModelingSpan
+#from data_collator_mask_span import DataCollatorForLanguageModelingSpan
 from genome_sampler_dataset import GenomeSamplerDataset
 
 
@@ -502,8 +502,8 @@ def main():
     # Data collator
     # This one will take care of randomly masking the tokens.
     pad_to_multiple_of_8 = data_args.line_by_line and training_args.fp16 and not data_args.pad_to_max_length
-    #data_collator = DataCollatorForLanguageModeling(
-    data_collator = DataCollatorForLanguageModelingSpan(
+    data_collator = DataCollatorForLanguageModeling(
+    #data_collator = DataCollatorForLanguageModelingSpan(
         tokenizer=tokenizer,
         mlm_probability=data_args.mlm_probability,
         pad_to_multiple_of=8 if pad_to_multiple_of_8 else None,
