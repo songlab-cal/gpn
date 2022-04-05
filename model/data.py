@@ -180,8 +180,8 @@ class PlantBertDataset(Dataset):
         x = self.tokenizer(x, padding="max_length", max_length=self.max_length, return_token_type_ids=False, return_tensors="pt", truncation=True)
         x["input_ids"] = x["input_ids"].flatten()
         x["attention_mask"] = x["attention_mask"].flatten()
-        x["global_attention_mask"] = torch.zeros_like(x["input_ids"])
-        x["global_attention_mask"][0] = 1
+        #x["global_attention_mask"] = torch.zeros_like(x["input_ids"])
+        #x["global_attention_mask"][0] = 1
         y = row[self.features].values.astype(np.uint8)
         return x, y
 
