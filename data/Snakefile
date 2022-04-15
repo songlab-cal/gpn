@@ -370,3 +370,19 @@ rule concat_genomes:
         "genomes/all.contigs.fa.gz",
     shell:
         "cat {input} > {output}"
+
+
+rule download_vcf:
+    output:
+        "variants/all.vcf.gz",
+    shell:
+        "wget --no-check-certificate https://1001genomes.org/data/GMI-MPI/releases/v3.1/1001genomes_snp-short-indel_only_ACGTN.vcf.gz -O {output}"
+
+
+rule filter_vcf:
+    input:
+        "variants/all.vcf.gz",
+    output:
+        "variants/filt.bed.gz",
+    shell:
+        "vcftools --gzvcf {input} --counts --out tmp --min-alleles 2 --max-alleles 2 --remove-indels && mv tmp.frq.count variants/filt.bed && gzip variants/filt.bed"
