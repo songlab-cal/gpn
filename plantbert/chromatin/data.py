@@ -163,7 +163,7 @@ class DNABERTDataModule(DataModule):
 class PlantBertDataset(Dataset):
     def __init__(self, data_path, language_model_path, max_length):
         self.df = pd.read_parquet(data_path)
-        self.tokenizer = AutoTokenizer.from_pretrained(language_model_path)
+        self.tokenizer = AutoTokenizer.from_pretrained(language_model_path)  # this should be loaded later to avoid memory leak with num_workers>0
         self.max_length = max_length
         self.features = [col for col in self.df.columns if col not in ["chromosome", "start", "end", "strand", "seq"]]
 
