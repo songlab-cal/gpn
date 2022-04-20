@@ -8,15 +8,14 @@ python ./run_mlm.py \
     --learning_rate 6e-4 \
     --pad_to_max_length True \
     --save_strategy steps \
-    --save_steps 5000 \
-    --max_steps 100000 \
+    --save_steps 10000 \
+    --max_steps 200000 \
     --evaluation_strategy steps \
-    --eval_steps 5000 \
-    --seed 42 \
+    --eval_steps 10000 \
     --dataloader_num_workers 8 \
     --preprocessing_num_workers 8 \
     --warmup_steps 10000 \
-    --logging_steps 5000 \
+    --logging_steps 10000 \
     --save_total_limit 20 \
     --output_dir results \
     --tokenizer_name ../data/tokenizer_bpe_8192_v5/ \
@@ -29,6 +28,9 @@ python ./run_mlm.py \
     --weight_decay 0.01 \
     --optim adamw_torch \
     --adam_epsilon 1e-4 \
+    --seed 44 \
+    --resume_from_checkpoint ./results/checkpoint-100000 \
+    --ignore_data_skip
 
 #    --tokenizer_name ../data/tokenizer_unigram_8192_50000_v5/ \
 #    --config_overrides vocab_size=8192 \

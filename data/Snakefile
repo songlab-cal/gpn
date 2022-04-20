@@ -386,3 +386,102 @@ rule filter_vcf:
         "variants/filt.bed.gz",
     shell:
         "vcftools --gzvcf {input} --counts --out tmp --min-alleles 2 --max-alleles 2 --remove-indels && mv tmp.frq.count variants/filt.bed && gzip variants/filt.bed"
+
+
+rule download_gff:
+    output:
+        "tair10.gff"
+    shell:
+        "wget https://www.arabidopsis.org/download_files/Genes/TAIR10_genome_release/TAIR10_gff3/TAIR10_GFF3_genes.gff -O {output}"
+
+
+rule extract_TSS:
+    input:
+        "tair10.gff",
+    output:
+        "tss.bed",
+    run:
+        df = pd.read_csv(
+            input[0], sep="\t", header=None, comment="#",
+            names=['chromosome', 'source', 'feature', 'start', 'end', 'score', 'strand', 'frame', 'attribute']
+        )
+        print(df)
+        df = df[df.feature=="mRNA"]
+        df["transcript_id"] = df.attribute.str.extract(r'ID=([^;]*);')
+        print(df)
+        df = df.groupby("transcript_id").agg({"chromosome": "first", "start": "min", "end": "max", "strand": "first"}).reset_index()
+        print(df)
+        df.start = df.apply(lambda row: row.start if row.strand=="+" else row.end, axis=1)
+        df.end = df.start + 1
+        df["score"] = "."
+        df = df.sort_values(["chromosome", "start"])
+        df.to_csv(output[0], sep="\t", index=False, header=False, columns=["chromosome", "start", "end", "transcript_id", "score", "strand"])
+
+
+rule process_variants:
+    input:
+        "variants/filt.bed.gz",
+        "tair10.fa",
+    output:
+        "variants/filt.processed.bed.gz",
+        "variants/coordinates.bed",
+    run:
+        variants = pd.read_csv(input[0], sep="\t", header=0, names=["chromosome", "pos", "N_ALLELES", "AN", "ref_count", "alt_count"]).drop(columns="N_ALLELES")
+        print(variants)
+        variants.chromosome = "Chr" + variants.chromosome.astype(str)
+        variants.pos = variants.pos - 1  # vcf have 1-based coordinates by convention, while BioSeq and bedtools not
+        print(variants)
+        genome = SeqIO.to_dict(SeqIO.parse(input[1], "fasta"))
+
+        def find_ref_alt_AC(row):
+            ref = genome[row.chromosome][row.pos]
+            assert(ref == row.ref_count[0])
+            alt, AC = row.alt_count.split(":")
+            AC = int(AC)
+            return ref, alt, AC
+
+        variants["ref"], variants["alt"], variants["AC"] = zip(*variants.apply(find_ref_alt_AC, axis=1))
+        print(variants)
+        variants.to_csv(output[0], sep="\t", index=False, columns=["chromosome", "pos", "ref", "alt", "AC", "AN"])
+        variants["start"] = variants.pos
+        variants["end"] = variants.start + 1
+        variants.to_csv(output[1], sep="\t", index=False, header=False, columns=["chromosome", "start", "end"])
+
+
+rule find_dist_to_TSS:
+    input:
+        "variants/coordinates.bed",
+        "tss.bed",
+    output:
+        "dist_to_tss.txt",
+    shell:
+        "bedtools closest -a {input[0]} -b {input[1]} -D b -t first | cut -f 7,10 > {output}"
+
+
+rule add_info_variants:
+    input:
+        "variants/filt.processed.bed.gz",
+        "dist_to_tss.txt",
+    output:
+        "variants/all.parquet",
+    run:
+        variants = pd.read_csv(input[0], sep="\t")
+        print(variants)
+        dist_to_tss = pd.read_csv(input[1], sep="\t", header=None, names=["closest_TSS", "dist_to_TSS"])
+        print(dist_to_tss)
+        variants = pd.concat([variants, dist_to_tss], axis=1)
+        print(variants)
+        variants.to_parquet(output[0], index=False)
+
+
+rule filter_variants:
+    input:
+        "variants/all.parquet",
+    output:
+        "variants/filt.parquet",
+    run:
+        df = pd.read_parquet(input[0])
+        print(df)
+        df = df[(df.chromosome=="Chr5") & (df.dist_to_TSS.abs() <= 1000)]
+        print(df)
+        df.to_parquet(output[0], index=False)
