@@ -5,17 +5,8 @@ import pandas as pd
 import torch
 from transformers import AutoTokenizer, Trainer, TrainingArguments
 
-from plantbert.chromatin.model import PlantBertModel
-
-
-variants_path = "../../data/variants/filt.parquet"
-genome_path = "../../data/tair10.fa"
-tokenizer_path = "../mlm/results/checkpoint-200000/"
-max_length = 200
-window_size = 1000
-model_ckpt = "version_6/checkpoints/epoch=9-step=33449.ckpt"
-output_path = "vep.parquet"
-output_dir = "results_vep"  # not really used but necessary for trainer
+from plantbert.chromatin.data import encode_dna_seq, seq2kmer
+from plantbert.chromatin.model import PlantBertModel, DeepSEAModel, DNABERTModel
 
 
 # TODO: should load both genome and tokenizer later, to avoid memory leak with num_workers>0
@@ -35,7 +26,7 @@ class VEPDataset(torch.utils.data.Dataset):
         self.window_size = window_size
 
         self.variants = pd.read_parquet(self.variants_path)
-        #self.variants = self.variants.head(10000)
+        #self.variants = self.variants.head(1000)
 
         df_ref_pos = self.variants.copy()
         df_ref_pos["start"] = df_ref_pos.pos - self.window_size // 2
@@ -55,7 +46,8 @@ class VEPDataset(torch.utils.data.Dataset):
         # can sort_values to accomplish that, I guess
         self.genome = SeqIO.to_dict(SeqIO.parse(self.genome_path, "fasta"))
 
-        self.tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_path)
+        if self.tokenizer_path is not None:
+            self.tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_path)
 
     def __len__(self):
         return len(self.df)
@@ -64,11 +56,11 @@ class VEPDataset(torch.utils.data.Dataset):
         row = self.df.iloc[idx]
         seq = self.genome[row.chromosome][row.start : row.end].seq
         assert len(seq) == self.window_size
-        assert seq[self.window_size//2] == row.ref
+        assert seq[self.window_size // 2] == row.ref
 
         if row.status == "alt":
             seq_list = list(str(seq))
-            seq_list[self.window_size//2] = row.alt
+            seq_list[self.window_size // 2] = row.alt
             seq = Seq("".join(seq_list))
 
         if row.strand == "-":
@@ -76,8 +68,20 @@ class VEPDataset(torch.utils.data.Dataset):
         seq = str(seq)
 
         nucleotides = pd.unique(list(seq))
-        assert len(nucleotides) == 4 and "A" in nucleotides and "C" in nucleotides and "G" in nucleotides and "T" in nucleotides
+        assert (
+            len(nucleotides) == 4
+            and "A" in nucleotides
+            and "C" in nucleotides
+            and "G" in nucleotides
+            and "T" in nucleotides
+        )
 
+        x = self.tokenize_seq(seq)
+        return x
+
+
+class PlantBertVEPDataset(VEPDataset):
+    def tokenize_seq(self, seq):
         x = self.tokenizer(
             seq,
             padding="max_length",
@@ -91,7 +95,61 @@ class VEPDataset(torch.utils.data.Dataset):
         return x
 
 
-d = VEPDataset(
+class DeepSEAVEPDataset(VEPDataset):
+    def tokenize_seq(self, seq):
+        input_ids = torch.tensor(encode_dna_seq(seq).astype(int), dtype=torch.int64)
+        return {"input_ids": input_ids}
+
+
+class DNABERTVEPDataset(VEPDataset):
+    def tokenize_seq(self, seq):
+        x = seq2kmer(seq, 6)
+        x = self.tokenizer(
+            x,
+            padding="max_length",
+            max_length=1000,
+            return_token_type_ids=False,
+            return_tensors="pt",
+        )
+        x["input_ids"] = x["input_ids"].flatten()
+        x["attention_mask"] = x["attention_mask"].flatten()
+        return x
+
+
+model_type = "PlantBert"
+# model_type = "DNABERT"
+# model_type = "DeepSEA"
+
+
+variants_path = "../../data/variants/filt.parquet"
+genome_path = "../../data/tair10.fa"
+max_length = 200
+window_size = 1000
+output_path = f"vep_{model_type}.parquet"
+output_dir = f"results_vep_{model_type}"  # not really used but necessary for trainer
+
+
+if model_type == "DeepSEA":
+    data_class = DeepSEAVEPDataset
+    model_class = DeepSEAModel
+    model_ckpt = "DeepSEA/checkpoints/epoch=25-step=86631.ckpt"
+    tokenizer_path = None
+    per_device_eval_batch_size = 2048
+elif model_type =="DNABERT":
+    data_class = DNABERTVEPDataset
+    model_class = DNABERTModel
+    model_ckpt = "DNABERT/checkpoints/epoch=7-step=27079.ckpt"
+    tokenizer_path = "armheb/DNA_bert_6"
+    per_device_eval_batch_size = 128
+elif model_type =="PlantBert":
+    data_class = PlantBertVEPDataset
+    model_class = PlantBertModel
+    model_ckpt = "version_6/checkpoints/epoch=9-step=33449.ckpt"
+    tokenizer_path = "../mlm/results/checkpoint-200000/"
+    per_device_eval_batch_size = 512
+
+
+d = data_class(
     variants_path=variants_path,
     genome_path=genome_path,
     tokenizer_path=tokenizer_path,
@@ -99,33 +157,35 @@ d = VEPDataset(
     window_size=window_size,
 )
 
-model = PlantBertModel.load_from_checkpoint(model_ckpt, language_model_path=tokenizer_path)
+if model_type == "PlantBert":
+    model = model_class.load_from_checkpoint(
+        model_ckpt, language_model_path=tokenizer_path
+    )
+else:
+    model = model_class.load_from_checkpoint(model_ckpt,)
 
 training_args = TrainingArguments(
-    output_dir=output_dir,
-    per_device_eval_batch_size=512,
-    dataloader_num_workers=0,
+    output_dir=output_dir, per_device_eval_batch_size=per_device_eval_batch_size, dataloader_num_workers=0,
 )
 
-trainer = Trainer(
-    model=model,
-    args=training_args,
-)
+trainer = Trainer(model=model, args=training_args,)
 
 pred = trainer.predict(test_dataset=d).predictions
 print(pred.shape)
 
 n_variants = len(d.variants)
-pred_ref_pos = pred[0*n_variants:1*n_variants]
-pred_ref_neg = pred[1*n_variants:2*n_variants]
-pred_alt_pos = pred[2*n_variants:3*n_variants]
-pred_alt_neg = pred[3*n_variants:4*n_variants]
+pred_ref_pos = pred[0 * n_variants : 1 * n_variants]
+pred_ref_neg = pred[1 * n_variants : 2 * n_variants]
+pred_alt_pos = pred[2 * n_variants : 3 * n_variants]
+pred_alt_neg = pred[3 * n_variants : 4 * n_variants]
 
 pred_ref = np.stack((pred_ref_pos, pred_ref_neg)).mean(axis=0)
 pred_alt = np.stack((pred_alt_pos, pred_alt_neg)).mean(axis=0)
-delta_pred = pred_alt - pred_ref
+#delta_pred = pred_alt - pred_ref
 
 variants = d.variants
-variants.loc[:, model.feature_names] = delta_pred
+#variants.loc[:, model.feature_names] = delta_pred
+variants.loc[:, [f"model_pred_ref_{f}" for f in model.feature_names]] = pred_ref
+variants.loc[:, [f"model_pred_alt_{f}" for f in model.feature_names]] = pred_alt
 print(variants)
 variants.to_parquet(output_path, index=False)

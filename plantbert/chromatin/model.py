@@ -135,8 +135,8 @@ class DeepSEAModel(Module):
 
         self.register_buffer("pos_weight", torch.tensor(pos_weight, dtype=torch.float))
 
-    def forward(self, x):
-        x = one_hot(x, num_classes=self.n_input).float()
+    def forward(self, input_ids=None):
+        x = one_hot(input_ids, num_classes=self.n_input).float()
         x = torch.transpose(x, 1, 2)
         x = self.Conv1(x)
         x = F.relu(x)
@@ -201,10 +201,7 @@ class DNABERTModel(Module):
 
         self.register_buffer("pos_weight", torch.tensor(pos_weight, dtype=torch.float))
 
-    def forward(self, x):
-        input_ids = x["input_ids"]
-        attention_mask = x["attention_mask"]
-
+    def forward(self, input_ids=None, attention_mask=None):
         input_ids = input_ids.unfold(1, 400, 300).reshape(-1, 400)
         attention_mask = attention_mask.unfold(1, 400, 300).reshape(-1, 400)
 
