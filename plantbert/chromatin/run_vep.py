@@ -2,6 +2,7 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 import numpy as np
 import pandas as pd
+import sys
 import torch
 from transformers import AutoTokenizer, Trainer, TrainingArguments
 
@@ -26,7 +27,7 @@ class VEPDataset(torch.utils.data.Dataset):
         self.window_size = window_size
 
         self.variants = pd.read_parquet(self.variants_path)
-        #self.variants = self.variants.head(1000)
+        self.variants = self.variants.head(100000)
 
         df_ref_pos = self.variants.copy()
         df_ref_pos["start"] = df_ref_pos.pos - self.window_size // 2
@@ -66,15 +67,6 @@ class VEPDataset(torch.utils.data.Dataset):
         if row.strand == "-":
             seq = seq.reverse_complement()
         seq = str(seq)
-
-        nucleotides = pd.unique(list(seq))
-        assert (
-            len(nucleotides) == 4
-            and "A" in nucleotides
-            and "C" in nucleotides
-            and "G" in nucleotides
-            and "T" in nucleotides
-        )
 
         x = self.tokenize_seq(seq)
         return x
@@ -116,9 +108,10 @@ class DNABERTVEPDataset(VEPDataset):
         return x
 
 
-model_type = "PlantBert"
-# model_type = "DNABERT"
-# model_type = "DeepSEA"
+#model_type = "PlantBert"
+#model_type = "DNABERT"
+#model_type = "DeepSEA"
+model_type = sys.argv[1]
 
 
 variants_path = "../../data/variants/filt.parquet"
@@ -140,7 +133,7 @@ elif model_type =="DNABERT":
     model_class = DNABERTModel
     model_ckpt = "DNABERT/checkpoints/epoch=7-step=27079.ckpt"
     tokenizer_path = "armheb/DNA_bert_6"
-    per_device_eval_batch_size = 128
+    per_device_eval_batch_size = 64
 elif model_type =="PlantBert":
     data_class = PlantBertVEPDataset
     model_class = PlantBertModel

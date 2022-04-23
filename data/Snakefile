@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import re
 from tqdm import tqdm
 tqdm.pandas(desc="my bar!")
 
@@ -477,11 +478,28 @@ rule add_info_variants:
 rule filter_variants:
     input:
         "variants/all.parquet",
+        "tair10.fa",
     output:
         "variants/filt.parquet",
     run:
         df = pd.read_parquet(input[0])
         print(df)
-        df = df[(df.chromosome=="Chr5") & (df.dist_to_TSS.abs() <= 1000)]
+        #df = df[(df.chromosome=="Chr5") & (df.dist_to_TSS.abs() <= 1000)]
+        df = df[(df.chromosome=="Chr5") & (df.AN >= 2000)]
         print(df)
+        df["start"] = df.pos - TOTAL_SIZE // 2
+        df["end"] = df.start + TOTAL_SIZE
+        df["strand"] = "+"
+
+        genome = SeqIO.to_dict(SeqIO.parse(input[1], "fasta"))
+
+        def check_ACGT(row):
+            seq = str(genome[row.chromosome][row.start : row.end].seq)
+            if len(seq) != TOTAL_SIZE: return False
+            if re.search("[^ACTG]", seq) is not None: return False
+            return True
+
+        df = df[df.progress_apply(check_ACGT, axis=1)]
+        print(df)
+        df.drop(columns=["start", "end", "strand"], inplace=True)
         df.to_parquet(output[0], index=False)
