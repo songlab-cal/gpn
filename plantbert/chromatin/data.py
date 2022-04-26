@@ -75,19 +75,16 @@ class DeepSEADataset(Dataset):
         print(data_path, self.df)
         self.features = [col for col in self.df.columns if col not in ["chromosome", "start", "end", "strand", "seq"]]
 
-        #n = len(self.df)
-        #idx = np.concatenate([np.arange(1000), np.arange(1000) + n//2])
-        #self.df = self.df.iloc[idx]
-
     def __len__(self):
         return len(self.df)
 
     def __getitem__(self, idx):
         row = self.df.iloc[idx]
         x = row.seq
-        x = encode_dna_seq(x).astype(int)
-        y = row[self.features].values.astype(np.uint8)
-        return x, y
+        d = {}
+        d["input_ids"] = encode_dna_seq(x).astype(int)
+        d["Y"] = row[self.features].values.astype(np.uint8)
+        return d
 
 
 class DeepSEADataModule(DataModule):
@@ -177,13 +174,17 @@ class PlantBertDataset(Dataset):
     def __getitem__(self, idx):
         row = self.df.iloc[idx]
         x = row.seq
+        #x = x[400:600]
+        #x = x[300:700]
         x = self.tokenizer(x, padding="max_length", max_length=self.max_length, return_token_type_ids=False, return_tensors="pt", truncation=True)
-        x["input_ids"] = x["input_ids"].flatten()
-        x["attention_mask"] = x["attention_mask"].flatten()
+        d = dict(
+            input_ids=x["input_ids"].flatten(),
+            attention_mask=x["attention_mask"].flatten(),
+            Y=torch.tensor(row[self.features].values.astype(np.uint8)),
+        )
         #x["global_attention_mask"] = torch.zeros_like(x["input_ids"])
         #x["global_attention_mask"][0] = 1
-        y = row[self.features].values.astype(np.uint8)
-        return x, y
+        return d
 
 
 class PlantBertDataModule(DataModule):

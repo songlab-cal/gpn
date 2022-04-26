@@ -1,0 +1,138 @@
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+from Bio import SeqIO, bgzf
+import gzip
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import re
+from tqdm import tqdm
+tqdm.pandas(desc="my bar!")
+
+
+genomes = pd.read_csv("genome_list.tsv", header=None).values.ravel()
+print(genomes)
+
+
+rule all:
+    input:
+        "genomes/all.contigs.fa.gz",
+        "windows/val/1000/100/seqs.txt",
+
+
+rule download_reference:
+    output:
+        "tair10.raw.fa",
+    shell:
+        "wget https://www.arabidopsis.org/download_files/Genes/TAIR10_genome_release/TAIR10_chromosome_files/TAIR10_chr_all.fas -O {output}"
+
+
+rule clean_reference:
+    input:
+        "tair10.raw.fa",
+    output:
+        "tair10.fa",
+    run:
+        records = []
+        with open(input[0]) as input_handle:
+            for record in SeqIO.parse(input_handle, "fasta"):
+                print(record.id)
+                if record.id in ["M", "chloroplast"]: continue
+                record.id = "Chr" + record.id
+                print(record.id)
+                records.append(record)
+
+        with open(output[0], "w") as output_handle:
+            SeqIO.write(records, output_handle, "fasta")
+
+
+rule make_windows_lm_raw:
+    input:
+       "intervals/{split}.bed"
+    output:
+        "windows/{split}/{window_size}/{step_size}/raw.bed"
+    shell:
+        "bedtools makewindows -b {input} -w {wildcards.window_size} -s {wildcards.step_size} > {output}"
+
+
+rule make_windows_lm_pos:
+    input:
+        "{anything}/raw.bed"
+    output:
+        "{anything}/pos.bed"
+    shell:
+        """awk '{{print $0 "\t.\t.\t+"}}' {input} > {output}"""
+
+
+rule make_windows_lm_neg:
+    input:
+        "{anything}/raw.bed"
+    output:
+        "{anything}/neg.bed"
+    shell:
+        """awk '{{print $0 "\t.\t.\t-"}}' {input} > {output}"""
+
+
+rule make_windows_lm:
+    input:
+        "{anything}/pos.bed",
+        "{anything}/neg.bed",
+    output:
+        "{anything}/all.bed",
+    shell:
+        "cat {input} > {output}"
+
+
+rule extract_seq_lm:
+    input:
+        "{anything}/all.bed",
+        "tair10.fa",
+    output:
+        "{anything}/seqs.txt",
+    shell:
+        """bedtools getfasta -fi {input[1]} -bed {input[0]} -s | grep -v "[^ACTG]" > {output}"""
+
+
+rule filter_fasta_train:
+    input:
+        "tair10.fa",
+        "intervals/train.bed",
+    output:
+        "tair10.train.fa",
+    run:
+        intervals = pd.read_csv(input[1], sep="\t", header=None, names=["chromosome", "start", "end"]).set_index("chromosome")
+
+        records = []
+        with open(input[0]) as input_handle:
+            for record in SeqIO.parse(input_handle, "fasta"):
+                if record.id in intervals.index.values:
+                    records.append(record[intervals.loc[record.id, "start"]:intervals.loc[record.id, "end"]])
+
+        with open(output[0], "w") as output_handle:
+            SeqIO.write(records, output_handle, "fasta")
+
+
+rule split_into_contigs:
+    input:
+        "{anything}.fa.gz",
+    output:
+        "{anything}.contigs.fa.gz",
+    run:
+        with gzip.open(input[0], "rt") as handle:
+            sequence = '\n'.join([str(record.seq).strip() for record in SeqIO.parse(handle, "fasta")])
+        m = re.sub('[^ACGTacgt]+', '\n', sequence).split('\n')
+
+        m = [x for x in m if len(x) > 0]
+        records = [SeqRecord(Seq(m[i]), id=f'contig_{i}', annotations={"molecule_type": "DNA"}) for i in range(len(m))]
+        with bgzf.BgzfWriter(output[0], "wb") as outgz:
+            SeqIO.write(sequences=records, handle=outgz, format="fasta")
+
+
+rule concat_genomes:
+    input:
+        expand("genomes/{genome}.contigs.fa.gz", genome=genomes),
+    output:
+        "genomes/all.contigs.fa.gz",
+    shell:
+        "cat {input} > {output}"

@@ -118,14 +118,15 @@ variants_path = "../../data/variants/filt.parquet"
 genome_path = "../../data/tair10.fa"
 max_length = 200
 window_size = 1000
-output_path = f"vep_{model_type}.parquet"
+output_path = f"vep_{model_type}_10epochs.parquet"
 output_dir = f"results_vep_{model_type}"  # not really used but necessary for trainer
 
 
 if model_type == "DeepSEA":
     data_class = DeepSEAVEPDataset
     model_class = DeepSEAModel
-    model_ckpt = "DeepSEA/checkpoints/epoch=25-step=86631.ckpt"
+    #model_ckpt = "DeepSEA/checkpoints/epoch=25-step=86631.ckpt"
+    model_ckpt = "lightning_logs/version_18/checkpoints/epoch=9-step=33319.ckpt"
     tokenizer_path = None
     per_device_eval_batch_size = 2048
 elif model_type =="DNABERT":

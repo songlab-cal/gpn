@@ -1,0 +1,21 @@
+name	url
+Aethionema_arabicum	https://genomevolution.org/coge/api/v1/genomes/23428/sequence
+Arabidopsis_halleri	http://ftp.ensemblgenomes.org/pub/plants/release-52/fasta/arabidopsis_halleri/dna/Arabidopsis_halleri.Ahal2.2.dna.toplevel.fa.gz
+Arabis_alpina	https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/900/128/785/GCA_900128785.1_MPIPZ.v5/GCA_900128785.1_MPIPZ.v5_genomic.fna.gz
+Brassica_napus	https://www.genoscope.cns.fr/brassicanapus/data/Brassica_napus_v4.1.chromosomes.fa.gz
+Brassica_oleracea	https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/695/525/GCF_000695525.1_BOL/GCF_000695525.1_BOL_genomic.fna.gz
+Brassica_rapa	https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/309/985/GCF_000309985.2_CAAS_Brap_v3.01/GCF_000309985.2_CAAS_Brap_v3.01_genomic.fna.gz
+Camelina_sativa	http://ftp.ensemblgenomes.org/pub/plants/release-52/fasta/camelina_sativa/dna/Camelina_sativa.Cs.dna.toplevel.fa.gz
+Raphanus_sativus  https://drive.google.com/file/d/1HkYXPHzplQ9pyN15x-ZqkWyRj1rv8zPf/view?usp=sharing.  need to download manually
+Sysymbrium_iriu	https://genomevolution.org/coge/api/v1/genomes/25878/sequence
+Tarenaya_hassleriana	https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/463/585/GCF_000463585.1_ASM46358v1/GCF_000463585.1_ASM46358v1_genomic.fna.gz
+Thellungiella_parvula	http://thellungiella.org/blast/db/Thellungiella_parvula_draft_genome_contig.fa
+
+
+JGI:
+  inflating: PhytozomeV11/Alyrata/assembly/Alyrata_107_v1.fa.gz
+  inflating: PhytozomeV11/Bstricta/assembly/Bstricta_278_v1.fa.gz
+  inflating: PhytozomeV11/Cgrandiflora/assembly/Cgrandiflora_266_v1.fa.gz
+  inflating: PhytozomeV11/Crubella/assembly/Crubella_183_v1.fa.gz
+  inflating: PhytozomeV11/Esalsugineum/assembly/Esalsugineum_173_v1.fa.gz
+  inflating: PhytozomeV11/Cpapaya/assembly/Cpapaya_113_r.Dec2008.fa.g

@@ -14,10 +14,7 @@ import matplotlib
 matplotlib.use('pdf')
 
 
-configfile: "config.yaml"
-
-
-tracks = pd.read_csv(config["tracks_path"], sep="\t", index_col=0)
+tracks = pd.read_csv("tracks.tsv", sep="\t", index_col=0)
 tracks = tracks[~tracks.index.str.startswith("DGF")]
 print(tracks)
 
@@ -27,27 +24,12 @@ TOTAL_SIZE = REGION_SIZE + 2 * FLANK_SIZE
 
 splits = ["train", "val", "test"]
 
-genomes = pd.read_csv("genome_list.tsv", header=None).values.ravel()
-print(genomes)
 
 rule all:
     input:
-        "genomes/all.contigs.fa.gz",
-        "windows/val/1000/1000/seqs.txt",
-        "tair10.train.fa",
-        #expand("genomes/{genome}.contigs.fa.gz", genome=genomes),
-        #"intersection.seq.bed",
-        #"plots/positive_proportion.pdf",
-        #expand("datasets/{split}.parquet", split=splits),
-        #"pos_regions/intersection.bed",
-        #expand("pos_regions/{split}/intersection.bed", split=splits),
-        #"all.bed",
-        #"plots/n_tracks_per_feature_type.pdf",
-        #expand("peaks/{track_name}.bed", track_name=tracks.index),
-        #expand("processed_peaks/{track_name}.bed", track_name=tracks.index),
-        #expand("pos_regions/{track_name}/all.bed", track_name=tracks.index),
-        #expand("neg_regions/{track_name}/{split}.bed", track_name=tracks.index, split=splits),
-        #"neg_regions/all/intersection.bed",
+        expand("datasets/{split}.parquet", split=splits),
+        "plots/positive_proportion.pdf",
+        "plots/n_tracks_per_feature_type.pdf",
 
 
 rule download_track:
@@ -132,7 +114,7 @@ rule plot_track_stats:
 rule process_peaks:
     input:
         "peaks/{track_name}.bed",
-        config["chrom_sizes_path"],
+        "chrom.sizes",
     output:
         "processed_peaks/{track_name}.bed",
     run:
@@ -154,7 +136,7 @@ rule merge_tracks:
 
 rule make_windows:
     input:
-        config["chrom_sizes_path"],
+        "chrom.sizes"
     output:
         "windows.bed"
     shell:
@@ -165,7 +147,7 @@ rule bedtools_intersect_and_slop:
     input:
         "windows.bed",
         "processed_peaks/all.bed",
-        config["chrom_sizes_path"],
+        "chrom.sizes",
     output:
         "intersection.bed",
     shell:
@@ -179,7 +161,7 @@ rule download_reference:
         "wget https://www.arabidopsis.org/download_files/Genes/TAIR10_genome_release/TAIR10_chromosome_files/TAIR10_chr_all.fas -O {output}"
 
 
-rule clean_fasta:
+rule clean_reference:
     input:
         "tair10.raw.fa",
     output:
@@ -280,226 +262,3 @@ rule plot_class_balance:
         g = sns.catplot(data=p, row="feature_type", y="log10_positive_proportion", kind="box", height=3, sharex=False, sharey=False, showfliers=False)
         g.set_titles(col_template="{col_name}", row_template="{row_name}")
         plt.savefig(output[1], bbox_inches='tight')
-
-
-rule make_windows_lm_raw:
-    input:
-       "intervals/{split}.bed"
-    output:
-        "windows/{split}/{window_size}/{step_size}/raw.bed"
-    shell:
-        "bedtools makewindows -b {input} -w {wildcards.window_size} -s {wildcards.step_size} > {output}"
-
-
-rule make_windows_lm_pos:
-    input:
-        "{anything}/raw.bed"
-    output:
-        "{anything}/pos.bed"
-    shell:
-        """awk '{{print $0 "\t.\t.\t+"}}' {input} > {output}"""
-
-
-rule make_windows_lm_neg:
-    input:
-        "{anything}/raw.bed"
-    output:
-        "{anything}/neg.bed"
-    shell:
-        """awk '{{print $0 "\t.\t.\t-"}}' {input} > {output}"""
-
-
-rule make_windows_lm:
-    input:
-        "{anything}/pos.bed",
-        "{anything}/neg.bed",
-    output:
-        "{anything}/all.bed",
-    shell:
-        "cat {input} > {output}"
-
-
-rule extract_seq_lm:
-    input:
-        "{anything}/all.bed",
-        "tair10.fa",
-    output:
-        "{anything}/seqs.txt",
-    shell:
-        """bedtools getfasta -fi {input[1]} -bed {input[0]} -s | grep -v "[^ACTG]" > {output}"""
-
-
-rule filter_fasta_train:
-    input:
-        "tair10.fa",
-        "intervals/train.bed",
-    output:
-        "tair10.train.fa",
-    run:
-        intervals = pd.read_csv(input[1], sep="\t", header=None, names=["chromosome", "start", "end"]).set_index("chromosome")
-
-        records = []
-        with open(input[0]) as input_handle:
-            for record in SeqIO.parse(input_handle, "fasta"):
-                if record.id in intervals.index.values:
-                    records.append(record[intervals.loc[record.id, "start"]:intervals.loc[record.id, "end"]])
-
-        with open(output[0], "w") as output_handle:
-            SeqIO.write(records, output_handle, "fasta")
-
-
-rule split_into_contigs:
-    input:
-        "{anything}.fa.gz",
-    output:
-        "{anything}.contigs.fa.gz",
-    run:
-        with gzip.open(input[0], "rt") as handle:
-            sequence = '\n'.join([str(record.seq).strip() for record in SeqIO.parse(handle, "fasta")])
-        m = re.sub('[^ACGTacgt]+', '\n', sequence).split('\n')
-
-        m = [x for x in m if len(x) > 0]
-        records = [SeqRecord(Seq(m[i]), id=f'contig_{i}', annotations={"molecule_type": "DNA"}) for i in range(len(m))]
-        with bgzf.BgzfWriter(output[0], "wb") as outgz:
-            SeqIO.write(sequences=records, handle=outgz, format="fasta")
-
-
-rule concat_genomes:
-    input:
-        expand("genomes/{genome}.contigs.fa.gz", genome=genomes),
-    output:
-        "genomes/all.contigs.fa.gz",
-    shell:
-        "cat {input} > {output}"
-
-
-rule download_vcf:
-    output:
-        "variants/all.vcf.gz",
-    shell:
-        "wget --no-check-certificate https://1001genomes.org/data/GMI-MPI/releases/v3.1/1001genomes_snp-short-indel_only_ACGTN.vcf.gz -O {output}"
-
-
-rule filter_vcf:
-    input:
-        "variants/all.vcf.gz",
-    output:
-        "variants/filt.bed.gz",
-    shell:
-        "vcftools --gzvcf {input} --counts --out tmp --min-alleles 2 --max-alleles 2 --remove-indels && mv tmp.frq.count variants/filt.bed && gzip variants/filt.bed"
-
-
-rule download_gff:
-    output:
-        "tair10.gff"
-    shell:
-        "wget https://www.arabidopsis.org/download_files/Genes/TAIR10_genome_release/TAIR10_gff3/TAIR10_GFF3_genes.gff -O {output}"
-
-
-rule extract_TSS:
-    input:
-        "tair10.gff",
-    output:
-        "tss.bed",
-    run:
-        df = pd.read_csv(
-            input[0], sep="\t", header=None, comment="#",
-            names=['chromosome', 'source', 'feature', 'start', 'end', 'score', 'strand', 'frame', 'attribute']
-        )
-        print(df)
-        df = df[df.feature=="mRNA"]
-        df["transcript_id"] = df.attribute.str.extract(r'ID=([^;]*);')
-        print(df)
-        df = df.groupby("transcript_id").agg({"chromosome": "first", "start": "min", "end": "max", "strand": "first"}).reset_index()
-        print(df)
-        df.start = df.apply(lambda row: row.start if row.strand=="+" else row.end, axis=1)
-        df.end = df.start + 1
-        df["score"] = "."
-        df = df.sort_values(["chromosome", "start"])
-        df.to_csv(output[0], sep="\t", index=False, header=False, columns=["chromosome", "start", "end", "transcript_id", "score", "strand"])
-
-
-rule process_variants:
-    input:
-        "variants/filt.bed.gz",
-        "tair10.fa",
-    output:
-        "variants/filt.processed.bed.gz",
-        "variants/coordinates.bed",
-    run:
-        variants = pd.read_csv(input[0], sep="\t", header=0, names=["chromosome", "pos", "N_ALLELES", "AN", "ref_count", "alt_count"]).drop(columns="N_ALLELES")
-        print(variants)
-        variants.chromosome = "Chr" + variants.chromosome.astype(str)
-        variants.pos = variants.pos - 1  # vcf have 1-based coordinates by convention, while BioSeq and bedtools not
-        print(variants)
-        genome = SeqIO.to_dict(SeqIO.parse(input[1], "fasta"))
-
-        def find_ref_alt_AC(row):
-            ref = genome[row.chromosome][row.pos]
-            assert(ref == row.ref_count[0])
-            alt, AC = row.alt_count.split(":")
-            AC = int(AC)
-            return ref, alt, AC
-
-        variants["ref"], variants["alt"], variants["AC"] = zip(*variants.apply(find_ref_alt_AC, axis=1))
-        print(variants)
-        variants.to_csv(output[0], sep="\t", index=False, columns=["chromosome", "pos", "ref", "alt", "AC", "AN"])
-        variants["start"] = variants.pos
-        variants["end"] = variants.start + 1
-        variants.to_csv(output[1], sep="\t", index=False, header=False, columns=["chromosome", "start", "end"])
-
-
-rule find_dist_to_TSS:
-    input:
-        "variants/coordinates.bed",
-        "tss.bed",
-    output:
-        "dist_to_tss.txt",
-    shell:
-        "bedtools closest -a {input[0]} -b {input[1]} -D b -t first | cut -f 7,10 > {output}"
-
-
-rule add_info_variants:
-    input:
-        "variants/filt.processed.bed.gz",
-        "dist_to_tss.txt",
-    output:
-        "variants/all.parquet",
-    run:
-        variants = pd.read_csv(input[0], sep="\t")
-        print(variants)
-        dist_to_tss = pd.read_csv(input[1], sep="\t", header=None, names=["closest_TSS", "dist_to_TSS"])
-        print(dist_to_tss)
-        variants = pd.concat([variants, dist_to_tss], axis=1)
-        print(variants)
-        variants.to_parquet(output[0], index=False)
-
-
-rule filter_variants:
-    input:
-        "variants/all.parquet",
-        "tair10.fa",
-    output:
-        "variants/filt.parquet",
-    run:
-        df = pd.read_parquet(input[0])
-        print(df)
-        #df = df[(df.chromosome=="Chr5") & (df.dist_to_TSS.abs() <= 1000)]
-        df = df[(df.chromosome=="Chr5") & (df.AN >= 2000)]
-        print(df)
-        df["start"] = df.pos - TOTAL_SIZE // 2
-        df["end"] = df.start + TOTAL_SIZE
-        df["strand"] = "+"
-
-        genome = SeqIO.to_dict(SeqIO.parse(input[1], "fasta"))
-
-        def check_ACGT(row):
-            seq = str(genome[row.chromosome][row.start : row.end].seq)
-            if len(seq) != TOTAL_SIZE: return False
-            if re.search("[^ACTG]", seq) is not None: return False
-            return True
-
-        df = df[df.progress_apply(check_ACGT, axis=1)]
-        print(df)
-        df.drop(columns=["start", "end", "strand"], inplace=True)
-        df.to_parquet(output[0], index=False)

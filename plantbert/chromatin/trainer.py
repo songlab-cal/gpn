@@ -8,7 +8,7 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 import torch
 
 from data import DeepSEADataModule, DNABERTDataModule, PlantBertDataModule
-from model import DeepSEAModel, DNABERTModel, PlantBertModel
+from model import DeepSEAModel, DNABERTModel, PlantBertModel, DSSModel
 
 
 pl.utilities.seed.seed_everything(seed=42)
@@ -24,9 +24,11 @@ def main(hparams):
         model_args = {}
         model_args["n_input"] = 4
         model_args["n_output"] = 109
+        precision = 16
         model_args["module"] = "PlantBert"
         #model_args["module"] = "DNABERT"
         #model_args["module"] = "DeepSEA"
+        #model_args["module"] = "DSS"
 
         if model_args["module"] == "DNABERT":
             model_class = DNABERTModel
@@ -36,7 +38,7 @@ def main(hparams):
             model_args["num_workers"] = 0
             n_epochs = 100
             data_module = DNABERTDataModule(
-                "../data/datasets/",
+                "../../data/datasets/",
                 model_args["batch_size"],
                 dnabert_language_model_name,
                 model_args["num_workers"],
@@ -48,23 +50,21 @@ def main(hparams):
             model_class = PlantBertModel
             #model_args["language_model_path"] = "../language_model/results/checkpoint-17440/"
             #model_args["language_model_path"] = "../language_model/results/checkpoint-34000/"
-            model_args["language_model_path"] = "../language_model/results/checkpoint-100000/"
+            model_args["language_model_path"] = "../mlm/results/checkpoint-200000/"
             #model_args["language_model_path"] = "../language_model/checkpoint-100000/"
             #model_args["language_model_path"] = "../language_model/results_nc_first_pass/checkpoint-10000/"
             #model_args["language_model_path"] = "../language_model/nc_small_span_50000/checkpoint-50000/"
             #model_args["language_model_path"] = "../language_model/nc_small_span_64/checkpoint-45000/"
             #model_args["max_length"] = 1000 #1024
             model_args["max_length"] = 200 # 170 #1024
-            #model_args["batch_size"] = 116
-            #model_args["accumulate_grad_batches"] = 256 // model_args["batch_size"]
-            model_args["batch_size"] = 85
-            model_args["accumulate_grad_batches"] = 3
-            #model_args["batch_size"] = 128
-            #model_args["accumulate_grad_batches"] = 2
-            model_args["num_workers"] = 12
+            #model_args["batch_size"] = 85
+            #model_args["accumulate_grad_batches"] = 3
+            model_args["batch_size"] = 256
+            model_args["accumulate_grad_batches"] = 1
+            model_args["num_workers"] = 8
             n_epochs = 100
             data_module = PlantBertDataModule(
-                "../data/datasets/",
+                "../../data/datasets/",
                 model_args["batch_size"],
                 model_args["language_model_path"],
                 model_args["num_workers"],
@@ -77,10 +77,25 @@ def main(hparams):
             model_class = DeepSEAModel
             model_args["batch_size"] = 256
             model_args["accumulate_grad_batches"] = 1
-            model_args["num_workers"] = 6
+            model_args["num_workers"] = 8
             n_epochs = 100
             data_module = DeepSEADataModule(
-                "../data/datasets/",
+                "../../data/datasets/",
+                model_args["batch_size"],
+                model_args["num_workers"],
+            )
+            data_module.prepare_data()
+            model_args["lr"] = 1e-3
+            model_args["reduce_lr_on_plateau_patience"] = 1
+        elif model_args["module"] == "DSS":
+            precision = 32
+            model_class = DSSModel
+            model_args["batch_size"] = 256
+            model_args["accumulate_grad_batches"] = 1
+            model_args["num_workers"] = 8
+            n_epochs = 100
+            data_module = DeepSEADataModule(
+                "../../data/datasets/",
                 model_args["batch_size"],
                 model_args["num_workers"],
             )
@@ -113,7 +128,7 @@ def main(hparams):
         trainer = pl.Trainer(
             max_epochs=n_epochs,
             gpus=hparams.gpus,
-            precision=16,
+            precision=precision,
             strategy="dp",
             accumulate_grad_batches=model_args["accumulate_grad_batches"],
             #val_check_interval=0.1,
