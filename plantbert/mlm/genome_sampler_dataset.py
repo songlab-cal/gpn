@@ -8,7 +8,16 @@ from transformers import AutoTokenizer
 
 
 class GenomeSamplerDataset(IterableDataset):
-    def __init__(self, fasta_path=None, tokenizer_path=None, window_size=None, max_length=None, random_seed=None, min_contig_size=None):
+    def __init__(
+        self,
+        fasta_path=None,
+        tokenizer_path=None,
+        window_size=None,
+        max_length=None,
+        random_seed=None,
+        min_contig_size=None,
+        use_fast_tokenizer=None,
+    ):
         super().__init__()
         self.fasta_path = fasta_path
         self.tokenizer_path = tokenizer_path
@@ -16,6 +25,7 @@ class GenomeSamplerDataset(IterableDataset):
         self.max_length = max_length
         self.random_seed = random_seed
         self.min_contig_size = min_contig_size
+        self.use_fast_tokenizer = use_fast_tokenizer
         # TODO: figure out if fasta and tokenizer should be loaded and instantiated in __init__
         # on in __iter__ (for good memory/compute performance with multiple workers)
         # also some data structures are better than others (e.g. np array better than python list)
@@ -23,9 +33,15 @@ class GenomeSamplerDataset(IterableDataset):
     def __iter__(self):
         print("Loading fasta.")
         with gzip.open(self.fasta_path, "rt") as handle:
-            contigs = [contig for contig in SeqIO.parse(handle, "fasta") if len(contig) > self.min_contig_size]
+            contigs = [
+                contig
+                for contig in SeqIO.parse(handle, "fasta")
+                if len(contig) > self.min_contig_size
+            ]
         print("Done.")
-        contig_sizes = np.array([max(len(contig)-self.window_size, 1) for contig in contigs])
+        contig_sizes = np.array(
+            [max(len(contig) - self.window_size, 1) for contig in contigs]
+        )
         contig_probs = contig_sizes / contig_sizes.sum()
         n_contigs = len(contigs)
         print("n_contigs: ", n_contigs)
@@ -33,7 +49,7 @@ class GenomeSamplerDataset(IterableDataset):
         print("contig_probs: ", pd.Series(contig_probs).describe())
 
         print("Loading tokenizer.")
-        tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_path)
+        tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_path, use_fast=self.use_fast_tokenizer)
         print("Done.")
 
         seed = self.random_seed
@@ -47,7 +63,7 @@ class GenomeSamplerDataset(IterableDataset):
             contig_index = rs.choice(n_contigs, p=contig_probs)
             contig = contigs[contig_index]
             if len(contig) > self.window_size:
-                start = rs.randint(len(contig)-self.window_size)
+                start = rs.randint(len(contig) - self.window_size)
             else:
                 start = 0
             end = start + self.window_size
@@ -56,18 +72,25 @@ class GenomeSamplerDataset(IterableDataset):
             if strand == "-":
                 seq = seq.reverse_complement()
             seq = str(seq)
-            x = tokenizer(seq, padding="max_length", max_length=self.max_length, return_token_type_ids=False, return_tensors="pt", truncation=True)
+            x = tokenizer(
+                seq,
+                padding="max_length",
+                max_length=self.max_length,
+                return_token_type_ids=False,
+                return_tensors="pt",
+                truncation=True,
+            )
             x["input_ids"] = x["input_ids"].flatten()
             x["attention_mask"] = x["attention_mask"].flatten()
-            #x["global_attention_mask"] = torch.zeros_like(x["input_ids"])
-            #x["global_attention_mask"][0] = 1
+            # x["global_attention_mask"] = torch.zeros_like(x["input_ids"])
+            # x["global_attention_mask"][0] = 1
             yield x
 
 
-#d = GenomeSamplerDataset(fasta_path="./all.contigs.fa.gz", tokenizer_path="./tokenizer_unigram_1019_v2/", window_size=1000, max_length=280, random_seed=42, min_contig_size=500)
-#dl = DataLoader(d, batch_size=4, num_workers=0)
-#i = 0
-#for x in dl:
+# d = GenomeSamplerDataset(fasta_path="./all.contigs.fa.gz", tokenizer_path="./tokenizer_unigram_1019_v2/", window_size=1000, max_length=280, random_seed=42, min_contig_size=500)
+# dl = DataLoader(d, batch_size=4, num_workers=0)
+# i = 0
+# for x in dl:
 #    print(x["attention_mask"].sum(dim=1))
 #    raise Exception("debug")
 #    i += 1

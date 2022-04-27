@@ -3,8 +3,12 @@ import sys
 from transformers import AutoTokenizer
 
 
-tokenizer = AutoTokenizer.from_pretrained(sys.argv[1])
+tokenizer = AutoTokenizer.from_pretrained(sys.argv[1], use_fast=False)
 print(len(tokenizer))
-dataset = pd.read_parquet(f"datasets/{sys.argv[2]}.parquet")
-dataset["tokenized_length"] = [len(s) for s in tokenizer(dataset.seq.values.tolist())["input_ids"]]
-print(dataset.tokenized_length.describe())
+with open(sys.argv[2]) as f:
+    seqs = f.read().splitlines()
+    seqs = seqs[:10000]
+    print(len(seqs))
+    print(len(seqs[0]))
+tokenized_length = pd.Series([len(s) for s in tokenizer(seqs)["input_ids"]])
+print(tokenized_length.describe())

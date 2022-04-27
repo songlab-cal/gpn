@@ -332,6 +332,7 @@ def main():
         "revision": model_args.model_revision,
         "use_auth_token": True if model_args.use_auth_token else None,
     }
+    tokenizer_kwargs["sp_model_kwargs"] = dict(enable_sampling=False)  # this tokenizer is only used for validation dataset
     if model_args.tokenizer_name:
         tokenizer = AutoTokenizer.from_pretrained(model_args.tokenizer_name, **tokenizer_kwargs)
     elif model_args.model_name_or_path:
@@ -464,6 +465,7 @@ def main():
             max_length=data_args.max_seq_length,
             random_seed=training_args.seed,
             min_contig_size=500,
+            use_fast_tokenizer=model_args.use_fast_tokenizer,
         )
 
     if training_args.do_eval:

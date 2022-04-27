@@ -12,7 +12,7 @@ spm.SentencePieceTrainer.train(
     input=train_file,
     model_prefix=output_path,
     vocab_size=vocab_size,
-    num_threads=40,
+    num_threads=32,
     seed_sentencepiece_size=50000,
     add_dummy_prefix=False,
     bos_piece="[CLS]",

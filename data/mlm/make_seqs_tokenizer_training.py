@@ -7,8 +7,8 @@ from tqdm import tqdm
 fasta_path = "./genomes/all.contigs.fa.gz"
 min_contig_size = 1001
 window_size = 1000
-n_seqs = 5000
-output_path = "./seqs_tokenizer_training_1k_5k.txt"
+n_seqs = 50000
+output_path = "./seqs_tokenizer_training_1k_10k_seed43.txt"
 
 
 print("Loading fasta.")
@@ -22,7 +22,7 @@ print(contig_sizes)
 n_contigs = len(contigs)
 
 
-rs = np.random.RandomState(seed=42)
+rs = np.random.RandomState(seed=43)
 
 with open(output_path, "a") as f:
     for _ in tqdm(range(n_seqs)):
@@ -31,7 +31,7 @@ with open(output_path, "a") as f:
         start = rs.randint(len(contig)-window_size)
         end = start + window_size
         seq = contig[start:end].seq
-        seq = seq.upper()
+        seq = seq.lower()
         strand = rs.choice(["+", "-"])
         if strand == "-":
             seq = seq.reverse_complement()
