@@ -1,0 +1,35 @@
+import anndata as ad
+import numpy as np
+import pandas as pd
+
+
+metadata = pd.read_csv("metadata.tsv", sep="\t", index_col=0)
+print(metadata.shape)
+
+
+rule make_h5ad:
+    input:
+        "input/GSE80744_ath1001_tx_norm_2016-04-21-UQ_gNorm_normCounts_k4.tsv.gz",
+    output:
+        "adata.h5ad",
+    run:
+        df = pd.read_csv(input[0], sep="\t", index_col=0).T
+        print(df)
+        df_indices = df.index.str[1:].astype(int).values
+        print(df_indices.shape)
+        mask = np.isin(df_indices, metadata.index.values)
+        df_indices = df_indices[mask]
+        df = df.iloc[mask]
+        print(df_indices.shape)
+        X = df.values
+        obs = metadata.loc[df_indices]
+        print(obs)
+        var = pd.DataFrame(index=df.columns)
+        adata = ad.AnnData(X=X, obs=obs, var=var)
+        print(adata)
+        adata.write(output[0], compression="gzip")
+
+
+
+# once I get the genomic windows of interest I can use bedtools to get the sequences from the respective fastas
+# so it's done in parallel
