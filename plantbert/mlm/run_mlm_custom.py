@@ -50,8 +50,9 @@ from transformers.utils import check_min_version
 from transformers.utils.versions import require_version
 
 
-#from data_collator_mask_span import DataCollatorForLanguageModelingSpan
+from data_collator_mask_span import DataCollatorForLanguageModelingSpan
 from genome_sampler_dataset import GenomeSamplerDataset
+from model import ConvNetForMaskedLM
 
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
@@ -344,20 +345,26 @@ def main():
             "You can do it from another script, save it, and load it from here, using --tokenizer_name."
         )
 
-    if model_args.model_name_or_path:
-        model = AutoModelForMaskedLM.from_pretrained(
-            model_args.model_name_or_path,
-            from_tf=bool(".ckpt" in model_args.model_name_or_path),
-            config=config,
-            cache_dir=model_args.cache_dir,
-            revision=model_args.model_revision,
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
-    else:
-        logger.info("Training new model from scratch")
-        model = AutoModelForMaskedLM.from_config(config)
+    #if model_args.model_name_or_path:
+    #    model = AutoModelForMaskedLM.from_pretrained(
+    #        model_args.model_name_or_path,
+    #        from_tf=bool(".ckpt" in model_args.model_name_or_path),
+    #        config=config,
+    #        cache_dir=model_args.cache_dir,
+    #        revision=model_args.model_revision,
+    #        use_auth_token=True if model_args.use_auth_token else None,
+    #    )
+    #else:
+    #    logger.info("Training new model from scratch")
+    #    model = AutoModelForMaskedLM.from_config(config)
 
-    model.resize_token_embeddings(len(tokenizer))
+    #model.resize_token_embeddings(len(tokenizer))
+
+    model = ConvNetForMaskedLM(
+        vocab_size=5,
+        n_layers=4,
+        hidden_size=256,
+    )
 
     # Preprocessing the datasets.
     # First we tokenize all the texts.
@@ -505,8 +512,8 @@ def main():
     # Data collator
     # This one will take care of randomly masking the tokens.
     pad_to_multiple_of_8 = data_args.line_by_line and training_args.fp16 and not data_args.pad_to_max_length
-    data_collator = DataCollatorForLanguageModeling(
-    #data_collator = DataCollatorForLanguageModelingSpan(
+    #data_collator = DataCollatorForLanguageModeling(
+    data_collator = DataCollatorForLanguageModelingSpan(
         tokenizer=tokenizer,
         mlm_probability=data_args.mlm_probability,
         pad_to_multiple_of=8 if pad_to_multiple_of_8 else None,

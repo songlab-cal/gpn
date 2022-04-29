@@ -26,6 +26,7 @@ class GenomeSamplerDataset(IterableDataset):
         self.random_seed = random_seed
         self.min_contig_size = min_contig_size
         self.use_fast_tokenizer = use_fast_tokenizer
+        print("self.use_fast_tokenizer: ", self.use_fast_tokenizer)
         # TODO: figure out if fasta and tokenizer should be loaded and instantiated in __init__
         # on in __iter__ (for good memory/compute performance with multiple workers)
         # also some data structures are better than others (e.g. np array better than python list)
