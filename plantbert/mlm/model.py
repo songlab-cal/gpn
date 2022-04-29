@@ -71,7 +71,7 @@ class ConvNetModel(nn.Module):
         self.vocab_size = vocab_size
         self.n_layers = n_layers
         self.hidden_size = hidden_size
-        self.kernel_size = 9
+        self.kernel_size = 5
 
         #self.embedding = nn.Embedding(self.vocab_size, self.hidden_size)
         self.embedding = OneHotEmbedding(self.hidden_size)
@@ -79,12 +79,12 @@ class ConvNetModel(nn.Module):
             ConvLayer(
                 hidden_size=self.hidden_size,
                 kernel_size=self.kernel_size,
-                dilation=min(i+1, 8),
+                dilation=min(2**(i//2), 64),
             )
             for i in range(self.n_layers)
         ])
 
-    def forward(self, input_ids=None):
+    def forward(self, input_ids=None, **kwargs):
         x = self.embedding(input_ids)
         x = self.encoder(x)
         return {"hidden_states": x}
@@ -119,8 +119,9 @@ class ConvNetForMaskedLM(nn.Module):
         self.model = ConvNetModel(**kwargs)
         self.cls = ConvNetOnlyMLMHead(vocab_size=self.vocab_size, hidden_size=self.hidden_size)
 
-    def forward(self, labels=None, **kwargs):
-        hidden_states = self.model(**kwargs)["hidden_states"]
+    def forward(self, input_ids=None, labels=None, **kwargs):
+        #print(input_ids.shape)
+        hidden_states = self.model(input_ids=input_ids, **kwargs)["hidden_states"]
         logits = self.cls(hidden_states)
         loss = None
         if labels is not None:

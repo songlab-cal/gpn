@@ -12,7 +12,7 @@ def batch_iterator():
     for i in range(0, len(dataset), batch_size):
         yield dataset[i: i + batch_size]
 
-special_tokens = ["[MASK]"]
+special_tokens = ["[MASK]", "[PAD]"]
 
 tokenizer = Tokenizer(models.BPE())
 tokenizer.normalizer = normalizers.Lowercase()
@@ -25,8 +25,8 @@ trainer = trainers.BpeTrainer(
 
 
 tokenizer.train_from_iterator(batch_iterator(), trainer=trainer, length=len(dataset))
-cls_token_id = tokenizer.token_to_id("[CLS]")
-sep_token_id = tokenizer.token_to_id("[SEP]")
+#cls_token_id = tokenizer.token_to_id("[CLS]")
+#sep_token_id = tokenizer.token_to_id("[SEP]")
 #tokenizer.post_processor = processors.TemplateProcessing(
 #    single="[CLS]:0 $A:0 [SEP]:0",
 #    pair="[CLS]:0 $A:0 [SEP]:0 $B:1 [SEP]:1",
@@ -38,7 +38,7 @@ sep_token_id = tokenizer.token_to_id("[SEP]")
 #tokenizer = BertTokenizerFast(tokenizer_object=tokenizer)
 #tokenizer = LongformerTokenizerFast(tokenizer_object=tokenizer)
 #tokenizer = RobertaTokenizerFast(tokenizer_object=tokenizer)
-tokenizer = PreTrainedTokenizerFast(tokenizer_object=tokenizer, mask_token="[MASK]")
+tokenizer = PreTrainedTokenizerFast(tokenizer_object=tokenizer, mask_token="[MASK]", pad_token="[PAD]")
 print(len(tokenizer))
 tokenizer.save_pretrained(f"./tokenizer_bare/")
 

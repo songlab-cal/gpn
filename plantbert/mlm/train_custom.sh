@@ -1,37 +1,39 @@
-WANDB_PROJECT=PlantBERT_MLM python ./run_mlm.py \
+WANDB_PROJECT=PlantBERT_MLM python ./run_mlm_custom.py \
     --report_to wandb \
-    --run_name vocab_4k \
+    --run_name ConvNet \
     --do_train \
-    --train_fasta_path ../../data/mlm/genomes/all.contigs.fa.gz \
     --do_eval \
+    --train_fasta_path ../../data/mlm/genomes/all.contigs.fa.gz \
     --validation_file ../../data/mlm/windows/val/1000/100/seqs.txt \
     --window_size 1000 \
-    --model_type bert \
     --learning_rate 6e-4 \
-    --pad_to_max_length True \
     --save_strategy steps \
-    --save_steps 20000 \
-    --max_steps 200000 \
+    --save_steps 10000 \
+    --max_steps 100000 \
     --evaluation_strategy steps \
     --eval_steps 5000 \
     --dataloader_num_workers 8 \
     --preprocessing_num_workers 8 \
-    --warmup_steps 20000 \
+    --warmup_steps 10000 \
     --logging_steps 5000 \
     --save_total_limit 10 \
     --output_dir results \
-    --tokenizer_name ../../data/mlm/tokenizer_spc_4096 \
-    --use_fast False \
-    --config_overrides vocab_size=4096,pad_token_id=3 \
-    --max_seq_length 205 \
-    --per_device_train_batch_size 170 \
-    --per_device_eval_batch_size 170 \
+    --tokenizer_name ../../data/mlm/tokenizer_bare \
+    --per_device_train_batch_size 682 \
+    --per_device_eval_batch_size 682 \
     --gradient_accumulation_steps 3 \
     --fp16 \
     --weight_decay 0.01 \
     --optim adamw_torch \
     --adam_epsilon 1e-4 \
     --seed 42 \
+    --prediction_loss_only True \
+
+#    --eval_accumulation_steps 50 \
+
+#    --train_fasta_path ../../data/mlm/genomes/Arabidopsis_thaliana_train.contigs.fa.gz \
+#--train_fasta_path ../../data/mlm/genomes/all.contigs.fa.gz \
+#    --overwrite_cache True \
 
 #    --tokenizer_name ../data/tokenizer_unigram_8192_50000_v5/ \
 #    --config_overrides vocab_size=8192 \

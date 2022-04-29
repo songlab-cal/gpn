@@ -50,6 +50,9 @@ from transformers.utils import check_min_version
 from transformers.utils.versions import require_version
 
 
+import torchinfo
+
+
 from data_collator_mask_span import DataCollatorForLanguageModelingSpan
 from genome_sampler_dataset import GenomeSamplerDataset
 from model import ConvNetForMaskedLM
@@ -310,22 +313,22 @@ def main():
     # Distributed training:
     # The .from_pretrained methods guarantee that only one local process can concurrently
     # download model & vocab.
-    config_kwargs = {
-        "cache_dir": model_args.cache_dir,
-        "revision": model_args.model_revision,
-        "use_auth_token": True if model_args.use_auth_token else None,
-    }
-    if model_args.config_name:
-        config = AutoConfig.from_pretrained(model_args.config_name, **config_kwargs)
-    elif model_args.model_name_or_path:
-        config = AutoConfig.from_pretrained(model_args.model_name_or_path, **config_kwargs)
-    else:
-        config = CONFIG_MAPPING[model_args.model_type]()
-        logger.warning("You are instantiating a new config instance from scratch.")
-        if model_args.config_overrides is not None:
-            logger.info(f"Overriding config: {model_args.config_overrides}")
-            config.update_from_string(model_args.config_overrides)
-            logger.info(f"New config: {config}")
+    #config_kwargs = {
+    #    "cache_dir": model_args.cache_dir,
+    #    "revision": model_args.model_revision,
+    #    "use_auth_token": True if model_args.use_auth_token else None,
+    #}
+    #if model_args.config_name:
+    #    config = AutoConfig.from_pretrained(model_args.config_name, **config_kwargs)
+    #elif model_args.model_name_or_path:
+    #    config = AutoConfig.from_pretrained(model_args.model_name_or_path, **config_kwargs)
+    #else:
+    #    config = CONFIG_MAPPING[model_args.model_type]()
+    #    logger.warning("You are instantiating a new config instance from scratch.")
+    #    if model_args.config_overrides is not None:
+    #        logger.info(f"Overriding config: {model_args.config_overrides}")
+    #        config.update_from_string(model_args.config_overrides)
+    #        logger.info(f"New config: {config}")
 
     tokenizer_kwargs = {
         "cache_dir": model_args.cache_dir,
@@ -333,7 +336,6 @@ def main():
         "revision": model_args.model_revision,
         "use_auth_token": True if model_args.use_auth_token else None,
     }
-    tokenizer_kwargs["sp_model_kwargs"] = dict(enable_sampling=False)  # this tokenizer is only used for validation dataset
     print(tokenizer_kwargs)
     if model_args.tokenizer_name:
         tokenizer = AutoTokenizer.from_pretrained(model_args.tokenizer_name, **tokenizer_kwargs)
@@ -361,10 +363,12 @@ def main():
     #model.resize_token_embeddings(len(tokenizer))
 
     model = ConvNetForMaskedLM(
-        vocab_size=5,
-        n_layers=4,
+        vocab_size=len(tokenizer),
+        n_layers=12,
         hidden_size=256,
     )
+    print(torchinfo.summary(model))
+
 
     # Preprocessing the datasets.
     # First we tokenize all the texts.
@@ -404,6 +408,8 @@ def main():
                 # We use this option because DataCollatorForLanguageModeling (see below) is more efficient when it
                 # receives the `special_tokens_mask`.
                 return_special_tokens_mask=True,
+                return_attention_mask=False,
+                return_token_type_ids=False,
             )
 
         with training_args.main_process_first(desc="dataset map tokenization"):
@@ -472,8 +478,9 @@ def main():
             window_size=data_args.window_size,
             max_length=data_args.max_seq_length,
             random_seed=training_args.seed,
-            min_contig_size=500,
-            use_fast_tokenizer=model_args.use_fast_tokenizer,
+            #min_contig_size=500,
+            min_contig_size=data_args.window_size,
+            #use_fast_tokenizer=model_args.use_fast_tokenizer,
         )
 
     if training_args.do_eval:
@@ -513,6 +520,10 @@ def main():
     # This one will take care of randomly masking the tokens.
     pad_to_multiple_of_8 = data_args.line_by_line and training_args.fp16 and not data_args.pad_to_max_length
     #data_collator = DataCollatorForLanguageModeling(
+    #    tokenizer=tokenizer,
+    #    mlm_probability=data_args.mlm_probability,
+    #    pad_to_multiple_of=8 if pad_to_multiple_of_8 else None,
+    #)
     data_collator = DataCollatorForLanguageModelingSpan(
         tokenizer=tokenizer,
         mlm_probability=data_args.mlm_probability,

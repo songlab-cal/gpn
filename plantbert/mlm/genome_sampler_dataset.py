@@ -16,7 +16,7 @@ class GenomeSamplerDataset(IterableDataset):
         max_length=None,
         random_seed=None,
         min_contig_size=None,
-        use_fast_tokenizer=None,
+        #use_fast_tokenizer=None,
     ):
         super().__init__()
         self.fasta_path = fasta_path
@@ -25,8 +25,8 @@ class GenomeSamplerDataset(IterableDataset):
         self.max_length = max_length
         self.random_seed = random_seed
         self.min_contig_size = min_contig_size
-        self.use_fast_tokenizer = use_fast_tokenizer
-        print("self.use_fast_tokenizer: ", self.use_fast_tokenizer)
+        #self.use_fast_tokenizer = use_fast_tokenizer
+        #print("self.use_fast_tokenizer: ", self.use_fast_tokenizer)
         # TODO: figure out if fasta and tokenizer should be loaded and instantiated in __init__
         # on in __iter__ (for good memory/compute performance with multiple workers)
         # also some data structures are better than others (e.g. np array better than python list)
@@ -37,7 +37,7 @@ class GenomeSamplerDataset(IterableDataset):
             contigs = [
                 contig
                 for contig in SeqIO.parse(handle, "fasta")
-                if len(contig) > self.min_contig_size
+                if len(contig) >= self.min_contig_size
             ]
         print("Done.")
         contig_sizes = np.array(
@@ -50,7 +50,8 @@ class GenomeSamplerDataset(IterableDataset):
         print("contig_probs: ", pd.Series(contig_probs).describe())
 
         print("Loading tokenizer.")
-        tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_path, use_fast=self.use_fast_tokenizer)
+        #tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_path, use_fast=self.use_fast_tokenizer)
+        tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_path)
         print("Done.")
 
         seed = self.random_seed
@@ -73,16 +74,25 @@ class GenomeSamplerDataset(IterableDataset):
             if strand == "-":
                 seq = seq.reverse_complement()
             seq = str(seq)
+            #x = tokenizer(
+            #    seq,
+            #    padding="max_length",
+            #    max_length=self.max_length,
+            #    return_token_type_ids=False,
+            #    return_tensors="pt",
+            #    truncation=True,
+            #)
+            #x["input_ids"] = x["input_ids"].flatten()
+            #x["attention_mask"] = x["attention_mask"].flatten()
+
             x = tokenizer(
                 seq,
-                padding="max_length",
-                max_length=self.max_length,
                 return_token_type_ids=False,
+                return_attention_mask=False,
                 return_tensors="pt",
-                truncation=True,
             )
             x["input_ids"] = x["input_ids"].flatten()
-            x["attention_mask"] = x["attention_mask"].flatten()
+
             # x["global_attention_mask"] = torch.zeros_like(x["input_ids"])
             # x["global_attention_mask"][0] = 1
             yield x

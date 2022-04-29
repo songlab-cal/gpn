@@ -20,6 +20,7 @@ class DataCollatorForLanguageModelingSpan(DataCollatorForLanguageModeling):
         Prepare masked tokens inputs/labels for masked language modeling: 80% MASK, 10% random, 10% original.
         """
         import torch
+        # print("data collator: ", inputs.shape)
 
         labels = inputs.clone()
         # We sample a few tokens in each sequence for MLM training (with probability `self.mlm_probability`)
