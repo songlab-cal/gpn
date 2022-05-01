@@ -87,7 +87,7 @@ class ConvNetModel(nn.Module):
     def forward(self, input_ids=None, **kwargs):
         x = self.embedding(input_ids)
         x = self.encoder(x)
-        return {"hidden_states": x}
+        return {"last_hidden_state": x}
 
 
 class ConvNetOnlyMLMHead(nn.Module):
@@ -104,8 +104,8 @@ class ConvNetOnlyMLMHead(nn.Module):
             nn.Linear(hidden_size, vocab_size),
         )
 
-    def forward(self, hidden_states):
-        return self.decoder(hidden_states)
+    def forward(self, hidden_state):
+        return self.decoder(hidden_state)
 
 
 class ConvNetForMaskedLM(nn.Module):
@@ -121,8 +121,8 @@ class ConvNetForMaskedLM(nn.Module):
 
     def forward(self, input_ids=None, labels=None, **kwargs):
         #print(input_ids.shape)
-        hidden_states = self.model(input_ids=input_ids, **kwargs)["hidden_states"]
-        logits = self.cls(hidden_states)
+        hidden_state = self.model(input_ids=input_ids, **kwargs)["last_hidden_state"]
+        logits = self.cls(hidden_state)
         loss = None
         if labels is not None:
             loss_fct = CrossEntropyLoss()
@@ -136,6 +136,6 @@ class ConvNetForMaskedLM(nn.Module):
 ##model = ConvNetModel(vocab_size=5, n_layers=2, hidden_size=64)
 #model = ConvNetForMaskedLM(vocab_size=5, n_layers=2, hidden_size=64)
 #x = torch.randint(low=0, high=5, size=(8, 100))
-##y = model(x)["hidden_states"]
+##y = model(x)["hidden_state"]
 #y = model(input_ids=x)["logits"]
 #print(x.shape, y.shape)

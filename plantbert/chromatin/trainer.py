@@ -5,16 +5,18 @@ import pandas as pd
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
+from pytorch_lightning.loggers import WandbLogger
 import torch
 
-from data import DeepSEADataModule, DNABERTDataModule, PlantBertDataModule
-from model import DeepSEAModel, DNABERTModel, PlantBertModel, DSSModel
+from data import DeepSEADataModule, DNABERTDataModule, PlantBertDataModule, ConvNetDataModule
+from model import DeepSEAModel, DNABERTModel, PlantBertModel, DSSModel, ConvNetModel
 
 
 pl.utilities.seed.seed_everything(seed=42)
 
 
 dnabert_language_model_name = "armheb/DNA_bert_6"
+data_path = "../../data/chromatin/datasets/"
 
 
 def main(hparams):
@@ -22,13 +24,13 @@ def main(hparams):
 
     def objective(trial):
         model_args = {}
-        model_args["n_input"] = 4
         model_args["n_output"] = 109
         precision = 16
-        model_args["module"] = "PlantBert"
+        #model_args["module"] = "PlantBert"
         #model_args["module"] = "DNABERT"
         #model_args["module"] = "DeepSEA"
         #model_args["module"] = "DSS"
+        model_args["module"] = "ConvNet"
 
         if model_args["module"] == "DNABERT":
             model_class = DNABERTModel
@@ -38,7 +40,7 @@ def main(hparams):
             model_args["num_workers"] = 0
             n_epochs = 100
             data_module = DNABERTDataModule(
-                "../../data/datasets/",
+                data_path,
                 model_args["batch_size"],
                 dnabert_language_model_name,
                 model_args["num_workers"],
@@ -64,7 +66,7 @@ def main(hparams):
             model_args["num_workers"] = 8
             n_epochs = 100
             data_module = PlantBertDataModule(
-                "../../data/datasets/",
+                data_path,
                 model_args["batch_size"],
                 model_args["language_model_path"],
                 model_args["num_workers"],
@@ -73,14 +75,36 @@ def main(hparams):
             data_module.prepare_data()
             model_args["lr"] = 5e-5
             model_args["reduce_lr_on_plateau_patience"] = 0
+        elif model_args["module"] == "ConvNet":
+            model_class = ConvNetModel
+            model_args["pretrained_model_path"] = "../mlm/results/checkpoint-50000/"
+            model_args["pretrained_model_args"] = dict(
+                vocab_size=6,
+                n_layers=12,
+                hidden_size=256,
+            )
+            model_args["batch_size"] = 256
+            model_args["accumulate_grad_batches"] = 1
+            model_args["num_workers"] = 8
+            n_epochs = 100
+            data_module = ConvNetDataModule(
+                data_path,
+                model_args["batch_size"],
+                model_args["pretrained_model_path"],
+                model_args["num_workers"],
+            )
+            data_module.prepare_data()
+            model_args["lr"] = 5e-5
+            model_args["reduce_lr_on_plateau_patience"] = 0
         elif model_args["module"] == "DeepSEA":
             model_class = DeepSEAModel
+            model_args["n_input"] = 4
             model_args["batch_size"] = 256
             model_args["accumulate_grad_batches"] = 1
             model_args["num_workers"] = 8
             n_epochs = 100
             data_module = DeepSEADataModule(
-                "../../data/datasets/",
+                data_path,
                 model_args["batch_size"],
                 model_args["num_workers"],
             )
@@ -95,7 +119,7 @@ def main(hparams):
             model_args["num_workers"] = 8
             n_epochs = 100
             data_module = DeepSEADataModule(
-                "../../data/datasets/",
+                data_path,
                 model_args["batch_size"],
                 model_args["num_workers"],
             )
@@ -122,8 +146,10 @@ def main(hparams):
         #lr_monitor = LearningRateMonitor(logging_interval='step')
         lr_monitor = LearningRateMonitor(logging_interval='epoch')
         early_stop_callback = EarlyStopping(
-            monitor="val_neg_median_auroc", min_delta=0.00, patience=2*(1+model_args["reduce_lr_on_plateau_patience"]), verbose=True, mode="min",
+            monitor="val/neg_median_auroc", min_delta=0.00, patience=2*(1+model_args["reduce_lr_on_plateau_patience"]), verbose=True, mode="min",
         )
+
+        wandb_logger = WandbLogger(project="PlantBERT_Chromatin", name="ConvNet")
 
         trainer = pl.Trainer(
             max_epochs=n_epochs,
@@ -133,10 +159,11 @@ def main(hparams):
             accumulate_grad_batches=model_args["accumulate_grad_batches"],
             #val_check_interval=0.1,
             callbacks=[lr_monitor, early_stop_callback],
+            logger=wandb_logger,
         )
         ckpt_path = None
         trainer.fit(model, data_module, ckpt_path=ckpt_path)
-        result = trainer.test(datamodule=data_module, verbose=True)[0]["test_neg_median_auroc"]
+        result = trainer.test(datamodule=data_module, verbose=True)[0]["test/neg_median_auroc"]
         return result
 
     study = optuna.create_study(
