@@ -365,9 +365,10 @@ def main():
     model = ConvNetForMaskedLM(
         vocab_size=len(tokenizer),
         n_layers=12,
-        hidden_size=256,
+        hidden_size=512,
     )
     print(torchinfo.summary(model))
+    #raise Exception("debug")
 
 
     # Preprocessing the datasets.

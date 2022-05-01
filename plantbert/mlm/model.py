@@ -79,7 +79,9 @@ class ConvNetModel(nn.Module):
             ConvLayer(
                 hidden_size=self.hidden_size,
                 kernel_size=self.kernel_size,
-                dilation=min(2**(i//2), 64),
+                #dilation=min(2**(i//2), 64),
+                dilation=min(2**i, 64),
+                groups=self.hidden_size,  # depthwise convolution
             )
             for i in range(self.n_layers)
         ])

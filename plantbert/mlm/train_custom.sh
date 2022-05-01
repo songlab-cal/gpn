@@ -1,6 +1,6 @@
 WANDB_PROJECT=PlantBERT_MLM python ./run_mlm_custom.py \
     --report_to wandb \
-    --run_name ConvNet \
+    --run_name ConvNet512 \
     --do_train \
     --do_eval \
     --train_fasta_path ../../data/mlm/genomes/all.contigs.fa.gz \
@@ -8,20 +8,20 @@ WANDB_PROJECT=PlantBERT_MLM python ./run_mlm_custom.py \
     --window_size 1000 \
     --learning_rate 6e-4 \
     --save_strategy steps \
-    --save_steps 10000 \
-    --max_steps 100000 \
+    --save_steps 20000 \
+    --max_steps 200000 \
     --evaluation_strategy steps \
     --eval_steps 5000 \
     --dataloader_num_workers 8 \
     --preprocessing_num_workers 8 \
-    --warmup_steps 10000 \
+    --warmup_steps 20000 \
     --logging_steps 5000 \
     --save_total_limit 10 \
     --output_dir results \
     --tokenizer_name ../../data/mlm/tokenizer_bare \
-    --per_device_train_batch_size 682 \
-    --per_device_eval_batch_size 682 \
-    --gradient_accumulation_steps 3 \
+    --per_device_train_batch_size 256 \
+    --per_device_eval_batch_size 256 \
+    --gradient_accumulation_steps 1 \
     --fp16 \
     --weight_decay 0.01 \
     --optim adamw_torch \
