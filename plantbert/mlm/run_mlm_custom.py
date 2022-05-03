@@ -472,6 +472,8 @@ def main():
                 desc=f"Grouping texts in chunks of {max_seq_length}",
             )
 
+    print("len val dataset: ", len(tokenized_datasets["validation"]))
+
     if training_args.do_train:
         train_dataset = GenomeSamplerDataset(
             fasta_path=data_args.train_fasta_path,

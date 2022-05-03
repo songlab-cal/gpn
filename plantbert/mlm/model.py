@@ -71,7 +71,7 @@ class ConvNetModel(nn.Module):
         self.vocab_size = vocab_size
         self.n_layers = n_layers
         self.hidden_size = hidden_size
-        self.kernel_size = 5
+        self.kernel_size = 7
 
         #self.embedding = nn.Embedding(self.vocab_size, self.hidden_size)
         self.embedding = OneHotEmbedding(self.hidden_size)
@@ -80,8 +80,9 @@ class ConvNetModel(nn.Module):
                 hidden_size=self.hidden_size,
                 kernel_size=self.kernel_size,
                 #dilation=min(2**(i//2), 64),
-                dilation=min(2**i, 64),
-                groups=self.hidden_size,  # depthwise convolution
+                dilation=min(2**(i//2), 16),
+                #dilation=min(2**i, 64),
+                #groups=self.hidden_size,  # depthwise convolution
             )
             for i in range(self.n_layers)
         ])
