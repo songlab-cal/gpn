@@ -3,7 +3,8 @@ import sys
 from transformers import AutoTokenizer
 
 
-tokenizer = AutoTokenizer.from_pretrained(sys.argv[1], use_fast=False)
+tokenizer = AutoTokenizer.from_pretrained(sys.argv[1], use_fast=True)
+#tokenizer._tokenizer.model.dropout = 0.5
 print(len(tokenizer))
 with open(sys.argv[2]) as f:
     seqs = f.read().splitlines()

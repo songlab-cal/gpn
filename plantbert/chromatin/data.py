@@ -173,11 +173,13 @@ class DNABERTDataModule(DataModule):
 
 
 class PlantBertDataset(Dataset):
-    def __init__(self, data_path, language_model_path, max_length):
+    def __init__(self, data_path, language_model_path, max_length, bpe_dropout=None):
         self.df = pd.read_parquet(data_path)
         self.tokenizer = AutoTokenizer.from_pretrained(
             language_model_path
         )  # this should be loaded later to avoid memory leak with num_workers>0
+        if bpe_dropout is not None:
+            self.tokenizer._tokenizer.model.dropout = bpe_dropout
         self.max_length = max_length
         self.features = [
             col
@@ -232,6 +234,7 @@ class PlantBertDataModule(DataModule):
             os.path.join(self.data_dir, "train.parquet"),
             self.language_model_path,
             self.max_length,
+            bpe_dropout=0.5,
         )
         print("Loading val dataset")
         self.val_dataset = PlantBertDataset(

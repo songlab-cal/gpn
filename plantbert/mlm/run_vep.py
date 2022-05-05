@@ -6,8 +6,8 @@ import torch
 from transformers import AutoTokenizer, Trainer, TrainingArguments, AutoModelForMaskedLM
 
 
-variants_path = "../../data/variants/filt.parquet"
-genome_path = "../../data/tair10.fa"
+variants_path = "../../data/vep/variants/filt.parquet"
+genome_path = "../../data/vep/tair10.fa"
 model_path = "./results/checkpoint-200000/"
 max_length = 200
 window_size = 1000
@@ -32,7 +32,7 @@ class VEPDataset(torch.utils.data.Dataset):
         self.window_size = window_size
 
         self.variants = pd.read_parquet(self.variants_path)
-        #self.variants = self.variants.head(10000)
+        self.variants = self.variants.head(10000)
 
         df_pos = self.variants.copy()
         df_pos["start"] = df_pos.pos - self.window_size // 2

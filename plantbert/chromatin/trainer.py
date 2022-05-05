@@ -26,11 +26,11 @@ def main(hparams):
         model_args = {}
         model_args["n_output"] = 109
         precision = 16
-        #model_args["module"] = "PlantBert"
+        model_args["module"] = "PlantBert"
         #model_args["module"] = "DNABERT"
         #model_args["module"] = "DeepSEA"
         #model_args["module"] = "DSS"
-        model_args["module"] = "ConvNet"
+        #model_args["module"] = "ConvNet"
 
         if model_args["module"] == "DNABERT":
             model_class = DNABERTModel
@@ -52,17 +52,17 @@ def main(hparams):
             model_class = PlantBertModel
             #model_args["language_model_path"] = "../language_model/results/checkpoint-17440/"
             #model_args["language_model_path"] = "../language_model/results/checkpoint-34000/"
-            model_args["language_model_path"] = "../mlm/results/checkpoint-200000/"
+            model_args["language_model_path"] = "../mlm/old_bpe/results/checkpoint-200000/"
             #model_args["language_model_path"] = "../language_model/checkpoint-100000/"
             #model_args["language_model_path"] = "../language_model/results_nc_first_pass/checkpoint-10000/"
             #model_args["language_model_path"] = "../language_model/nc_small_span_50000/checkpoint-50000/"
             #model_args["language_model_path"] = "../language_model/nc_small_span_64/checkpoint-45000/"
             #model_args["max_length"] = 1000 #1024
-            model_args["max_length"] = 200 # 170 #1024
+            model_args["max_length"] = 222#200 # 170 #1024
             #model_args["batch_size"] = 85
             #model_args["accumulate_grad_batches"] = 3
-            model_args["batch_size"] = 256
-            model_args["accumulate_grad_batches"] = 1
+            model_args["batch_size"] = 128
+            model_args["accumulate_grad_batches"] = 2
             model_args["num_workers"] = 8
             n_epochs = 100
             data_module = PlantBertDataModule(
@@ -149,7 +149,7 @@ def main(hparams):
             monitor="val/neg_median_auroc", min_delta=0.00, patience=2*(1+model_args["reduce_lr_on_plateau_patience"]), verbose=True, mode="min",
         )
 
-        wandb_logger = WandbLogger(project="PlantBERT_Chromatin", name="ConvNet")
+        wandb_logger = WandbLogger(project="PlantBERT_Chromatin", name="PlantBERT_dropout=0.5")
 
         trainer = pl.Trainer(
             max_epochs=n_epochs,
