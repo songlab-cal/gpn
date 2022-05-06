@@ -2,17 +2,26 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 import numpy as np
 import pandas as pd
+import sys
 import torch
 from transformers import AutoTokenizer, Trainer, TrainingArguments, AutoModelForMaskedLM
 
 
+model_name = sys.argv[1]
+
 variants_path = "../../data/vep/variants/filt.parquet"
 genome_path = "../../data/vep/tair10.fa"
-model_path = "./results/checkpoint-200000/"
-max_length = 200
-window_size = 1000
-output_path = "vep.parquet"
-output_dir = "results_vep"  # not really used but necessary for trainer
+output_path = f"vep_{model_name}.parquet"
+output_dir = f"results_vep_{model_name}"  # not really used but necessary for trainer
+
+if model_name == "window-128_tokenization-no_model-bert":
+    model_path = "./results_128_bert/checkpoint-200000/"
+    max_length = 128
+    window_size = 128
+elif model_name == "window-1000_tokenization-bpe8192_model-bert":
+    model_path = "./old_bpe/results/checkpoint-200000/"
+    max_length = 200
+    window_size = 1000
 
 
 # TODO: should load both genome and tokenizer later, to avoid memory leak with num_workers>0
@@ -32,7 +41,7 @@ class VEPDataset(torch.utils.data.Dataset):
         self.window_size = window_size
 
         self.variants = pd.read_parquet(self.variants_path)
-        self.variants = self.variants.head(10000)
+        self.variants = self.variants.head(100000)
 
         df_pos = self.variants.copy()
         df_pos["start"] = df_pos.pos - self.window_size // 2

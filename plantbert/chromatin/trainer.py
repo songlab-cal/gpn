@@ -62,7 +62,7 @@ def main(hparams):
             #model_args["batch_size"] = 85
             #model_args["accumulate_grad_batches"] = 3
             model_args["batch_size"] = 128
-            model_args["accumulate_grad_batches"] = 2
+            model_args["accumulate_grad_batches"] = 1#2
             model_args["num_workers"] = 8
             n_epochs = 100
             data_module = PlantBertDataModule(
@@ -149,7 +149,11 @@ def main(hparams):
             monitor="val/neg_median_auroc", min_delta=0.00, patience=2*(1+model_args["reduce_lr_on_plateau_patience"]), verbose=True, mode="min",
         )
 
-        wandb_logger = WandbLogger(project="PlantBERT_Chromatin", name="PlantBERT_dropout=0.5")
+        wandb_logger = WandbLogger(
+            project="PlantBERT_Chromatin",
+            name="PlantBERT_dropout=0.5",
+            log_model=False,
+        )
 
         trainer = pl.Trainer(
             max_epochs=n_epochs,
@@ -163,6 +167,14 @@ def main(hparams):
         )
         ckpt_path = None
         trainer.fit(model, data_module, ckpt_path=ckpt_path)
+
+        version_number = trainer.logger.version
+        epoch_number = trainer.current_epoch
+        global_step = trainer.global_step
+        ckpt_path = f"lightning_logs/version_{version_number}/epoch_{epoch_number}-step_{global_step}.ckpt"
+        print(ckpt_path)
+        trainer.save_checkpoint(ckpt_path)
+
         result = trainer.test(datamodule=data_module, verbose=True)[0]["test/neg_median_auroc"]
         return result
 
