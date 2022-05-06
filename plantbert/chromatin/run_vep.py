@@ -118,8 +118,8 @@ variants_path = "../../data/vep/variants/filt.parquet"
 genome_path = "../../data/vep/tair10.fa"
 max_length = 200
 window_size = 1000
-output_path = f"vep_{model_type}_maxpool.parquet"
-output_dir = f"results_vep_{model_type}"  # not really used but necessary for trainer
+output_path = f"vep_{model_type}_dropout.parquet"
+output_dir = f"results_vep_{model_type}_dropout"  # not really used but necessary for trainer
 
 
 if model_type == "DeepSEA":
@@ -139,8 +139,9 @@ elif model_type =="PlantBert":
     data_class = PlantBertVEPDataset
     model_class = PlantBertModel
     #model_ckpt = "version_6/checkpoints/epoch=9-step=33449.ckpt"
-    model_ckpt = "lightning_logs/version_33/checkpoints/epoch=7-step=26655.ckpt"
-    tokenizer_path = "../mlm/results/checkpoint-200000/"
+    #model_ckpt = "lightning_logs/version_33/checkpoints/epoch=7-step=26655.ckpt"
+    model_ckpt = "lightning_logs/version_2znci1qx/epoch_6-step_46648.ckpt"  # bpe dropout version
+    tokenizer_path = "../mlm/old_bpe/results/checkpoint-200000/"
     per_device_eval_batch_size = 512
 
 

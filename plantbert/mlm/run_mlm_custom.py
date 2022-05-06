@@ -55,8 +55,9 @@ import torchinfo
 
 from data_collator_mask_span import DataCollatorForLanguageModelingSpan
 from genome_sampler_dataset import GenomeSamplerDataset
-from model import ConvNetForMaskedLM
+#from model import ConvNetForMaskedLM
 
+from convnet import ConvNetForMaskedLM, ConvNetConfig
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
 check_min_version("4.18.0.dev0")
@@ -362,11 +363,17 @@ def main():
 
     #model.resize_token_embeddings(len(tokenizer))
 
-    model = ConvNetForMaskedLM(
+    config = ConvNetConfig(
         vocab_size=len(tokenizer),
         n_layers=12,
         hidden_size=512,
     )
+    model = ConvNetForMaskedLM(config)
+    #model = ConvNetForMaskedLM(
+    #    vocab_size=len(tokenizer),
+    #    n_layers=12,
+    #    hidden_size=512,
+    #)
     print(torchinfo.summary(model))
     #raise Exception("debug")
 

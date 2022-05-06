@@ -1,24 +1,24 @@
 WANDB_PROJECT=PlantBERT_MLM_128 python ./run_mlm_custom.py \
     --report_to wandb \
-    --run_name ConvNet \
+    --run_name ConvNetHF \
     --do_train \
     --do_eval \
     --train_fasta_path ../../data/mlm/genomes/all.contigs.fa.gz \
     --validation_file ../../data/mlm/windows/val/128/64/seqs.txt \
     --line_by_line True \
     --window_size 128 \
-    --learning_rate 6e-4 \
+    --learning_rate 1e-3 \
     --save_strategy steps \
-    --save_steps 20000 \
-    --max_steps 200000 \
+    --save_steps 10000 \
+    --max_steps 100000 \
     --evaluation_strategy steps \
     --eval_steps 10000 \
     --dataloader_num_workers 8 \
     --preprocessing_num_workers 8 \
-    --warmup_steps 20000 \
+    --warmup_steps 10000 \
     --logging_steps 10000 \
     --save_total_limit 10 \
-    --output_dir results_128_convnet \
+    --output_dir results_128_convnethf \
     --tokenizer_name ../../data/mlm/tokenizer_bare \
     --per_device_train_batch_size 512 \
     --per_device_eval_batch_size 512 \
@@ -27,10 +27,10 @@ WANDB_PROJECT=PlantBERT_MLM_128 python ./run_mlm_custom.py \
     --weight_decay 0.01 \
     --optim adamw_torch \
     --adam_epsilon 1e-4 \
-    --seed 43 \
+    --seed 42 \
     --prediction_loss_only True \
-    --resume_from_checkpoint ./results_128_convnet/checkpoint-60000 \
-    --ignore_data_skip \
+#    --resume_from_checkpoint ./results_128_convnet/checkpoint-60000 \
+#    --ignore_data_skip \
 #    --overwrite_cache True \
 
 #    --eval_accumulation_steps 50 \

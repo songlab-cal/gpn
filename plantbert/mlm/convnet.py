@@ -2,7 +2,49 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss
-from transformers.modeling_outputs import MaskedLMOutput
+from transformers import PretrainedConfig, PreTrainedModel
+from transformers.modeling_outputs import MaskedLMOutput, BaseModelOutput
+
+
+class ConvNetConfig(PretrainedConfig):
+    model_type = "ConvNet"
+
+    def __init__(
+        self,
+        vocab_size=6,
+        hidden_size=512,
+        n_layers=12,
+        initializer_range=0.02,
+        **kwargs
+    ):
+        super().__init__(**kwargs)
+        self.vocab_size = vocab_size
+        self.n_layers = n_layers
+        self.hidden_size = hidden_size
+        self.initializer_range = initializer_range
+
+
+class ConvNetPreTrainedModel(PreTrainedModel):
+    config_class = ConvNetConfig
+    base_model_prefix = "ConvNet"
+    #supports_gradient_checkpointing = True
+    _keys_to_ignore_on_load_missing = [r"position_ids"]
+
+    def _init_weights(self, module):
+        """Initialize the weights"""
+        if isinstance(module, nn.Linear):
+            # Slightly different from the TF version which uses truncated_normal for initialization
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                module.bias.data.zero_()
+        elif isinstance(module, nn.Embedding):
+            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx].zero_()
+        elif isinstance(module, nn.LayerNorm):
+            module.bias.data.zero_()
+            module.weight.data.fill_(1.0)
 
 
 class TransposeLayer(nn.Module):
@@ -60,17 +102,16 @@ class OneHotEmbedding(nn.Module):
         return F.one_hot(x, num_classes=self.hidden_size).float()
 
 
-class ConvNetModel(nn.Module):
+class ConvNetModel(ConvNetPreTrainedModel):
     def __init__(
         self,
-        vocab_size=None,
-        n_layers=None,
-        hidden_size=None,
+        config,
     ):
-        super().__init__()
-        self.vocab_size = vocab_size
-        self.n_layers = n_layers
-        self.hidden_size = hidden_size
+        super().__init__(config)
+        self.config = config
+        self.vocab_size = config.vocab_size
+        self.n_layers = config.n_layers
+        self.hidden_size = config.hidden_size
         self.kernel_size = 7
 
         #self.embedding = nn.Embedding(self.vocab_size, self.hidden_size)
@@ -90,7 +131,7 @@ class ConvNetModel(nn.Module):
     def forward(self, input_ids=None, **kwargs):
         x = self.embedding(input_ids)
         x = self.encoder(x)
-        return {"last_hidden_state": x}
+        return BaseModelOutput(last_hidden_state=x)
 
 
 class ConvNetOnlyMLMHead(nn.Module):
@@ -111,20 +152,21 @@ class ConvNetOnlyMLMHead(nn.Module):
         return self.decoder(hidden_state)
 
 
-class ConvNetForMaskedLM(nn.Module):
+class ConvNetForMaskedLM(ConvNetPreTrainedModel):
     def __init__(
         self,
-        **kwargs,
+        config,
     ):
-        super().__init__()
-        self.vocab_size = kwargs["vocab_size"]
-        self.hidden_size = kwargs["hidden_size"]
-        self.model = ConvNetModel(**kwargs)
+        super().__init__(config)
+        self.config = config
+        self.vocab_size = config.vocab_size
+        self.hidden_size = config.hidden_size
+        self.model = ConvNetModel(config)
         self.cls = ConvNetOnlyMLMHead(vocab_size=self.vocab_size, hidden_size=self.hidden_size)
 
     def forward(self, input_ids=None, labels=None, **kwargs):
         #print(input_ids.shape)
-        hidden_state = self.model(input_ids=input_ids, **kwargs)["last_hidden_state"]
+        hidden_state = self.model(input_ids=input_ids, **kwargs).last_hidden_state
         logits = self.cls(hidden_state)
         loss = None
         if labels is not None:
@@ -135,6 +177,12 @@ class ConvNetForMaskedLM(nn.Module):
             logits=logits,
         )
 
+
+
+
+    #def _set_gradient_checkpointing(self, module, value=False):
+        #if isinstance(module, ConvNetEncoder):
+        #    module.gradient_checkpointing = value
 
 ##model = ConvNetModel(vocab_size=5, n_layers=2, hidden_size=64)
 #model = ConvNetForMaskedLM(vocab_size=5, n_layers=2, hidden_size=64)
