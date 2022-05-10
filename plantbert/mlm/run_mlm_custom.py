@@ -365,8 +365,12 @@ def main():
 
     config = ConvNetConfig(
         vocab_size=len(tokenizer),
-        n_layers=12,
+        n_layers=30,
         hidden_size=512,
+        kernel_size=9,
+        dilation_double_every=1,
+        dilation_max=32,
+        dilation_cycle=5,
     )
     model = ConvNetForMaskedLM(config)
     #model = ConvNetForMaskedLM(

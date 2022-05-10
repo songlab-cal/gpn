@@ -11,7 +11,6 @@ from torch.optim import AdamW
 import torchmetrics
 
 from dss import DSS
-from plantbert.mlm.model import ConvNetForMaskedLM
 
 
 def calculate_auroc(outputs, feature_names):
@@ -254,7 +253,8 @@ class DNABERTModel(Module):
 class PlantBertModel(Module):
     def __init__(
         self,
-        language_model_path=None,
+        pretrained_model_path=None,
+        pretrained_model_class=AutoModel,
         n_input=None,
         n_output=None,
         lr=None,
@@ -266,19 +266,19 @@ class PlantBertModel(Module):
         super().__init__()
         self.save_hyperparameters()
 
-        self.language_model_path = language_model_path
+        self.pretrained_model_path = pretrained_model_path
+        self.pretrained_model_class = pretrained_model_class
         self.n_input = n_input
         self.n_output = n_output
         self.lr = lr
         self.reduce_lr_on_plateau_patience = reduce_lr_on_plateau_patience
         self.feature_names = feature_names
 
-        self.language_model = AutoModel.from_pretrained(language_model_path, add_pooling_layer=False)
-        #config = PretrainedConfig.get_config_dict(language_model_name)
-        #self.language_model = AutoModel.from_config(config)
-        self.hidden_size = PretrainedConfig.get_config_dict(language_model_path)[0]["hidden_size"]
+        self.pretrained_model = pretrained_model_class.from_pretrained(pretrained_model_path, add_pooling_layer=False)
+        #print(self.pretrained_model.hidden_size)
+        #raise Exception()
+        self.hidden_size = PretrainedConfig.get_config_dict(pretrained_model_path)[0]["hidden_size"]
         self.pooler = BertAvgPooler(self.hidden_size)
-        #self.pooler = BertMaxPooler(self.hidden_size)
         self.dropout = nn.Dropout(0.1)
         self.classifier = nn.Linear(self.hidden_size, n_output)
 
@@ -286,7 +286,7 @@ class PlantBertModel(Module):
 
     def forward(self, **kwargs):
         #print("input_ids.is_cuda: ", kwargs["input_ids"].is_cuda)
-        x = self.language_model(**kwargs)["last_hidden_state"]
+        x = self.pretrained_model(**kwargs)["last_hidden_state"]
         x = self.pooler(x)
         x = self.dropout(x)
         x = self.classifier(x)
@@ -390,60 +390,6 @@ class DSSModel(Module):
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
-        lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer,
-            patience=self.reduce_lr_on_plateau_patience,
-            factor=0.1,
-            threshold=0.0,
-            threshold_mode="abs",
-            verbose=True,
-        )
-        monitor = "val/neg_median_auroc"
-        return dict(optimizer=optimizer, lr_scheduler=lr_scheduler, monitor=monitor)
-
-
-class ConvNetModel(Module):
-    def __init__(
-        self,
-        pretrained_model_path=None,
-        pretrained_model_args=None,
-        n_output=None,
-        lr=None,
-        reduce_lr_on_plateau_patience=None,
-        feature_names=None,
-        pos_weight=None,
-        **kwargs,
-    ):
-        super().__init__()
-        self.save_hyperparameters()
-
-        self.pretrained_model_path = pretrained_model_path
-        self.n_input = pretrained_model_args["vocab_size"]
-        self.n_output = n_output
-        self.lr = lr
-        self.reduce_lr_on_plateau_patience = reduce_lr_on_plateau_patience
-        self.feature_names = feature_names
-
-        full_pretrained_model = ConvNetForMaskedLM(**pretrained_model_args)
-        full_pretrained_model.load_state_dict(torch.load(os.path.join(pretrained_model_path, "pytorch_model.bin")))
-        self.pretrained_model = full_pretrained_model.model
-
-        self.hidden_size = pretrained_model_args["hidden_size"]
-        self.pooler = BertAvgPooler(self.hidden_size)
-        self.dropout = nn.Dropout(0.1)
-        self.classifier = nn.Linear(self.hidden_size, n_output)
-
-        self.register_buffer("pos_weight", torch.tensor(pos_weight, dtype=torch.float))
-
-    def forward(self, **kwargs):
-        x = self.pretrained_model(**kwargs)["last_hidden_state"]
-        x = self.pooler(x)
-        x = self.dropout(x)
-        x = self.classifier(x)
-        return x
-
-    def configure_optimizers(self):
-        optimizer = AdamW(self.parameters(), lr=self.lr)
         lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
             patience=self.reduce_lr_on_plateau_patience,

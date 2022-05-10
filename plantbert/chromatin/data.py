@@ -234,7 +234,7 @@ class PlantBertDataModule(DataModule):
             os.path.join(self.data_dir, "train.parquet"),
             self.language_model_path,
             self.max_length,
-            bpe_dropout=0.5,
+            #bpe_dropout=0.5,
         )
         print("Loading val dataset")
         self.val_dataset = PlantBertDataset(
@@ -247,67 +247,5 @@ class PlantBertDataModule(DataModule):
             os.path.join(self.data_dir, "test.parquet"),
             self.language_model_path,
             self.max_length,
-        )
-        print(len(self.train_dataset), len(self.val_dataset), len(self.test_dataset))
-
-
-class ConvNetDataset(Dataset):
-    def __init__(self, data_path, language_model_path):
-        self.df = pd.read_parquet(data_path)
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            language_model_path
-        )  # this should be loaded later to avoid memory leak with num_workers>0
-        self.features = [
-            col
-            for col in self.df.columns
-            if col not in ["chromosome", "start", "end", "strand", "seq"]
-        ]
-
-    def __len__(self):
-        return len(self.df)
-
-    def __getitem__(self, idx):
-        row = self.df.iloc[idx]
-        x = row.seq
-        x = self.tokenizer(
-            x,
-            return_token_type_ids=False,
-            return_attention_mask=False,
-            return_tensors="pt",
-        )
-        d = dict(
-            input_ids=x["input_ids"].flatten(),
-            Y=torch.tensor(row[self.features].values.astype(np.uint8)),
-        )
-        # x["global_attention_mask"] = torch.zeros_like(x["input_ids"])
-        # x["global_attention_mask"][0] = 1
-        return d
-
-
-class ConvNetDataModule(DataModule):
-    def __init__(
-        self, data_dir, batch_size, language_model_path, num_workers,
-    ):
-        super().__init__()
-        self.data_dir = data_dir
-        self.batch_size = batch_size
-        self.language_model_path = language_model_path
-        self.num_workers = num_workers
-
-    def prepare_data(self):
-        print("Loading train dataset")
-        self.train_dataset = ConvNetDataset(
-            os.path.join(self.data_dir, "train.parquet"),
-            self.language_model_path,
-        )
-        print("Loading val dataset")
-        self.val_dataset = ConvNetDataset(
-            os.path.join(self.data_dir, "val.parquet"),
-            self.language_model_path,
-        )
-        print("Loading test dataset")
-        self.test_dataset = ConvNetDataset(
-            os.path.join(self.data_dir, "test.parquet"),
-            self.language_model_path,
         )
         print(len(self.train_dataset), len(self.val_dataset), len(self.test_dataset))

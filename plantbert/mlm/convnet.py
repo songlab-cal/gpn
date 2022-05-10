@@ -14,6 +14,10 @@ class ConvNetConfig(PretrainedConfig):
         vocab_size=6,
         hidden_size=512,
         n_layers=12,
+        kernel_size=5,
+        dilation_double_every=4,
+        dilation_max=32,
+        dilation_cycle=32,
         initializer_range=0.02,
         **kwargs
     ):
@@ -21,12 +25,16 @@ class ConvNetConfig(PretrainedConfig):
         self.vocab_size = vocab_size
         self.n_layers = n_layers
         self.hidden_size = hidden_size
+        self.kernel_size = kernel_size
+        self.dilation_double_every = dilation_double_every
+        self.dilation_max = dilation_max
+        self.dilation_cycle = dilation_cycle
         self.initializer_range = initializer_range
 
 
 class ConvNetPreTrainedModel(PreTrainedModel):
     config_class = ConvNetConfig
-    base_model_prefix = "ConvNet"
+    base_model_prefix = "model" #"ConvNet"
     #supports_gradient_checkpointing = True
     _keys_to_ignore_on_load_missing = [r"position_ids"]
 
@@ -102,31 +110,36 @@ class OneHotEmbedding(nn.Module):
         return F.one_hot(x, num_classes=self.hidden_size).float()
 
 
+def get_dilation_schedule(config):
+    return [
+        min(config.dilation_max, 2**((i%config.dilation_cycle)//config.dilation_double_every))
+        for i in range(config.n_layers)
+    ]
+
+
 class ConvNetModel(ConvNetPreTrainedModel):
     def __init__(
         self,
         config,
+        **kwargs,
     ):
         super().__init__(config)
         self.config = config
-        self.vocab_size = config.vocab_size
-        self.n_layers = config.n_layers
-        self.hidden_size = config.hidden_size
-        self.kernel_size = 7
 
         #self.embedding = nn.Embedding(self.vocab_size, self.hidden_size)
-        self.embedding = OneHotEmbedding(self.hidden_size)
+        self.embedding = OneHotEmbedding(config.hidden_size)
+        self.dilation_schedule = get_dilation_schedule(config)
+        print(self.dilation_schedule)
         self.encoder = nn.Sequential(*[
             ConvLayer(
-                hidden_size=self.hidden_size,
-                kernel_size=self.kernel_size,
-                #dilation=min(2**(i//2), 64),
-                dilation=min(2**(i//2), 16),
-                #dilation=min(2**i, 64),
+                hidden_size=config.hidden_size,
+                kernel_size=config.kernel_size,
+                dilation=self.dilation_schedule[i],
                 #groups=self.hidden_size,  # depthwise convolution
             )
-            for i in range(self.n_layers)
+            for i in range(config.n_layers)
         ])
+        self.post_init()
 
     def forward(self, input_ids=None, **kwargs):
         x = self.embedding(input_ids)
@@ -137,15 +150,14 @@ class ConvNetModel(ConvNetPreTrainedModel):
 class ConvNetOnlyMLMHead(nn.Module):
     def __init__(
         self,
-        vocab_size=None,
-        hidden_size=None,
+        config,
     ):
         super().__init__()
         self.decoder = nn.Sequential(
-            nn.Linear(hidden_size, hidden_size),
+            nn.Linear(config.hidden_size, config.hidden_size),
             nn.GELU(),
-            nn.LayerNorm(hidden_size),
-            nn.Linear(hidden_size, vocab_size),
+            nn.LayerNorm(config.hidden_size),
+            nn.Linear(config.hidden_size, config.vocab_size),
         )
 
     def forward(self, hidden_state):
@@ -159,10 +171,9 @@ class ConvNetForMaskedLM(ConvNetPreTrainedModel):
     ):
         super().__init__(config)
         self.config = config
-        self.vocab_size = config.vocab_size
-        self.hidden_size = config.hidden_size
         self.model = ConvNetModel(config)
-        self.cls = ConvNetOnlyMLMHead(vocab_size=self.vocab_size, hidden_size=self.hidden_size)
+        self.cls = ConvNetOnlyMLMHead(config)
+        self.post_init()
 
     def forward(self, input_ids=None, labels=None, **kwargs):
         #print(input_ids.shape)
@@ -171,7 +182,7 @@ class ConvNetForMaskedLM(ConvNetPreTrainedModel):
         loss = None
         if labels is not None:
             loss_fct = CrossEntropyLoss()
-            loss = loss_fct(logits.view(-1, self.vocab_size), labels.view(-1))
+            loss = loss_fct(logits.view(-1, self.config.vocab_size), labels.view(-1))
         return MaskedLMOutput(
             loss=loss,
             logits=logits,

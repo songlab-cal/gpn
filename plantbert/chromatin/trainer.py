@@ -8,8 +8,15 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 import torch
 
-from data import DeepSEADataModule, DNABERTDataModule, PlantBertDataModule, ConvNetDataModule
-from model import DeepSEAModel, DNABERTModel, PlantBertModel, DSSModel, ConvNetModel
+from data import DeepSEADataModule, DNABERTDataModule, PlantBertDataModule
+from model import DeepSEAModel, DNABERTModel, PlantBertModel, DSSModel
+
+
+from plantbert.mlm.convnet import ConvNetModel
+#from ..mlm.convnet import ConvNetModel
+#import sys
+#sys.path.append("../mlm")
+#from convnet import ConvNetModel
 
 
 pl.utilities.seed.seed_everything(seed=42)
@@ -50,48 +57,23 @@ def main(hparams):
             model_args["reduce_lr_on_plateau_patience"] = 0
         elif model_args["module"] == "PlantBert":
             model_class = PlantBertModel
-            #model_args["language_model_path"] = "../language_model/results/checkpoint-17440/"
-            #model_args["language_model_path"] = "../language_model/results/checkpoint-34000/"
-            model_args["language_model_path"] = "../mlm/old_bpe/results/checkpoint-200000/"
-            #model_args["language_model_path"] = "../language_model/checkpoint-100000/"
-            #model_args["language_model_path"] = "../language_model/results_nc_first_pass/checkpoint-10000/"
-            #model_args["language_model_path"] = "../language_model/nc_small_span_50000/checkpoint-50000/"
-            #model_args["language_model_path"] = "../language_model/nc_small_span_64/checkpoint-45000/"
-            #model_args["max_length"] = 1000 #1024
-            model_args["max_length"] = 222#200 # 170 #1024
+            #model_args["language_model_path"] = "../mlm/old_bpe/results/checkpoint-200000/"
+            model_args["pretrained_model_path"] = "../mlm/results_128_cycle/checkpoint-200000/"
+            model_args["pretrained_model_class"] = ConvNetModel
+            model_args["max_length"] = 1000 #1024
+            #model_args["max_length"] = 222#200 # 170 #1024
             #model_args["batch_size"] = 85
             #model_args["accumulate_grad_batches"] = 3
             model_args["batch_size"] = 128
-            model_args["accumulate_grad_batches"] = 1#2
+            model_args["accumulate_grad_batches"] = 2
             model_args["num_workers"] = 8
             n_epochs = 100
             data_module = PlantBertDataModule(
                 data_path,
                 model_args["batch_size"],
-                model_args["language_model_path"],
-                model_args["num_workers"],
-                model_args["max_length"],
-            )
-            data_module.prepare_data()
-            model_args["lr"] = 5e-5
-            model_args["reduce_lr_on_plateau_patience"] = 0
-        elif model_args["module"] == "ConvNet":
-            model_class = ConvNetModel
-            model_args["pretrained_model_path"] = "../mlm/results/checkpoint-50000/"
-            model_args["pretrained_model_args"] = dict(
-                vocab_size=6,
-                n_layers=12,
-                hidden_size=256,
-            )
-            model_args["batch_size"] = 256
-            model_args["accumulate_grad_batches"] = 1
-            model_args["num_workers"] = 8
-            n_epochs = 100
-            data_module = ConvNetDataModule(
-                data_path,
-                model_args["batch_size"],
                 model_args["pretrained_model_path"],
                 model_args["num_workers"],
+                model_args["max_length"],
             )
             data_module.prepare_data()
             model_args["lr"] = 5e-5
@@ -151,7 +133,7 @@ def main(hparams):
 
         wandb_logger = WandbLogger(
             project="PlantBERT_Chromatin",
-            name="PlantBERT_dropout=0.5",
+            name="ConvNet_128_cycle",
             log_model=False,
         )
 
