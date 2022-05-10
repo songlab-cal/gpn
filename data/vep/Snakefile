@@ -1,6 +1,7 @@
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO, bgzf
+from cyvcf2 import VCF
 import gzip
 import matplotlib.pyplot as plt
 import numpy as np
@@ -118,6 +119,28 @@ rule process_variants:
         variants.to_csv(output[1], sep="\t", index=False, header=False, columns=["chromosome", "start", "end"])
 
 
+rule process_ensembl_vep:
+    input:
+        "arabidopsis_thaliana_incl_consequences.vcf.gz",
+    output:
+        "ensembl_vep.tsv.gz",
+    run:
+        i = 0
+        rows = []
+        for variant in VCF(input[0]):
+            if variant.INFO.get("TSA") != "SNV": continue
+            if len(variant.ALT) > 1: continue
+            if variant.FILTER is not None: continue  # this is supposed to mean PASS
+            VEP = variant.INFO.get("VE").split(",")
+            consequence = ",".join(sorted([transcript_vep.split("|")[0] for transcript_vep in VEP]))  # TODO: should remove duplicates here. unique or set.
+            rows.append([variant.CHROM, variant.POS, variant.REF, variant.ALT[0], consequence])
+            i += 1
+            if i % 100000 == 0: print(i)
+        df = pd.DataFrame(data=rows, columns=["chromosome", "pos", "ref", "alt", "consequence"])
+        print(df)
+        df.to_csv(output[0], sep="\t", index=False)        
+
+
 rule find_dist_to_TSS:
     input:
         "variants/coordinates.bed",
@@ -132,6 +155,7 @@ rule add_info_variants:
     input:
         "variants/filt.processed.bed.gz",
         "dist_to_tss.txt",
+        "ensembl_vep.tsv.gz",
     output:
         "variants/all.parquet",
     run:
@@ -140,6 +164,12 @@ rule add_info_variants:
         dist_to_tss = pd.read_csv(input[1], sep="\t", header=None, names=["closest_TSS", "dist_to_TSS"])
         print(dist_to_tss)
         variants = pd.concat([variants, dist_to_tss], axis=1)
+        print(variants)
+        ensembl_vep = pd.read_csv(input[2], sep="\t")
+        ensembl_vep.chromosome = "Chr" + ensembl_vep.chromosome.astype(str)
+        ensembl_vep.pos = ensembl_vep.pos - 1
+        print(ensembl_vep)
+        variants = variants.merge(ensembl_vep, how="left", on=["chromosome", "pos", "ref", "alt"])
         print(variants)
         variants.to_parquet(output[0], index=False)
 
@@ -151,6 +181,7 @@ rule filter_variants:
     output:
         "variants/filt.parquet",
     run:
+        TOTAL_SIZE = 1000
         df = pd.read_parquet(input[0])
         print(df)
         #df = df[(df.chromosome=="Chr5") & (df.dist_to_TSS.abs() <= 1000)]

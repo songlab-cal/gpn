@@ -6,22 +6,32 @@ import sys
 import torch
 from transformers import AutoTokenizer, Trainer, TrainingArguments, AutoModelForMaskedLM
 
+from convnet import ConvNetForMaskedLM
+
 
 model_name = sys.argv[1]
 
 variants_path = "../../data/vep/variants/filt.parquet"
 genome_path = "../../data/vep/tair10.fa"
-output_path = f"vep_{model_name}.parquet"
-output_dir = f"results_vep_{model_name}"  # not really used but necessary for trainer
+output_path = f"vep_full_{model_name}.parquet"
+output_dir = f"results_vep_full_{model_name}"  # not really used but necessary for trainer
 
 if model_name == "window-128_tokenization-no_model-bert":
     model_path = "./results_128_bert/checkpoint-200000/"
     max_length = 128
     window_size = 128
+    model_class = AutoModelForMaskedLM
 elif model_name == "window-1000_tokenization-bpe8192_model-bert":
     model_path = "./old_bpe/results/checkpoint-200000/"
     max_length = 200
     window_size = 1000
+    model_class = AutoModelForMaskedLM
+elif model_name == "window-128_tokenization-no_model-convnet":
+    model_path = "./results_128_cycle/checkpoint-200000/"
+    max_length = 128
+    window_size = 128
+    model_class = ConvNetForMaskedLM
+
 
 
 # TODO: should load both genome and tokenizer later, to avoid memory leak with num_workers>0
@@ -41,7 +51,7 @@ class VEPDataset(torch.utils.data.Dataset):
         self.window_size = window_size
 
         self.variants = pd.read_parquet(self.variants_path)
-        self.variants = self.variants.head(100000)
+        #self.variants = self.variants.head(100000)
 
         df_pos = self.variants.copy()
         df_pos["start"] = df_pos.pos - self.window_size // 2
@@ -99,9 +109,9 @@ class VEPDataset(torch.utils.data.Dataset):
 
 
 class MLMforVEPModel(torch.nn.Module):
-    def __init__(self, model_path):
+    def __init__(self, model_class, model_path):
         super().__init__()
-        self.model = AutoModelForMaskedLM.from_pretrained(model_path)
+        self.model = model_class.from_pretrained(model_path)
 
     def forward(self, pos=None, ref=None, alt=None, **kwargs):
         logits = self.model(**kwargs).logits
@@ -120,7 +130,7 @@ d = VEPDataset(
     window_size=window_size,
 )
 
-model = MLMforVEPModel(model_path=model_path)
+model = MLMforVEPModel(model_class=model_class, model_path=model_path)
 
 training_args = TrainingArguments(
     output_dir=output_dir, per_device_eval_batch_size=512, dataloader_num_workers=0,
