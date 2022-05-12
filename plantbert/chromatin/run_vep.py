@@ -108,9 +108,6 @@ class DNABERTVEPDataset(VEPDataset):
         return x
 
 
-#model_type = "PlantBert"
-#model_type = "DNABERT"
-#model_type = "DeepSEA"
 model_type = sys.argv[1]
 
 
@@ -118,8 +115,8 @@ variants_path = "../../data/vep/variants/filt.parquet"
 genome_path = "../../data/vep/tair10.fa"
 max_length = 200
 window_size = 1000
-output_path = f"vep_{model_type}_dropout.parquet"
-output_dir = f"results_vep_{model_type}_dropout"  # not really used but necessary for trainer
+output_path = f"vep_{model_type}.parquet"
+output_dir = f"results_vep_{model_type}"  # not really used but necessary for trainer
 
 
 if model_type == "DeepSEA":
@@ -142,6 +139,13 @@ elif model_type =="PlantBert":
     #model_ckpt = "lightning_logs/version_33/checkpoints/epoch=7-step=26655.ckpt"
     model_ckpt = "lightning_logs/version_2znci1qx/epoch_6-step_46648.ckpt"  # bpe dropout version
     tokenizer_path = "../mlm/old_bpe/results/checkpoint-200000/"
+    per_device_eval_batch_size = 512
+elif model_type =="ConvNet":
+    data_class = PlantBertVEPDataset
+    model_class = PlantBertModel
+    model_ckpt = "lightning_logs/version_3kimm4yz/epoch_6-step_23324.ckpt"
+    tokenizer_path = "../mlm/results_128_cycle/checkpoint-200000/"
+    max_length = 1000
     per_device_eval_batch_size = 512
 
 

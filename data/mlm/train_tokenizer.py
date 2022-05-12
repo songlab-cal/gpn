@@ -1,14 +1,14 @@
 import numpy as np
 import pandas as pd
 from tokenizers import decoders, models, normalizers, pre_tokenizers, processors, trainers, Tokenizer
-from transformers import BertTokenizerFast, LongformerTokenizerFast, RobertaTokenizerFast
+from transformers import PreTrainedTokenizerFast, AlbertTokenizer
+import sentencepiece as spm
 import sys
 
 # based on examples here:
 # https://colab.research.google.com/github/huggingface/notebooks/blob/master/examples/tokenizer_training.ipynb
 
 with open(sys.argv[1]) as file:
-    #dataset = file.readlines()
     dataset = file.read().splitlines()
 print(len(dataset))
 
@@ -16,18 +16,10 @@ n_seqs = int(sys.argv[4])
 dataset = dataset[:n_seqs]
 print(len(dataset))
 
-#dataset = np.random.choice(dataset, size=len(dataset)//100, replace=False)
-#print(len(dataset))
-
-#chunk_size = 1000
-#new_dataset = []
-#for d in dataset:
-#    new_dataset += [d[i:i + chunk_size] for i in range(0, len(d), chunk_size)]
-#dataset = new_dataset
-#print(len(dataset))
 
 model = sys.argv[2]
 vocab_size = int(sys.argv[3])
+output_path = f"./tokenizer_{model}_{vocab_size}_v10"
 
 batch_size = 1000
 
@@ -35,45 +27,52 @@ def batch_iterator():
     for i in range(0, len(dataset), batch_size):
         yield dataset[i: i + batch_size]
 
-special_tokens = ["[CLS]", "[SEP]", "[UNK]", "[PAD]", "[MASK]"]
+special_tokens = ["[MASK]", "[PAD]", "[UNK]"]
+initial_alphabet = ["a", "c", "g", "t"]
 
 if model == "bpe":
     tokenizer = Tokenizer(models.BPE())
     tokenizer.normalizer = normalizers.Lowercase()
     tokenizer.pre_tokenizer = pre_tokenizers.Whitespace()  # should not be used at all
     trainer = trainers.BpeTrainer(
-        #vocab_size=vocab_size - len(special_tokens),
         vocab_size=vocab_size,
         special_tokens=special_tokens,
-        initial_alphabet=["a", "c", "g", "t"],
+        initial_alphabet=initial_alphabet,
     )
-elif model == "unigram":
-    tokenizer = Tokenizer(models.Unigram())
-    tokenizer.normalizer = normalizers.Lowercase()
-    trainer = trainers.UnigramTrainer(
-        vocab_size=vocab_size - len(special_tokens),
-        special_tokens=special_tokens,
+    tokenizer.train_from_iterator(batch_iterator(), trainer=trainer, length=len(dataset))
+    tokenizer = PreTrainedTokenizerFast(tokenizer_object=tokenizer, mask_token="[MASK]", pad_token="[PAD]", unk_token="[UNK]")
+elif model == "unigram": 
+    spm.SentencePieceTrainer.train(
+        input=sys.argv[1],
+        model_prefix=output_path,
+        vocab_size=vocab_size,
+        num_threads=32,
+        seed_sentencepiece_size=50000,
+        add_dummy_prefix=False,
+        bos_piece="[CLS]",
+        bos_id=0,
+        eos_piece="[SEP]",
+        eos_id=1,
+        unk_piece="[UNK]",
+        unk_id=2,
+        pad_piece="[PAD]",
+        pad_id=3,
+        user_defined_symbols="[MASK]",
+    )
+
+    #sp_model_kwargs = dict(enable_sampling=True, nbest_size=-1, alpha=1.5)
+    sp_model_kwargs = dict(enable_sampling=False)
+    tokenizer = AlbertTokenizer(
+        vocab_file=output_path + ".model",
+        bos_token="[CLS]",
+        eos_token="[SEP]",
         unk_token="[UNK]",
-        initial_alphabet=["a", "c", "g", "t"],
-        #max_piece_length=8,
-        #shrinking_factor=0.75,
-        #n_sub_iterations=2,
+        pad_token="[PAD]",
+        mask_token="[MASK]",
+        extra_ids=0,
+        sp_model_kwargs=sp_model_kwargs,
+        do_lower_case=True,
     )
 
-
-tokenizer.train_from_iterator(batch_iterator(), trainer=trainer, length=len(dataset))
-cls_token_id = tokenizer.token_to_id("[CLS]")
-sep_token_id = tokenizer.token_to_id("[SEP]")
-tokenizer.post_processor = processors.TemplateProcessing(
-    single="[CLS]:0 $A:0 [SEP]:0",
-    pair="[CLS]:0 $A:0 [SEP]:0 $B:1 [SEP]:1",
-    special_tokens=[
-        ("[CLS]", cls_token_id),
-        ("[SEP]", sep_token_id),
-    ],
-)
-#tokenizer = BertTokenizerFast(tokenizer_object=tokenizer)
-tokenizer = LongformerTokenizerFast(tokenizer_object=tokenizer)
-#tokenizer = RobertaTokenizerFast(tokenizer_object=tokenizer)
 print(len(tokenizer))
-tokenizer.save_pretrained(f"./tokenizer_{model}_{vocab_size}_{n_seqs}_v7/")
+tokenizer.save_pretrained(output_path)

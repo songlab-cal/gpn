@@ -7,6 +7,17 @@ from torch.utils.data import DataLoader, IterableDataset, get_worker_info
 from transformers import AutoTokenizer
 
 
+#def insert_spaces(seq, prob):
+#    new_seq = []
+#    for x in seq:
+#        if np.random.random() < prob:
+#            new_seq += [" ", x, " "]
+#        else:
+#            new_seq.append(x)
+#    new_seq = "".join(new_seq)
+#    return new_seq
+
+
 class GenomeSamplerDataset(IterableDataset):
     def __init__(
         self,
@@ -84,6 +95,8 @@ class GenomeSamplerDataset(IterableDataset):
             #)
             #x["input_ids"] = x["input_ids"].flatten()
             #x["attention_mask"] = x["attention_mask"].flatten()
+
+            #seq = insert_spaces(seq, 0.02)
 
             x = tokenizer(
                 seq,

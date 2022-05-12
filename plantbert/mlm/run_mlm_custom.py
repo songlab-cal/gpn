@@ -55,9 +55,10 @@ import torchinfo
 
 from data_collator_mask_span import DataCollatorForLanguageModelingSpan
 from genome_sampler_dataset import GenomeSamplerDataset
-#from model import ConvNetForMaskedLM
 
 from convnet import ConvNetForMaskedLM, ConvNetConfig
+from s4dnet import S4DNetForMaskedLM, S4DNetConfig
+
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
 check_min_version("4.18.0.dev0")
@@ -370,14 +371,16 @@ def main():
         kernel_size=9,
         dilation_double_every=1,
         dilation_max=32,
-        dilation_cycle=5,
+        dilation_cycle=6,
     )
     model = ConvNetForMaskedLM(config)
-    #model = ConvNetForMaskedLM(
+
+    #config = S4DNetConfig(
     #    vocab_size=len(tokenizer),
-    #    n_layers=12,
+    #    n_layers=16,
     #    hidden_size=512,
     #)
+    #model = S4DNetForMaskedLM(config)
     print(torchinfo.summary(model))
     #raise Exception("debug")
 

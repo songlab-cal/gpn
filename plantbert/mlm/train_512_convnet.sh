@@ -1,12 +1,12 @@
 WANDB_PROJECT=PlantBERT_MLM_512 python ./run_mlm_custom.py \
     --report_to wandb \
-    --run_name ConvNet_cycle \
+    --run_name ConvNet \
     --do_train \
     --do_eval \
     --train_fasta_path ../../data/mlm/genomes/all.contigs.fa.gz \
-    --validation_file ../../data/mlm/windows/val/128/64/seqs.txt \
+    --validation_file ../../data/mlm/windows/val/512/256/seqs.txt \
     --line_by_line True \
-    --window_size 128 \
+    --window_size 512 \
     --learning_rate 1e-3 \
     --save_strategy steps \
     --save_steps 20000 \
@@ -18,10 +18,10 @@ WANDB_PROJECT=PlantBERT_MLM_512 python ./run_mlm_custom.py \
     --warmup_steps 10000 \
     --logging_steps 10000 \
     --save_total_limit 10 \
-    --output_dir results_512_cycle \
+    --output_dir results_512_convnet \
     --tokenizer_name ../../data/mlm/tokenizer_bare \
-    --per_device_train_batch_size 512 \
-    --per_device_eval_batch_size 512 \
+    --per_device_train_batch_size 256 \
+    --per_device_eval_batch_size 256 \
     --gradient_accumulation_steps 1 \
     --fp16 \
     --weight_decay 0.01 \
@@ -30,9 +30,10 @@ WANDB_PROJECT=PlantBERT_MLM_512 python ./run_mlm_custom.py \
     --seed 42 \
     --prediction_loss_only True \
     --lr_scheduler_type constant_with_warmup \
+#    --overwrite_cache True \
+
 #    --resume_from_checkpoint ./results_128_convnet/checkpoint-60000 \
 #    --ignore_data_skip \
-#    --overwrite_cache True \
 
 #    --eval_accumulation_steps 50 \
 
