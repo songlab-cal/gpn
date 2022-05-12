@@ -57,6 +57,7 @@ from data_collator_mask_span import DataCollatorForLanguageModelingSpan
 from genome_sampler_dataset import GenomeSamplerDataset
 
 from convnet import ConvNetForMaskedLM, ConvNetConfig
+from convtransformer import ConvTransformerForMaskedLM, ConvTransformerConfig
 from s4dnet import S4DNetForMaskedLM, S4DNetConfig
 
 
@@ -364,16 +365,24 @@ def main():
 
     #model.resize_token_embeddings(len(tokenizer))
 
-    config = ConvNetConfig(
+    #config = ConvNetConfig(
+    #    vocab_size=len(tokenizer),
+    #    n_layers=30,
+    #    hidden_size=512,
+    #    kernel_size=9,
+    #    dilation_double_every=1,
+    #    dilation_max=32,
+    #    dilation_cycle=6,
+    #)
+    #model = ConvNetForMaskedLM(config)
+
+    config = ConvTransformerConfig(
         vocab_size=len(tokenizer),
-        n_layers=30,
-        hidden_size=512,
+        n_conv_layers=1,
         kernel_size=9,
-        dilation_double_every=1,
-        dilation_max=32,
-        dilation_cycle=6,
+        position_embedding_type="relative_key",
     )
-    model = ConvNetForMaskedLM(config)
+    model = ConvTransformerForMaskedLM(config)
 
     #config = S4DNetConfig(
     #    vocab_size=len(tokenizer),
