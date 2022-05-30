@@ -116,7 +116,7 @@ class VEPDatasetDNABERT(torch.utils.data.Dataset):
         self.window_size = window_size
 
         self.variants = pd.read_parquet(self.variants_path)
-        #self.variants = self.variants.head(10000)
+        #self.variants = self.variants.head(100000)
 
         df_pos = self.variants.copy()
         df_pos["start"] = df_pos.pos - self.window_size // 2
@@ -165,7 +165,10 @@ class VEPDatasetDNABERT(torch.utils.data.Dataset):
         alt_kmer_str[kmer_pos] = alt_str
         alt_kmer_str = "".join(alt_kmer_str)
 
-        for i in range(window_pos-2, window_pos+4):
+        range_low = 2 if row.strand == "+" else 3
+        range_high = 4 if row.strand == "+" else 3
+
+        for i in range(window_pos-range_low, window_pos+range_high):  # need to do -3 and +3 I believe for negative strand
             seq_list[i] = "[MASK]"
         seq = " ".join(seq_list)
 
