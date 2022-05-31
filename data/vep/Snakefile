@@ -203,3 +203,17 @@ rule filter_variants:
         print(df)
         df.drop(columns=["start", "end", "strand"], inplace=True)
         df.to_parquet(output[0], index=False)
+
+
+rule download_phastcons:
+    output:
+        "conservation/Ath_PhastCons.bedGraph.gz"
+    shell:
+        "wget http://plantregmap.gao-lab.org/download_ftp.php?filepath=08-download/Arabidopsis_thaliana/sequence_conservation/Ath_PhastCons.bedGraph.gz -O {output}"
+
+
+rule download_phylop:
+    output:
+        "conservation/Ath_PhyloP.bedGraph.gz"
+    shell:
+        "wget http://plantregmap.gao-lab.org/download_ftp.php?filepath=08-download/Arabidopsis_thaliana/sequence_conservation/Ath_PhyloP.bedGraph.gz -O {output}"
