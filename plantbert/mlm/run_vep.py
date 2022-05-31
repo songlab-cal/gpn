@@ -232,6 +232,13 @@ elif model_name == "window-128_tokenization-no_model-convnet":
     model_class = ConvNetForMaskedLM
     data_class = VEPDataset
     batch_size = 512
+elif model_name == "window-512_tokenization-no_model-convnet":
+    model_path = "./results_512_convnet/checkpoint-400000/"
+    max_length = 512
+    window_size = 512
+    model_class = ConvNetForMaskedLM
+    data_class = VEPDataset
+    batch_size = 128
 elif model_name == "DNABERT":
     model_path = "armheb/DNA_bert_6"
     max_length = 512
