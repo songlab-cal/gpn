@@ -9,15 +9,14 @@ WANDB_PROJECT=PlantBERT_MLM_512 python ./run_mlm_custom.py \
     --window_size 512 \
     --learning_rate 1e-3 \
     --save_strategy steps \
-    --save_steps 20000 \
-    --max_steps 200000 \
+    --save_steps 100000 \
+    --max_steps 400000 \
     --evaluation_strategy steps \
     --eval_steps 10000 \
     --dataloader_num_workers 8 \
     --preprocessing_num_workers 8 \
     --warmup_steps 10000 \
     --logging_steps 10000 \
-    --save_total_limit 10 \
     --output_dir results_512_convnet \
     --tokenizer_name ../../data/mlm/tokenizer_bare \
     --per_device_train_batch_size 256 \
@@ -27,13 +26,16 @@ WANDB_PROJECT=PlantBERT_MLM_512 python ./run_mlm_custom.py \
     --weight_decay 0.01 \
     --optim adamw_torch \
     --adam_epsilon 1e-4 \
-    --seed 42 \
+    --seed 43 \
     --prediction_loss_only True \
     --lr_scheduler_type constant_with_warmup \
-#    --overwrite_cache True \
+    --resume_from_checkpoint ./results_512_convnet/checkpoint-200000 \
+    --ignore_data_skip \
 
-#    --resume_from_checkpoint ./results_128_convnet/checkpoint-60000 \
-#    --ignore_data_skip \
+#    --overwrite_cache True \
+#    --save_total_limit 10 \
+
+
 
 #    --eval_accumulation_steps 50 \
 

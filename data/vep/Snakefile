@@ -217,3 +217,28 @@ rule download_phylop:
         "conservation/Ath_PhyloP.bedGraph.gz"
     shell:
         "wget http://plantregmap.gao-lab.org/download_ftp.php?filepath=08-download/Arabidopsis_thaliana/sequence_conservation/Ath_PhyloP.bedGraph.gz -O {output}"
+
+
+rule process_conservation:
+    input:
+        "conservation/Ath_PhastCons.bedGraph.gz",
+        "conservation/Ath_PhyloP.bedGraph.gz",
+    output:
+        "conservation/Chr5.tsv.gz",
+    run:
+        def load_conservation(model):
+            conservation = pd.read_csv(f"./conservation/Ath_{model}.bedGraph.gz", sep="\t", header=None, names=["chromosome", "pos", "end", model])
+            conservation = conservation[conservation.chromosome=="Chr5"]
+            conservation = conservation[["pos", model]]
+            return conservation
+        phastcons = load_conservation("PhastCons")
+        print(phastcons.shape)
+        phylop = load_conservation("PhyloP")
+        print(phylop.shape)
+        conservation = phastcons.merge(phylop, how="inner", on="pos")
+        print(conservation.shape)
+        print(conservation)
+        conservation.to_csv(output[0], sep="\t", index=False)
+
+
+
