@@ -85,6 +85,54 @@ class ConvLayer(nn.Module):
         return x
 
 
+class CompressionLayer(nn.Module):
+    def __init__(
+        self,
+        hidden_size=None,
+        **kwargs,
+    ):
+        super().__init__()
+        self.conv = nn.Sequential(
+            TransposeLayer(),
+            nn.Conv1d(
+                in_channels=hidden_size,
+                out_channels=hidden_size,
+                **kwargs,
+            ),
+            TransposeLayer(),
+            nn.GELU(),
+            nn.LayerNorm(hidden_size),
+        )
+
+    def forward(self, x):
+        x = self.conv(x)
+        return x
+
+
+class DecompressionLayer(nn.Module):
+    def __init__(
+        self,
+        hidden_size=None,
+        **kwargs,
+    ):
+        super().__init__()
+        self.conv = nn.Sequential(
+            TransposeLayer(),
+            nn.ConvTranspose1d(
+                in_channels=hidden_size,
+                out_channels=hidden_size,
+                **kwargs,
+            ),
+            TransposeLayer(),
+            nn.GELU(),
+            nn.LayerNorm(hidden_size),
+        )
+
+    def forward(self, x):
+        x = self.conv(x)
+        return x
+
+
 class OneHotEmbedding(nn.Module):
     def __init__(
         self,
@@ -115,13 +163,39 @@ class ConvTransformerModel(ConvTransformerPreTrainedModel):
                 )
             for i in range(config.n_conv_layers)]
         )
+        self.compression = CompressionLayer(
+            hidden_size=config.hidden_size,
+            kernel_size=8,
+            stride=8,
+        )
         self.encoder = BertModel(config)
+        self.decompression = DecompressionLayer(
+            hidden_size=config.hidden_size,
+            kernel_size=8,
+            stride=8,
+        )
+        self.final_layer = ConvLayer(
+            hidden_size=config.hidden_size,
+            kernel_size=1,
+        )
         self.post_init()
 
     def forward(self, input_ids=None, **kwargs):
         x = self.embedding(input_ids)
-        x = self.encoder(inputs_embeds=x)
-        return x
+        residual = x
+        #print(x.shape)
+        x = self.compression(x)
+        #print(x.shape)
+        x = self.encoder(inputs_embeds=x).last_hidden_state
+        #print(x.shape)
+        x = self.decompression(x)
+        #print(x.shape)
+        x = x + residual
+        #print(x.shape)
+        x = self.final_layer(x)
+        #print(x.shape)
+        #raise Exception("debug")
+        return BaseModelOutput(last_hidden_state=x)
 
 
 class ConvTransformerOnlyMLMHead(nn.Module):
@@ -163,3 +237,16 @@ class ConvTransformerForMaskedLM(ConvTransformerPreTrainedModel):
             loss=loss,
             logits=logits,
         )
+
+
+
+#config = ConvTransformerConfig(
+#    vocab_size=6,
+#    n_conv_layers=4,
+#    kernel_size=9,
+#    position_embedding_type="relative_key",
+#)
+#model = ConvTransformerForMaskedLM(config)
+#x = torch.randint(low=0, high=5, size=(8, 512))
+#y = model(input_ids=x)["logits"]
+#print(x.shape, y.shape)
