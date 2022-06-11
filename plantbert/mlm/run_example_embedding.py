@@ -7,12 +7,21 @@ import sys
 
 
 checkpoint_path = sys.argv[1]
-output_path = sys.argv[2]
+strand = sys.argv[2]
+output_path = sys.argv[3]
 
 genome = SeqIO.to_dict(SeqIO.parse("../../data/mlm/tair10.fa", format="fasta"))
 window_size = 1000000
 center = 3566700
-seq = str(genome["Chr5"][center-window_size//2:center+window_size//2].seq)
+seq = genome["Chr5"][center-window_size//2:center+window_size//2].seq
+if strand == "+":
+    print("Positive strand")
+elif strand == "-":
+    print("Negative strand")
+    print(seq[:10])
+    seq = seq.reverse_complement()
+    print(seq[:10])
+seq = str(seq)
 
 tokenizer = AutoTokenizer.from_pretrained(checkpoint_path)
 model = ConvNetModel.from_pretrained(checkpoint_path)
