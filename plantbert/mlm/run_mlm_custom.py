@@ -365,24 +365,28 @@ def main():
 
     #model.resize_token_embeddings(len(tokenizer))
 
-    #config = ConvNetConfig(
-    #    vocab_size=len(tokenizer),
-    #    n_layers=30,
-    #    hidden_size=512,
-    #    kernel_size=9,
-    #    dilation_double_every=1,
-    #    dilation_max=32,
-    #    dilation_cycle=6,
-    #)
-    #model = ConvNetForMaskedLM(config)
-
-    config = ConvTransformerConfig(
+    config = ConvNetConfig(
         vocab_size=len(tokenizer),
-        n_conv_layers=4,
+        n_layers=30, #60,#30,
+        hidden_size=512,
         kernel_size=9,
-        position_embedding_type="relative_key",
+        dilation_double_every=1,
+        dilation_max=32,
+        dilation_cycle=6,
     )
-    model = ConvTransformerForMaskedLM(config)
+    model = ConvNetForMaskedLM(config)
+
+    #config = ConvTransformerConfig(
+    #    conv_hidden_size=512,
+    #    vocab_size=len(tokenizer),
+    #    conv_n_layers=4,
+    #    kernel_size=7,
+    #    position_embedding_type="relative_key",
+    #    dilation_double_every=1,
+    #    dilation_max=8,
+    #    dilation_cycle=3,
+    #)
+    #model = ConvTransformerForMaskedLM(config)
 
     #config = S4DNetConfig(
     #    vocab_size=len(tokenizer),

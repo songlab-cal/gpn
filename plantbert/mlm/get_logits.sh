@@ -1,0 +1,2 @@
+#python get_logits.py ./results_512_convnet_finetuning_v2/checkpoint-1000000/ ./examples_Chr5:3687412-3688325.parquet logits_Chr5:3687412-3688325.parquet
+python get_logits.py ./results_512_convnet_finetuning_v2/checkpoint-1000000/ ./examples_Chr5:3564493-3565087.parquet logits_Chr5:3564493-3565087.parquet

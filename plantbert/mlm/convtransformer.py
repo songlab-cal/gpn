@@ -13,11 +13,19 @@ class ConvTransformerConfig(BertConfig):
         self,
         kernel_size=15,
         n_conv_layers=1,
+        dilation_double_every=4,
+        dilation_max=32,
+        dilation_cycle=32,
+        initializer_range=0.02,
         **kwargs
     ):
         super().__init__(**kwargs)
         self.kernel_size = kernel_size
         self.n_conv_layers = n_conv_layers
+        self.dilation_double_every = dilation_double_every
+        self.dilation_max = dilation_max
+        self.dilation_cycle = dilation_cycle
+        self.initializer_range = initializer_range
 
 
 class ConvTransformerPreTrainedModel(PreTrainedModel):
@@ -88,20 +96,21 @@ class ConvLayer(nn.Module):
 class CompressionLayer(nn.Module):
     def __init__(
         self,
-        hidden_size=None,
+        in_channels=None,
+        out_channels=None,
         **kwargs,
     ):
         super().__init__()
         self.conv = nn.Sequential(
             TransposeLayer(),
             nn.Conv1d(
-                in_channels=hidden_size,
-                out_channels=hidden_size,
+                in_channels=in_channels,
+                out_channels=out_channels,
                 **kwargs,
             ),
             TransposeLayer(),
             nn.GELU(),
-            nn.LayerNorm(hidden_size),
+            nn.LayerNorm(out_channels),
         )
 
     def forward(self, x):
@@ -112,20 +121,21 @@ class CompressionLayer(nn.Module):
 class DecompressionLayer(nn.Module):
     def __init__(
         self,
-        hidden_size=None,
+        in_channels=None,
+        out_channels=None,
         **kwargs,
     ):
         super().__init__()
         self.conv = nn.Sequential(
             TransposeLayer(),
             nn.ConvTranspose1d(
-                in_channels=hidden_size,
-                out_channels=hidden_size,
+                in_channels=in_channels,
+                out_channels=out_channels,
                 **kwargs,
             ),
             TransposeLayer(),
             nn.GELU(),
-            nn.LayerNorm(hidden_size),
+            nn.LayerNorm(out_channels),
         )
 
     def forward(self, x):
@@ -145,6 +155,13 @@ class OneHotEmbedding(nn.Module):
         return F.one_hot(x, num_classes=self.hidden_size).float()
 
 
+def get_dilation_schedule(config):
+    return [
+        min(config.dilation_max, 2**((i%config.dilation_cycle)//config.dilation_double_every))
+        for i in range(config.conv_n_layers)
+    ]
+
+
 class ConvTransformerModel(ConvTransformerPreTrainedModel):
     def __init__(
         self,
@@ -154,47 +171,52 @@ class ConvTransformerModel(ConvTransformerPreTrainedModel):
         super().__init__(config)
         self.config = config
 
+        self.dilation_schedule = get_dilation_schedule(config)
+        print(self.dilation_schedule)
+
         self.embedding = nn.Sequential(
-            OneHotEmbedding(config.hidden_size),  # nn.Embedding(self.vocab_size, self.hidden_size)
+            OneHotEmbedding(config.conv_hidden_size),  # nn.Embedding(self.vocab_size, self.hidden_size)
             *[
                 ConvLayer(
-                    hidden_size=config.hidden_size,
+                    hidden_size=config.conv_hidden_size,
                     kernel_size=config.kernel_size,
+                    dilation=self.dilation_schedule[i],
                 )
-            for i in range(config.n_conv_layers)]
+            for i in range(config.conv_n_layers)]
         )
+        aggregation = 8
         self.compression = CompressionLayer(
-            hidden_size=config.hidden_size,
-            kernel_size=8,
-            stride=8,
+            in_channels=config.conv_hidden_size,
+            out_channels=config.hidden_size,
+            kernel_size=aggregation,
+            stride=aggregation,
         )
         self.encoder = BertModel(config)
         self.decompression = DecompressionLayer(
-            hidden_size=config.hidden_size,
-            kernel_size=8,
-            stride=8,
+            in_channels=config.hidden_size,
+            out_channels=config.conv_hidden_size,
+            kernel_size=aggregation,
+            stride=aggregation,
         )
-        self.final_layer = ConvLayer(
-            hidden_size=config.hidden_size,
-            kernel_size=1,
-        )
+        self.final_layer = nn.Sequential(*[
+            ConvLayer(
+                    hidden_size=config.conv_hidden_size,
+                    kernel_size=config.kernel_size,
+                    dilation=self.dilation_schedule[i],
+                )
+            for i in range(config.conv_n_layers)
+        ])
+        
         self.post_init()
 
     def forward(self, input_ids=None, **kwargs):
         x = self.embedding(input_ids)
         residual = x
-        #print(x.shape)
         x = self.compression(x)
-        #print(x.shape)
         x = self.encoder(inputs_embeds=x).last_hidden_state
-        #print(x.shape)
         x = self.decompression(x)
-        #print(x.shape)
         x = x + residual
-        #print(x.shape)
         x = self.final_layer(x)
-        #print(x.shape)
-        #raise Exception("debug")
         return BaseModelOutput(last_hidden_state=x)
 
 
@@ -205,10 +227,10 @@ class ConvTransformerOnlyMLMHead(nn.Module):
     ):
         super().__init__()
         self.decoder = nn.Sequential(
-            nn.Linear(config.hidden_size, config.hidden_size),
+            nn.Linear(config.conv_hidden_size, config.conv_hidden_size),
             nn.GELU(),
-            nn.LayerNorm(config.hidden_size),
-            nn.Linear(config.hidden_size, config.vocab_size),
+            nn.LayerNorm(config.conv_hidden_size),
+            nn.Linear(config.conv_hidden_size, config.vocab_size),
         )
 
     def forward(self, hidden_state):

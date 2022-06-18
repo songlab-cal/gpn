@@ -57,7 +57,8 @@ def main(hparams):
         elif model_args["module"] == "PlantBert":
             model_class = PlantBertModel
             #model_args["language_model_path"] = "../mlm/old_bpe/results/checkpoint-200000/"
-            model_args["pretrained_model_path"] = "../mlm/results_512_convnet/checkpoint-400000/"
+            #model_args["pretrained_model_path"] = "../mlm/results_512_convnet/checkpoint-400000/"
+            model_args["pretrained_model_path"] = "../mlm/results_512_convnet_finetuning_v2/checkpoint-1000000/"
             model_args["pretrained_model_class"] = ConvNetModel
             model_args["max_length"] = 1000 #1024
             #model_args["max_length"] = 222#200 # 170 #1024
@@ -132,7 +133,7 @@ def main(hparams):
 
         wandb_logger = WandbLogger(
             project="PlantBERT_Chromatin",
-            name="ConvNet_512",
+            name="ConvNet_512_ft",
             log_model=False,
         )
 

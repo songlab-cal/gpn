@@ -239,6 +239,34 @@ elif model_name == "window-512_tokenization-no_model-convnet":
     model_class = ConvNetForMaskedLM
     data_class = VEPDataset
     batch_size = 128
+elif model_name == "window-512_tokenization-no_model-convnet800k":
+    model_path = "./results_512_convnet/checkpoint-800000/"
+    max_length = 512
+    window_size = 512
+    model_class = ConvNetForMaskedLM
+    data_class = VEPDataset
+    batch_size = 128
+elif model_name == "window-512_tokenization-no_model-convnet200k":
+    model_path = "./results_512_convnet/checkpoint-200000/"
+    max_length = 512
+    window_size = 512
+    model_class = ConvNetForMaskedLM
+    data_class = VEPDataset
+    batch_size = 128
+elif model_name == "window-512_tokenization-no_model-convnet800kfinetune150k":
+    model_path = "./results_512_convnet_finetuning_v2/checkpoint-950000/"
+    max_length = 512
+    window_size = 512
+    model_class = ConvNetForMaskedLM
+    data_class = VEPDataset
+    batch_size = 128
+elif model_name == "window-512_tokenization-no_model-convnet800kfinetune200k":
+    model_path = "./results_512_convnet_finetuning_v2/checkpoint-1000000/"
+    max_length = 512
+    window_size = 512
+    model_class = ConvNetForMaskedLM
+    data_class = VEPDataset
+    batch_size = 128
 elif model_name == "DNABERT":
     model_path = "armheb/DNA_bert_6"
     max_length = 512

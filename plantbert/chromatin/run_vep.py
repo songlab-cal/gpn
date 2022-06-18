@@ -27,7 +27,8 @@ class VEPDataset(torch.utils.data.Dataset):
         self.window_size = window_size
 
         self.variants = pd.read_parquet(self.variants_path)
-        #self.variants = self.variants.head(100000)
+        #self.variants = self.variants.iloc[:len(self.variants)//2]
+        self.variants = self.variants.iloc[len(self.variants)//2:]
 
         df_ref_pos = self.variants.copy()
         df_ref_pos["start"] = df_ref_pos.pos - self.window_size // 2
@@ -115,8 +116,8 @@ variants_path = "../../data/vep/variants/filt.parquet"
 genome_path = "../../data/vep/tair10.fa"
 max_length = 200
 window_size = 1000
-output_path = f"vep_full_{model_type}.parquet"
-output_dir = f"results_vep_full_{model_type}"  # not really used but necessary for trainer
+output_path = f"vep_full_half2_{model_type}.parquet"
+output_dir = f"results_vep_full_half2_{model_type}"  # not really used but necessary for trainer
 
 
 if model_type == "DeepSEA":

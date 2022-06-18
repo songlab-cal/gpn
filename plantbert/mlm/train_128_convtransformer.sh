@@ -1,6 +1,6 @@
 WANDB_PROJECT=PlantBERT_MLM_128 python ./run_mlm_custom.py \
     --report_to wandb \
-    --run_name ConvTransformer_4 \
+    --run_name ConvTransformer_8 \
     --do_train \
     --do_eval \
     --train_fasta_path ../../data/mlm/genomes/all.contigs.fa.gz \
@@ -18,11 +18,11 @@ WANDB_PROJECT=PlantBERT_MLM_128 python ./run_mlm_custom.py \
     --warmup_steps 10000 \
     --logging_steps 10000 \
     --save_total_limit 10 \
-    --output_dir results_128_convtransformer_4 \
+    --output_dir results_128_convtransformer_8 \
     --tokenizer_name ../../data/mlm/tokenizer_bare \
-    --per_device_train_batch_size 256 \
-    --per_device_eval_batch_size 256 \
-    --gradient_accumulation_steps 2 \
+    --per_device_train_batch_size 512 \
+    --per_device_eval_batch_size 512 \
+    --gradient_accumulation_steps 1 \
     --fp16 \
     --weight_decay 0.01 \
     --optim adamw_torch \

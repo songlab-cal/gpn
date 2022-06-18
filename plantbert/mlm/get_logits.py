@@ -9,7 +9,6 @@ from transformers import AutoTokenizer, Trainer, TrainingArguments, AutoModelFor
 from convnet import ConvNetForMaskedLM
 
 
-
 # TODO: should load both genome and tokenizer later, to avoid memory leak with num_workers>0
 class LogitsDataset(torch.utils.data.Dataset):
     def __init__(
@@ -26,7 +25,7 @@ class LogitsDataset(torch.utils.data.Dataset):
         self.max_length = max_length
         self.window_size = window_size
 
-        self.examples = pd.read_csv(self.examples_path)
+        self.examples = pd.read_parquet(self.examples_path)
         #self.examples = self.examples.head(100)
 
         df_pos = self.examples.copy()
@@ -76,22 +75,6 @@ class LogitsDataset(torch.utils.data.Dataset):
         return x
 
 
-def seq2kmer(seq, k):
-    """
-    Convert original sequence to kmers
-
-    Arguments:
-    seq -- str, original sequence.
-    k -- int, kmer of length k specified.
-
-    Returns:
-    kmers -- str, kmers separated by space
-    """
-    kmer = [seq[x : x + k] for x in range(len(seq) + 1 - k)]
-    kmers = " ".join(kmer)
-    return kmers
-
-
 class MLMforLogitsModel(torch.nn.Module):
     def __init__(self, model_class, model_path):
         super().__init__()
@@ -103,92 +86,35 @@ class MLMforLogitsModel(torch.nn.Module):
         return logits
 
 
-model_name = sys.argv[1]
+model_ckpt = sys.argv[1]  # e.g. "./results_512_convnet_finetuning_v2/checkpoint-1000000/"
+input_path = sys.argv[2]  
+output_path = sys.argv[3]  # parquet file
 
-examples_path = "./perplexity_examples.tsv.gz"
 genome_path = "../../data/vep/tair10.fa"
-output_path = f"Logits_examples_{model_name}.parquet"
-output_dir = f"results_Logits_examples_{model_name}"  # not really used but necessary for trainer
+output_dir = f"results_{output_path}_dir"  # not really used but necessary for trainer
 
-
-if model_name == "window-128_tokenization-no_model-bert":
-    model_path = "./results_128_bert/checkpoint-200000/"
-    max_length = 128
-    window_size = 128
-    model_class = AutoModelForMaskedLM
-    data_class = LogitsDataset
-    batch_size = 512
-elif model_name == "window-1000_tokenization-bpe8192_model-bert":
-    model_path = "./old_bpe/results/checkpoint-200000/"
-    max_length = 200
-    window_size = 1000
-    model_class = AutoModelForMaskedLM
-    data_class = LogitsDataset
-    batch_size = 512
-elif model_name == "window-128_tokenization-no_model-convnet":
-    model_path = "./results_128_cycle/checkpoint-200000/"
-    max_length = 128
-    window_size = 128
-    model_class = ConvNetForMaskedLM
-    data_class = LogitsDataset
-    batch_size = 512
-elif model_name == "window-512_tokenization-no_model-convnet":
-    model_path = "./results_512_convnet/checkpoint-400000/"
-    max_length = 512
-    window_size = 512
-    model_class = ConvNetForMaskedLM
-    data_class = LogitsDataset
-    batch_size = 128
-elif model_name == "window-512_tokenization-no_model-convnet800k":
-    model_path = "./results_512_convnet/checkpoint-800000/"
-    max_length = 512
-    window_size = 512
-    model_class = ConvNetForMaskedLM
-    data_class = LogitsDataset
-    batch_size = 128
-elif model_name == "window-512_tokenization-no_model-convnet200k":
-    model_path = "./results_512_convnet/checkpoint-200000/"
-    max_length = 512
-    window_size = 512
-    model_class = ConvNetForMaskedLM
-    data_class = LogitsDataset
-    batch_size = 128
-elif model_name == "window-512_tokenization-no_model-convnet800kfinetune150k":
-    model_path = "./results_512_convnet_finetuning_v2/checkpoint-950000/"
-    max_length = 512
-    window_size = 512
-    model_class = ConvNetForMaskedLM
-    data_class = LogitsDataset
-    batch_size = 128
-elif model_name == "window-512_tokenization-no_model-convnet800kfinetune200k":
-    model_path = "./results_512_convnet_finetuning_v2/checkpoint-1000000/"
-    max_length = 512
-    window_size = 512
-    model_class = ConvNetForMaskedLM
-    data_class = LogitsDataset
-    batch_size = 128
-elif model_name == "DNABERT":
-    model_path = "armheb/DNA_bert_6"
-    max_length = 512
-    window_size = 512
-    model_class = AutoModelForMaskedLM
-    data_class = LogitsDatasetDNABERT
-    batch_size = 128
-
+max_length = 512
+window_size = 512
+model_class = ConvNetForMaskedLM
+data_class = LogitsDataset
+batch_size = 128
 
 d = data_class(
-    examples_path=examples_path,
+    examples_path=input_path,
     genome_path=genome_path,
-    tokenizer_path=model_path,
+    tokenizer_path=model_ckpt,
     max_length=max_length,
     window_size=window_size,
 )
 print(d.tokenizer.get_vocab())
-#print(d[0])
-#print(d[10000])
-#raise Exception("debug")
+vocab = d.tokenizer.get_vocab()
+id_a = vocab["a"]
+id_c = vocab["c"]
+id_g = vocab["g"]
+id_t = vocab["t"]
+print(id_a, id_c, id_g, id_t)
 
-model = MLMforLogitsModel(model_class=model_class, model_path=model_path)
+model = MLMforLogitsModel(model_class=model_class, model_path=model_ckpt)
 
 training_args = TrainingArguments(
     output_dir=output_dir, per_device_eval_batch_size=batch_size, dataloader_num_workers=0,
@@ -201,11 +127,10 @@ print(pred.shape)
 
 examples = d.examples
 n_examples = len(examples)
-pred_pos = pred[:n_examples, 2:]
-pred_neg = pred[n_examples:, 2:]
-pred_neg = pred_neg[:, [3, 2, 1, 0]]  # complement
+pred_pos = pred[:n_examples, [id_a, id_c, id_g, id_t]]
+pred_neg = pred[n_examples:, [id_t, id_g, id_c, id_a]]
 avg_pred = np.stack((pred_pos, pred_neg)).mean(axis=0)
 
-examples.loc[:, ["a", "c", "g", "t"]] = avg_pred
+examples.loc[:, ["A", "C", "G", "T"]] = avg_pred
 print(examples)
 examples.to_parquet(output_path, index=False)
