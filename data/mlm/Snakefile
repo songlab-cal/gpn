@@ -15,10 +15,13 @@ genomes = pd.read_csv("genome_list.tsv", header=None).values.ravel()
 print(genomes)
 
 
+MIN_CONTIG_LEN = 512
+
+
 rule all:
     input:
-        "genomes/all.contigs.fa.gz",
-        "windows/val/1000/100/seqs.txt",
+        "genomes/all.contigs.parquet",
+        #"windows/val/1000/100/seqs.txt",
 
 
 rule download_reference:
@@ -117,22 +120,32 @@ rule split_into_contigs:
     input:
         "{anything}.fa.gz",
     output:
-        "{anything}.contigs.fa.gz",
+        "{anything}.contigs.parquet",
     run:
         with gzip.open(input[0], "rt") as handle:
             sequence = '\n'.join([str(record.seq).strip() for record in SeqIO.parse(handle, "fasta")])
         m = re.sub('[^ACGTacgt]+', '\n', sequence).split('\n')
-
-        m = [x for x in m if len(x) > 0]
-        records = [SeqRecord(Seq(m[i]), id=f'contig_{i}', annotations={"molecule_type": "DNA"}) for i in range(len(m))]
-        with bgzf.BgzfWriter(output[0], "wb") as outgz:
-            SeqIO.write(sequences=records, handle=outgz, format="fasta")
+        m = [x for x in m if len(x) >= MIN_CONTIG_LEN]
+        df = pd.DataFrame(dict(
+            contig_id=[f"contig_{i}" for i in range(len(m))],
+            seq=m,
+        ))
+        df["species"] = wildcards["anything"]
+        df["contig_len"] = df.seq.str.len()
+        print(df)
+        df.to_parquet(output[0], index=False)
 
 
 rule concat_genomes:
     input:
-        expand("genomes/{genome}.contigs.fa.gz", genome=genomes),
+        expand("genomes/{genome}.contigs.parquet", genome=genomes),
     output:
-        "genomes/all.contigs.fa.gz",
-    shell:
-        "cat {input} > {output}"
+        "genomes/all.contigs.parquet",
+    run:
+        df = pd.concat([pd.read_parquet(input_path) for input_path in input], ignore_index=True)
+        print(df)
+        df.species.replace({"genomes/Arabidopsis_thaliana_train": "genomes/AAA_Arabidopsis_thaliana_train"}, inplace=True)  # to ensure it's sorted first
+        df["species_id"] = pd.Categorical(df.species).codes
+        print(df)
+        print(df[df.species_id==0])
+        df.to_parquet(output[0], index=False)

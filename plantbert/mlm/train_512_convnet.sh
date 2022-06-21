@@ -1,9 +1,9 @@
 WANDB_PROJECT=PlantBERT_MLM_512 python ./run_mlm_custom.py \
     --report_to wandb \
-    --run_name ConvNet \
+    --run_name ConvNet_concat20_embed_v2 \
     --do_train \
     --do_eval \
-    --train_fasta_path ../../data/mlm/genomes/all.contigs.fa.gz \
+    --train_fasta_path ../../data/mlm/genomes/all.contigs.parquet \
     --validation_file ../../data/mlm/windows/val/512/256/seqs.txt \
     --line_by_line True \
     --window_size 512 \
@@ -12,12 +12,12 @@ WANDB_PROJECT=PlantBERT_MLM_512 python ./run_mlm_custom.py \
     --save_steps 100000 \
     --max_steps 1000000 \
     --evaluation_strategy steps \
-    --eval_steps 20000 \
+    --eval_steps 50000 \
     --dataloader_num_workers 8 \
     --preprocessing_num_workers 8 \
     --warmup_steps 10000 \
-    --logging_steps 20000 \
-    --output_dir results_512_convnet \
+    --logging_steps 50000 \
+    --output_dir results_512_convnet_concat20_embed_v2 \
     --tokenizer_name ../../data/mlm/tokenizer_bare \
     --per_device_train_batch_size 256 \
     --per_device_eval_batch_size 256 \
@@ -26,11 +26,11 @@ WANDB_PROJECT=PlantBERT_MLM_512 python ./run_mlm_custom.py \
     --weight_decay 0.01 \
     --optim adamw_torch \
     --adam_epsilon 1e-4 \
-    --seed 45 \
+    --seed 42 \
     --prediction_loss_only True \
     --lr_scheduler_type constant_with_warmup \
-    --resume_from_checkpoint ./results_512_convnet/checkpoint-600000 \
-    --ignore_data_skip \
+#    --resume_from_checkpoint ./results_512_convnet/checkpoint-600000 \
+#    --ignore_data_skip \
 
 #    --overwrite_cache True \
 #    --save_total_limit 10 \

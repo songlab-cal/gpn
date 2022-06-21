@@ -128,6 +128,10 @@ class ConvNetModel(ConvNetPreTrainedModel):
 
         #self.embedding = nn.Embedding(self.vocab_size, self.hidden_size)
         self.embedding = OneHotEmbedding(config.hidden_size)
+
+        #self.n_species = 18
+        #self.species_embedding = nn.Embedding(self.n_species, config.hidden_size)
+
         self.dilation_schedule = get_dilation_schedule(config)
         print(self.dilation_schedule)
         self.encoder = nn.Sequential(*[
@@ -141,8 +145,17 @@ class ConvNetModel(ConvNetPreTrainedModel):
         ])
         self.post_init()
 
-    def forward(self, input_ids=None, **kwargs):
+    def forward(self, input_ids=None, species_id=None, **kwargs):
+        #B, L = input_ids.shape
+        #if species_id is None:
+        #    species_id = torch.zeros(B, dtype=torch.int64, device=input_ids.device)
+
         x = self.embedding(input_ids)
+
+        #sp_embedding = self.species_embedding(species_id)
+        #sp_embedding = sp_embedding.unsqueeze(1).repeat(1, L, 1)
+        #x = x + sp_embedding
+
         x = self.encoder(x)
         return BaseModelOutput(last_hidden_state=x)
 

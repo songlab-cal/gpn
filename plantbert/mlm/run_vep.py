@@ -205,10 +205,12 @@ class MLMforVEPModel(torch.nn.Module):
 
 model_name = sys.argv[1]
 
-variants_path = "../../data/vep/variants/filt.parquet"
+#variants_path = "../../data/vep/variants/filt.parquet"
+variants_path = "example_annotated.parquet"
+
 genome_path = "../../data/vep/tair10.fa"
-output_path = f"vep_full_{model_name}.parquet"
-output_dir = f"results_vep_full_{model_name}"  # not really used but necessary for trainer
+output_path = f"vep_full_example_annotated_{model_name}.parquet"
+output_dir = f"results_vep_full_example_annotated_{model_name}"  # not really used but necessary for trainer
 
 
 if model_name == "window-128_tokenization-no_model-bert":
@@ -262,6 +264,13 @@ elif model_name == "window-512_tokenization-no_model-convnet800kfinetune150k":
     batch_size = 128
 elif model_name == "window-512_tokenization-no_model-convnet800kfinetune200k":
     model_path = "./results_512_convnet_finetuning_v2/checkpoint-1000000/"
+    max_length = 512
+    window_size = 512
+    model_class = ConvNetForMaskedLM
+    data_class = VEPDataset
+    batch_size = 128
+elif model_name == "window-512_tokenization-no_model-convnet_only_athaliana":
+    model_path = "./results_512_convnet_only_athaliana/checkpoint-500000/"
     max_length = 512
     window_size = 512
     model_class = ConvNetForMaskedLM
