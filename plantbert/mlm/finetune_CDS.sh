@@ -6,6 +6,7 @@ WANDB_PROJECT=PlantBERT_MLM_CDS python ./run_mlm_custom.py \
     --train_fasta_path ../../data/mlm/dataset/CDS.parquet \
     --validation_file ../../data/mlm/windows/CDS.test/512/128/seqs.txt \
     --model_name_or_path ./results_512_convnet_finetuning_v2/checkpoint-1000000/ \
+    --model_type ConvNet \
     --line_by_line True \
     --window_size 512 \
     --learning_rate 1e-3 \
@@ -19,7 +20,6 @@ WANDB_PROJECT=PlantBERT_MLM_CDS python ./run_mlm_custom.py \
     --warmup_steps 1000 \
     --logging_steps 1000 \
     --output_dir results_CDS_ConvNet \
-    --tokenizer_name ../../data/mlm/tokenizer_bare \
     --per_device_train_batch_size 256 \
     --per_device_eval_batch_size 256 \
     --gradient_accumulation_steps 1 \

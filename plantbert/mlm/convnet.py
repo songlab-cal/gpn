@@ -13,11 +13,11 @@ class ConvNetConfig(PretrainedConfig):
         self,
         vocab_size=6,
         hidden_size=512,
-        n_layers=12,
-        kernel_size=5,
-        dilation_double_every=4,
+        n_layers=30,
+        kernel_size=9,
+        dilation_double_every=1,
         dilation_max=32,
-        dilation_cycle=32,
+        dilation_cycle=6,
         initializer_range=0.02,
         **kwargs
     ):

@@ -3,6 +3,7 @@ WANDB_PROJECT=PlantBERT_MLM_512 python ./run_mlm_custom.py \
     --run_name ConvNet_concat20_embed_v2 \
     --do_train \
     --do_eval \
+    --model_type ConvNet \
     --train_fasta_path ../../data/mlm/genomes/all.contigs.parquet \
     --validation_file ../../data/mlm/windows/val/512/256/seqs.txt \
     --line_by_line True \

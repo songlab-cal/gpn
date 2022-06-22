@@ -61,6 +61,12 @@ from convtransformer import ConvTransformerForMaskedLM, ConvTransformerConfig
 from s4dnet import S4DNetForMaskedLM, S4DNetConfig
 
 
+CONFIG_MAPPING["ConvNet"] = ConvNetConfig
+MY_MODEL_MAPPING = {
+    "ConvNet": ConvNetForMaskedLM,
+}
+
+
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
 check_min_version("4.18.0.dev0")
 
@@ -350,31 +356,26 @@ def main():
             "You can do it from another script, save it, and load it from here, using --tokenizer_name."
         )
 
+    try:
+        model_class = MY_MODEL_MAPPING[model_args.model_type]
+    except:
+        model_class = AutoModelForMaskedLM
+
     if model_args.model_name_or_path:
-    #    model = AutoModelForMaskedLM.from_pretrained(
-    #        model_args.model_name_or_path,
-    #        from_tf=bool(".ckpt" in model_args.model_name_or_path),
-    #        config=config,
-    #        cache_dir=model_args.cache_dir,
-    #        revision=model_args.model_revision,
-    #        use_auth_token=True if model_args.use_auth_token else None,
-    #    )
-        logger.info("Loading checkpoint ", model_args.model_name_or_path)
-        model = ConvNetForMaskedLM.from_pretrained(model_args.model_name_or_path)
+        logger.info("Loading checkpoint.")
+        #model = ConvNetForMaskedLM.from_pretrained(model_args.model_name_or_path)
+        model = model_class.from_pretrained(model_args.model_name_or_path)
     else:
         logger.info("Training new model from scratch")
-        config = ConvNetConfig(
-            vocab_size=len(tokenizer),
-            n_layers=30, #60,#30,
-            hidden_size=512,
-            kernel_size=9,
-            dilation_double_every=1,
-            dilation_max=32,
-            dilation_cycle=6,
-        )
-        model = ConvNetForMaskedLM(config)
-
-    #    model = AutoModelForMaskedLM.from_config(config)
+        config = CONFIG_MAPPING[model_args.model_type]()
+        #config = ConvNetConfig()
+        logger.warning("You are instantiating a new config instance from scratch.")
+            if model_args.config_overrides is not None:
+                logger.info(f"Overriding config: {model_args.config_overrides}")
+                config.update_from_string(model_args.config_overrides)
+                logger.info(f"New config: {config}")
+        #model = ConvNetForMaskedLM(config)
+        model = model_class.from_config(config)
 
     #model.resize_token_embeddings(len(tokenizer))
 
@@ -531,7 +532,6 @@ def main():
             return logits.argmax(dim=-1)
 
         metric = load_metric("accuracy")
-        #metric = load_metric("accuracy", cache_dir="/global/scratch/projects/fc_songlab/gbenegas/.hf_datasets_cache")
 
         def compute_metrics(eval_preds):
             preds, labels = eval_preds
