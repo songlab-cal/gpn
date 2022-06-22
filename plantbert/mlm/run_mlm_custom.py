@@ -57,14 +57,12 @@ from data_collator_mask_span import DataCollatorForLanguageModelingSpan
 from genome_sampler_dataset import GenomeSamplerDataset
 
 from convnet import ConvNetForMaskedLM, ConvNetConfig
-from convtransformer import ConvTransformerForMaskedLM, ConvTransformerConfig
-from s4dnet import S4DNetForMaskedLM, S4DNetConfig
+#from convtransformer import ConvTransformerForMaskedLM, ConvTransformerConfig
+#from s4dnet import S4DNetForMaskedLM, S4DNetConfig
 
 
-CONFIG_MAPPING["ConvNet"] = ConvNetConfig
-MY_MODEL_MAPPING = {
-    "ConvNet": ConvNetForMaskedLM,
-}
+AutoConfig.register("ConvNet", ConvNetConfig)
+AutoModelForMaskedLM.register(ConvNetConfig, ConvNetForMaskedLM)
 
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
@@ -356,26 +354,18 @@ def main():
             "You can do it from another script, save it, and load it from here, using --tokenizer_name."
         )
 
-    try:
-        model_class = MY_MODEL_MAPPING[model_args.model_type]
-    except:
-        model_class = AutoModelForMaskedLM
-
     if model_args.model_name_or_path:
         logger.info("Loading checkpoint.")
-        #model = ConvNetForMaskedLM.from_pretrained(model_args.model_name_or_path)
-        model = model_class.from_pretrained(model_args.model_name_or_path)
+        model = AutoModelForMaskedLM.from_pretrained(model_args.model_name_or_path)
     else:
         logger.info("Training new model from scratch")
         config = CONFIG_MAPPING[model_args.model_type]()
-        #config = ConvNetConfig()
         logger.warning("You are instantiating a new config instance from scratch.")
         if model_args.config_overrides is not None:
             logger.info(f"Overriding config: {model_args.config_overrides}")
             config.update_from_string(model_args.config_overrides)
             logger.info(f"New config: {config}")
-        #model = ConvNetForMaskedLM(config)
-        model = model_class.from_config(config)
+        model = AutoModelForMaskedLM.from_config(config)
 
     #model.resize_token_embeddings(len(tokenizer))
 

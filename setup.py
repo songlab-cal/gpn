@@ -3,9 +3,13 @@ from setuptools import setup
 
 install_requires = [
     "transformers[torch]",
+    "datasets",
     "pyarrow",
     "pandas",
-    "numpy"
+    "numpy",
+    "torchinfo",
+    "biopython",
+    "wandb",
 ]
 
 
