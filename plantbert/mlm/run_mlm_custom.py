@@ -350,7 +350,7 @@ def main():
             "You can do it from another script, save it, and load it from here, using --tokenizer_name."
         )
 
-    #if model_args.model_name_or_path:
+    if model_args.model_name_or_path:
     #    model = AutoModelForMaskedLM.from_pretrained(
     #        model_args.model_name_or_path,
     #        from_tf=bool(".ckpt" in model_args.model_name_or_path),
@@ -359,22 +359,25 @@ def main():
     #        revision=model_args.model_revision,
     #        use_auth_token=True if model_args.use_auth_token else None,
     #    )
-    #else:
-    #    logger.info("Training new model from scratch")
+        logger.info("Loading checkpoint ", model_args.model_name_or_path)
+        model = ConvNetForMaskedLM.from_pretrained(model_args.model_name_or_path)
+    else:
+        logger.info("Training new model from scratch")
+        config = ConvNetConfig(
+            vocab_size=len(tokenizer),
+            n_layers=30, #60,#30,
+            hidden_size=512,
+            kernel_size=9,
+            dilation_double_every=1,
+            dilation_max=32,
+            dilation_cycle=6,
+        )
+        model = ConvNetForMaskedLM(config)
+
     #    model = AutoModelForMaskedLM.from_config(config)
 
     #model.resize_token_embeddings(len(tokenizer))
 
-    config = ConvNetConfig(
-        vocab_size=len(tokenizer),
-        n_layers=30, #60,#30,
-        hidden_size=512,
-        kernel_size=9,
-        dilation_double_every=1,
-        dilation_max=32,
-        dilation_cycle=6,
-    )
-    model = ConvNetForMaskedLM(config)
 
     #config = ConvTransformerConfig(
     #    conv_hidden_size=512,
