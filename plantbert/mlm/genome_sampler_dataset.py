@@ -48,7 +48,11 @@ class GenomeSamplerDataset(IterableDataset):
         print(self.contigs.shape)
         self.contigs = self.contigs[self.contigs.contig_len >= self.min_contig_size]
         print(self.contigs.shape)
-        self.contigs["contig_weight"] = (1 + self.contigs.contig_len - self.window_size).clip(lower=1)
+        if not "contig_weight" in self.contigs.columns:
+            print("Setting contig weights according to lengths.")
+            self.contigs["contig_weight"] = (1 + self.contigs.contig_len - self.window_size).clip(lower=1)
+        else:
+            print("Using predefined contig weights.")
         self.contigs["contig_prob"] = self.contigs.contig_weight / self.contigs.contig_weight.sum()
         print(self.contigs[["contig_len", "contig_weight", "contig_prob"]])
         print("Done.")

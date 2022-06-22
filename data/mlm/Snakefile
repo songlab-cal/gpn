@@ -28,8 +28,8 @@ rule all:
     input:
         "genomes/all.contigs.parquet",
         #"windows/val/1000/100/seqs.txt",
-        "windows/CDS.test/512/128/seqs.txt",
-        "dataset/CDS.parquet",
+        expand("windows/{feature}.test/512/128/seqs.txt", feature=features),
+        expand("dataset/{feature}.parquet", feature=features),
 
 
 rule download_reference:
@@ -192,6 +192,7 @@ rule make_train_data_region:
     input:
         "intervals/{feature}.train.bed",
         "tair10.fa",
+        "genomes/Arabidopsis_thaliana_train.contigs.parquet",
     output:
         "dataset/{feature}.parquet",
     run:
@@ -205,4 +206,29 @@ rule make_train_data_region:
         df["contig_len"] = df.seq.str.len()
         print(df)
         print(df.contig_len.describe())
+
+        df["contig_type"] = "target"
+
+        df2 = pd.read_parquet(input[2])
+        df2["contig_type"] = "background"
+
+        df = pd.concat([df, df2], ignore_index=True)
+        print(df)
+        print(df.contig_type.value_counts())
+
+        df["contig_weight"] = (1 + df.contig_len - MIN_CONTIG_LEN).clip(lower=1)
+
+        contig_weight_by_type = df.groupby("contig_type").contig_weight.sum()
+        print(contig_weight_by_type)
+        print(contig_weight_by_type / contig_weight_by_type.sum())
+
+        target_ratio = 0.5
+        weight_multiplier = (contig_weight_by_type["background"]*target_ratio) / (contig_weight_by_type["target"]*(1-target_ratio))
+        print(weight_multiplier)
+
+        df.loc[df.contig_type=="target", "contig_weight"] *= weight_multiplier
+        contig_weight_by_type = df.groupby("contig_type").contig_weight.sum()
+        print(contig_weight_by_type)
+        print(contig_weight_by_type / contig_weight_by_type.sum())
+
         df.to_parquet(output[0], index=False)

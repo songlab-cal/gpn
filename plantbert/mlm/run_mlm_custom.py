@@ -370,10 +370,10 @@ def main():
         config = CONFIG_MAPPING[model_args.model_type]()
         #config = ConvNetConfig()
         logger.warning("You are instantiating a new config instance from scratch.")
-            if model_args.config_overrides is not None:
-                logger.info(f"Overriding config: {model_args.config_overrides}")
-                config.update_from_string(model_args.config_overrides)
-                logger.info(f"New config: {config}")
+        if model_args.config_overrides is not None:
+            logger.info(f"Overriding config: {model_args.config_overrides}")
+            config.update_from_string(model_args.config_overrides)
+            logger.info(f"New config: {config}")
         #model = ConvNetForMaskedLM(config)
         model = model_class.from_config(config)
 
