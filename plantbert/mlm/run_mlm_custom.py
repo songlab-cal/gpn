@@ -57,12 +57,13 @@ from data_collator_mask_span import DataCollatorForLanguageModelingSpan
 from genome_sampler_dataset import GenomeSamplerDataset
 
 from convnet import ConvNetForMaskedLM, ConvNetConfig
+from kmertransformer import KmerTransformerForMaskedLM, KmerTransformerConfig
 #from convtransformer import ConvTransformerForMaskedLM, ConvTransformerConfig
 #from s4dnet import S4DNetForMaskedLM, S4DNetConfig
 
 
-AutoConfig.register("ConvNet", ConvNetConfig)
-AutoModelForMaskedLM.register(ConvNetConfig, ConvNetForMaskedLM)
+AutoConfig.register("KmerTransformer", KmerTransformerConfig)
+AutoModelForMaskedLM.register(KmerTransformerConfig, KmerTransformerForMaskedLM)
 
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.

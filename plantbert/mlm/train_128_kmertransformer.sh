@@ -1,0 +1,35 @@
+WANDB_PROJECT=PlantBERT_MLM_128 python ./run_mlm_custom.py \
+    --report_to wandb \
+    --run_name KmerTransformer \
+    --do_train \
+    --do_eval \
+    --model_type KmerTransformer \
+    --config_overrides vocab_size=6,position_embedding_type=relative_key \
+    --train_fasta_path ../../data/mlm/genomes/all.contigs.parquet \
+    --validation_file ../../data/mlm/windows/val/128/64/seqs.txt \
+    --line_by_line True \
+    --window_size 128 \
+    --learning_rate 1e-3 \
+    --save_strategy steps \
+    --save_steps 100000 \
+    --max_steps 1000000 \
+    --evaluation_strategy steps \
+    --eval_steps 50000 \
+    --dataloader_num_workers 8 \
+    --preprocessing_num_workers 8 \
+    --warmup_steps 10000 \
+    --logging_steps 50000 \
+    --output_dir results_128_kmertransformer \
+    --tokenizer_name ../../data/mlm/tokenizer_bare \
+    --per_device_train_batch_size 400 \
+    --per_device_eval_batch_size 400 \
+    --gradient_accumulation_steps 1 \
+    --fp16 \
+    --weight_decay 0.01 \
+    --optim adamw_torch \
+    --adam_epsilon 1e-4 \
+    --seed 42 \
+    --prediction_loss_only True \
+    --lr_scheduler_type constant_with_warmup \
+#    --resume_from_checkpoint ./results_512_convnet/checkpoint-800000 \
+#    --ignore_data_skip \

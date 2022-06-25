@@ -26,10 +26,11 @@ MIN_CONTIG_LEN = 512
 
 rule all:
     input:
-        "genomes/all.contigs.parquet",
+        "genomes/all.spike_target_0.5.contigs.parquet",
+        #"genomes/all.contigs.parquet",
         #"windows/val/1000/100/seqs.txt",
-        expand("windows/{feature}.test/512/128/seqs.txt", feature=features),
-        expand("dataset/{feature}.parquet", feature=features),
+        #expand("windows/{feature}.test/512/128/seqs.txt", feature=features),
+        #expand("dataset/{feature}.parquet", feature=features),
 
 
 rule download_reference:
@@ -223,6 +224,34 @@ rule make_train_data_region:
         print(contig_weight_by_type / contig_weight_by_type.sum())
 
         target_ratio = 0.5
+        weight_multiplier = (contig_weight_by_type["background"]*target_ratio) / (contig_weight_by_type["target"]*(1-target_ratio))
+        print(weight_multiplier)
+
+        df.loc[df.contig_type=="target", "contig_weight"] *= weight_multiplier
+        contig_weight_by_type = df.groupby("contig_type").contig_weight.sum()
+        print(contig_weight_by_type)
+        print(contig_weight_by_type / contig_weight_by_type.sum())
+
+        df.to_parquet(output[0], index=False)
+
+
+rule make_train_data_spike_arabidopsis:
+    input:
+        "genomes/all.contigs.parquet",
+    output:
+        "genomes/all.spike_target_{target_ratio}.contigs.parquet",
+    run:
+        df = pd.read_parquet(input[0])
+        df["contig_type"] = "background"
+        df.loc[df.species_id==0, "contig_type"] = "target"
+
+        df["contig_weight"] = (1 + df.contig_len - MIN_CONTIG_LEN).clip(lower=1)
+
+        contig_weight_by_type = df.groupby("contig_type").contig_weight.sum()
+        print(contig_weight_by_type)
+        print(contig_weight_by_type / contig_weight_by_type.sum())
+
+        target_ratio = float(wildcards["target_ratio"])
         weight_multiplier = (contig_weight_by_type["background"]*target_ratio) / (contig_weight_by_type["target"]*(1-target_ratio))
         print(weight_multiplier)
 
