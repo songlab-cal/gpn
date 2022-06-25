@@ -232,3 +232,21 @@ rule make_train_data_region:
         print(contig_weight_by_type / contig_weight_by_type.sum())
 
         df.to_parquet(output[0], index=False)
+
+
+rule make_latex_table_train_sizes:
+    input:
+        "genomes/all.contigs.parquet",
+    output:
+        "table_train_sizes.txt",
+    run:
+        df = pd.read_parquet(input[0])
+        df = df.groupby("species").contig_len.sum().to_frame().reset_index()
+        print(df)
+        df.species = df.species.str.replace("genomes/", "").str.replace("_", " ")
+        df.species.replace({"AAA Arabidopsis thaliana train": "Arabidopsis thaliana (chr. 1-4)"}, inplace=True)
+        print(df)
+        print("Total: ", df.contig_len.sum()) 
+        df.contig_len = (df.contig_len / 1000000).round(decimals=0).astype(int).astype(str) + " Mb"
+        print(df)
+        df.to_latex(output[0], index=False)

@@ -105,8 +105,8 @@ class GenomeSamplerDataset(IterableDataset):
                 return_tensors="pt",
             )
             x["input_ids"] = x["input_ids"].flatten()
-            if "species_id" in contig:
-                x["species_id"] = torch.tensor(contig.species_id, dtype=torch.int64)
+            #if "species_id" in contig:
+            #    x["species_id"] = torch.tensor(contig.species_id, dtype=torch.int64)
 
             # x["global_attention_mask"] = torch.zeros_like(x["input_ids"])
             # x["global_attention_mask"][0] = 1

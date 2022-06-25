@@ -145,7 +145,8 @@ class ConvNetModel(ConvNetPreTrainedModel):
         ])
         self.post_init()
 
-    def forward(self, input_ids=None, species_id=None, **kwargs):
+    #def forward(self, input_ids=None, species_id=None, **kwargs):
+    def forward(self, input_ids=None, **kwargs):
         #B, L = input_ids.shape
         #if species_id is None:
         #    species_id = torch.zeros(B, dtype=torch.int64, device=input_ids.device)
