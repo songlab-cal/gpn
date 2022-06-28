@@ -62,6 +62,9 @@ from kmertransformer import KmerTransformerForMaskedLM, KmerTransformerConfig
 #from s4dnet import S4DNetForMaskedLM, S4DNetConfig
 
 
+AutoConfig.register("ConvNet", ConvNetConfig)
+AutoModelForMaskedLM.register(ConvNetConfig, ConvNetForMaskedLM)
+
 AutoConfig.register("KmerTransformer", KmerTransformerConfig)
 AutoModelForMaskedLM.register(KmerTransformerConfig, KmerTransformerForMaskedLM)
 
