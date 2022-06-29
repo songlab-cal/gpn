@@ -13,10 +13,6 @@ from model import DeepSEAModel, DNABERTModel, PlantBertModel, DSSModel
 
 
 from plantbert.mlm.convnet import ConvNetModel
-#from ..mlm.convnet import ConvNetModel
-#import sys
-#sys.path.append("../mlm")
-#from convnet import ConvNetModel
 
 
 pl.utilities.seed.seed_everything(seed=42)
