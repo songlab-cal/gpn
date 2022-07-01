@@ -10,6 +10,7 @@ install_requires = [
     "torchinfo",
     "biopython",
     "wandb",
+    "einops",
 ]
 
 
