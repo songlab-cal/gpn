@@ -9,7 +9,6 @@ from transformers import AutoTokenizer, Trainer, TrainingArguments, AutoModelFor
 from convnet import ConvNetForMaskedLM
 
 
-
 # TODO: should load both genome and tokenizer later, to avoid memory leak with num_workers>0
 class VEPDataset(torch.utils.data.Dataset):
     def __init__(
@@ -203,16 +202,27 @@ class MLMforVEPModel(torch.nn.Module):
         return llr
 
 
-model_name = sys.argv[1]
+#model_name = sys.argv[1]
+model_path = sys.argv[1]
 
-#variants_path = "../../data/vep/variants/filt.parquet"
-variants_path = "example_annotated.parquet"
+
+max_length = 512
+window_size = 512
+model_class = ConvNetForMaskedLM
+data_class = VEPDataset
+batch_size = 128
+
+variants_path = "../../data/vep/variants/filt.parquet"
+#variants_path = "example_annotated.parquet"
 
 genome_path = "../../data/vep/tair10.fa"
-output_path = f"vep_full_example_annotated_{model_name}.parquet"
-output_dir = f"results_vep_full_example_annotated_{model_name}"  # not really used but necessary for trainer
+output_path = f"vep_full_{model_path}.parquet"
+output_dir = f"results_vep_full_{model_path}"  # not really used but necessary for trainer
+#output_path = f"vep_full_example_annotated_{model_name}.parquet"
+#output_dir = f"results_vep_full_example_annotated_{model_name}"  # not really used but necessary for trainer
 
 
+"""
 if model_name == "window-128_tokenization-no_model-bert":
     model_path = "./results_128_bert/checkpoint-200000/"
     max_length = 128
@@ -269,6 +279,20 @@ elif model_name == "window-512_tokenization-no_model-convnet800kfinetune200k":
     model_class = ConvNetForMaskedLM
     data_class = VEPDataset
     batch_size = 128
+elif model_name == "window-512_tokenization-no_model-convnet_ftAth_alone":
+    model_path = "./results_512_convnet_ftAth_alone/checkpoint-600000/"
+    max_length = 512
+    window_size = 512
+    model_class = ConvNetForMaskedLM
+    data_class = VEPDataset
+    batch_size = 128
+elif model_name == "window-512_tokenization-no_model-convnet_ftAth":
+    model_path = "./results_512_convnet_ftAth/checkpoint-500000/"
+    max_length = 512
+    window_size = 512
+    model_class = ConvNetForMaskedLM
+    data_class = VEPDataset
+    batch_size = 128
 elif model_name == "window-512_tokenization-no_model-convnet_only_athaliana":
     model_path = "./results_512_convnet_only_athaliana/checkpoint-500000/"
     max_length = 512
@@ -283,7 +307,7 @@ elif model_name == "DNABERT":
     model_class = AutoModelForMaskedLM
     data_class = VEPDatasetDNABERT
     batch_size = 128
-
+"""
 
 d = data_class(
     variants_path=variants_path,

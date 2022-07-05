@@ -1,6 +1,13 @@
 import anndata as ad
+from Bio import SeqIO
+from Bio.Seq import Seq
+import h5py
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
+
+
+CONTEXT = 500  # total context twice this
 
 
 metadata = pd.read_csv("metadata.tsv", sep="\t", index_col=0)
@@ -30,6 +37,128 @@ rule make_h5ad:
         adata.write(output[0], compression="gzip")
 
 
+rule make_dataset:
+    input:
+        "adata.h5ad",
+        "../vep/tss.bed",
+        "../mlm/tair10.fa",
+        "1001_SNP_MATRIX/imputed_snps_binary.hdf5",
+        "../vep/variants/all.parquet",
+    output:
+        "dataset.parquet",
+    run:
+        adata = ad.read_h5ad(input[0])
+        #sc.pp.log1p(adata)
+        #print(adata.shape)
+        # don't remember where these came from. maybe their paper.
+        marker_genes = ["AT2G27120", "AT1G47920", "AT1G78330", "AT2G47680", "AT3G54460", "AT5G63120", "AT1G09860", "AT4G03050", "AT1G04880", "AT4G39590",]
+        adata = adata[:, marker_genes]
+        #print(adata.shape)
 
-# once I get the genomic windows of interest I can use bedtools to get the sequences from the respective fastas
-# so it's done in parallel
+        df = pd.read_csv(input[1], sep="\t", header=None, names=["chromosome", "start", "end", "transcript_id", "score", "strand"])
+        #print(df)
+        df["gene_id"] = df.transcript_id.str.split('.').str[0]
+        #print(df)
+        df = df[df.gene_id.isin(marker_genes)]
+        #print(df)
+        # TODO: some are missing, need to figure out why
+        # e.g. AT1G78330. it's a pseudogene. can skip for now.
+
+        # filter to single-TSS genes
+        gene_id_counts = df.gene_id.value_counts().to_frame().rename(columns=dict(gene_id='gene_id_count'))
+        df = df.merge(gene_id_counts, how="left", left_on="gene_id", right_index=True)
+        df = df[df.gene_id_count==1]
+        #print(df)
+
+        # TODO: make sure there's not a +-1 discrepancy between genes on
+        # positive or negative strand
+        df.start -= CONTEXT
+        df.end += CONTEXT
+
+        genome = SeqIO.to_dict(SeqIO.parse(input[2], "fasta"))
+
+        def get_seq(row):
+            return str(genome[row.chromosome][row.start:row.end].seq)
+
+        def check_reverse_complement(row):
+            if row.strand == "+":
+                return row.seq
+            elif row.strand == "-":
+                return str(Seq(row.seq).reverse_complement())
+
+        df["seq"] = df.apply(get_seq, axis=1)
+        #print(df)
+
+        snps = h5py.File(input[3],'r')
+        # Get all SNP positions for all chromosomes (len=10709949)
+        positions = snps['positions'][:]
+        #print(len(positions))
+        positions -= 1
+        accessions = np.array([accession.decode('UTF-8') for accession in snps['accessions'][:]])
+        # Array of tuples with start/stop indices for each chromosome
+        chr_regions = snps['positions'].attrs['chr_regions']
+        
+        variants = pd.read_parquet(input[4])  # to get ref and alt
+        #print(variants)
+
+        rows = []
+
+        for _, tss in tqdm(df.iterrows(), total=df.shape[0]):
+            #print(tss.gene_id)
+            chr_indices = chr_regions[int(tss.chromosome[-1])-1]
+            chr_positions = positions[chr_indices[0]:chr_indices[1]]
+            mask_tss_positions = (chr_positions > tss.start) & (chr_positions < tss.end)
+            tss_positions = chr_positions[mask_tss_positions]
+            #print(len(tss_positions))
+            if len(tss_positions) == 0: continue
+            tss_variants = variants[(variants.chromosome == tss.chromosome) & (variants.pos > tss.start) & (variants.pos < tss.end)].set_index("pos").loc[tss_positions]
+            refs = tss_variants.ref.values
+            alts = tss_variants.alt.values
+            tss_relative_positions = tss_positions - tss.start  # need to reverse complement this. maybe reverse complement at the end
+            seq = np.array(list(tss.seq))
+            assert((refs==seq[tss_relative_positions])).all()
+
+            snp_matrix = snps["snps"][chr_indices[0] + np.where(mask_tss_positions)[0]]
+
+            # TODO: snp_matrix often has 1 or 2 less singletons, maybe because it includes imputation?
+            # overall they agree though
+            #print((snp_matrix.sum(axis=1)==1).sum(), (tss_variants.AC==2).sum())
+
+            for accession in adata.obs.index.values:
+                idx_accession = np.where(accessions==accession)[0]
+                accession_snps = snp_matrix[:, idx_accession].ravel().astype(bool)
+                seq_accession = seq.copy()
+                seq_accession[tss_relative_positions[accession_snps]] = alts[accession_snps]
+                new_row = tss.copy()
+                new_row["accession"] = accession
+                new_row["seq"] = ''.join(seq_accession)
+                new_row["expression"] = adata[accession, tss.gene_id].X[0,0]
+                rows.append(new_row)
+            
+        dataset = pd.concat(rows, axis=1).T.reset_index(drop=True)
+        print(dataset)
+        dataset["seq"] = dataset.apply(check_reverse_complement, axis=1)
+        dataset.to_parquet(output[0], index=False)
+
+
+rule embed_seqs_model:
+    input:
+        "dataset.parquet",
+        "../../plantbert/mlm/results_512_ftAth_alone/checkpoint-600000",
+    output:
+        "embeddings/model.npy",
+    run:
+        dataset = pd.read_parquet(input[0])
+        # TODO: transform into huggingface dataset, and tokenize
+
+        training_args = TrainingArguments(
+            output_dir="/dev/null",
+            per_device_eval_batch_size=128,
+            dataloader_num_workers=0,
+        )
+        trainer = Trainer(model=model, args=training_args)
+        embedding = trainer.predict(test_dataset=dataset).predictions
+
+
+        np.save(output[0], embedding)
+# should do both GPN and 1-hot
