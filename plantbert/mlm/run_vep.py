@@ -1,8 +1,10 @@
 from Bio import SeqIO
 from Bio.Seq import Seq
 import numpy as np
+import os
 import pandas as pd
 import sys
+import tempfile
 import torch
 from transformers import AutoTokenizer, Trainer, TrainingArguments, AutoModelForMaskedLM
 
@@ -203,7 +205,8 @@ class MLMforVEPModel(torch.nn.Module):
 
 
 #model_name = sys.argv[1]
-model_path = sys.argv[1]
+variants_path = sys.argv[1]
+model_path = sys.argv[2]
 
 
 max_length = 512
@@ -212,13 +215,12 @@ model_class = ConvNetForMaskedLM
 data_class = VEPDataset
 batch_size = 128
 
-variants_path = "../../data/vep/variants/filt.parquet"
+#variants_path = "../../data/vep/variants/filt.parquet"
 #variants_path = "example_annotated.parquet"
 
 genome_path = "../../data/vep/tair10.fa"
-output_path = f"vep_full_{model_path.replace('/', '_')}.parquet"
+output_path = f"results/vep/{variants_path.replace('/', '_')}/{model_path.replace('/', '_')}/"
 print("output_path: ", output_path)
-import tempfile
 output_dir = tempfile.TemporaryDirectory().name  # not really used but necessary for trainer
 #output_path = f"vep_full_example_annotated_{model_name}.parquet"
 #output_dir = f"results_vep_full_example_annotated_{model_name}"  # not really used but necessary for trainer
@@ -341,4 +343,6 @@ avg_pred = np.stack((pred_pos, pred_neg)).mean(axis=0)
 
 variants.loc[:, "model_llr"] = avg_pred
 print(variants)
-variants.to_parquet(output_path, index=False)
+if not os.path.exists(output_path):
+    os.makedirs(output_path)
+variants.to_parquet(os.path.join(output_path, "results.parquet"), index=False)

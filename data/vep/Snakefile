@@ -1,7 +1,7 @@
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO, bgzf
-from cyvcf2 import VCF
+#from cyvcf2 import VCF
 import gzip
 import matplotlib.pyplot as plt
 import numpy as np
@@ -179,13 +179,12 @@ rule filter_variants:
         "variants/all.parquet",
         "tair10.fa",
     output:
-        "variants/filt.parquet",
+        "variants/filt.{chrom}.parquet",
     run:
-        TOTAL_SIZE = 1000
+        TOTAL_SIZE = 512
         df = pd.read_parquet(input[0])
         print(df)
-        #df = df[(df.chromosome=="Chr5") & (df.dist_to_TSS.abs() <= 1000)]
-        df = df[(df.chromosome=="Chr5") & (df.AN >= 2000)]
+        df = df[(df.chromosome==wildcards["chrom"]) & (df.AN >= 2000)]
         print(df)
         df["start"] = df.pos - TOTAL_SIZE // 2
         df["end"] = df.start + TOTAL_SIZE
