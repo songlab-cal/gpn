@@ -27,8 +27,8 @@ WANDB_PROJECT=PlantBERT_MLM_512 python ./run_mlm_custom.py \
     --weight_decay 0.01 \
     --optim adamw_torch \
     --adam_epsilon 1e-4 \
-    --seed 44 \
+    --seed 45 \
     --prediction_loss_only True \
     --lr_scheduler_type constant_with_warmup \
-    --resume_from_checkpoint ./results_512_convnet_only_athaliana/checkpoint-500000 \
+    --resume_from_checkpoint ./results_512_convnet_only_athaliana/checkpoint-600000 \
     --ignore_data_skip \
