@@ -216,8 +216,10 @@ variants_path = "../../data/vep/variants/filt.parquet"
 #variants_path = "example_annotated.parquet"
 
 genome_path = "../../data/vep/tair10.fa"
-output_path = f"vep_full_{model_path}.parquet"
-output_dir = f"results_vep_full_{model_path}"  # not really used but necessary for trainer
+output_path = f"vep_full_{model_path.replace('/', '_')}.parquet"
+print("output_path: ", output_path)
+import tempfile
+output_dir = tempfile.TemporaryDirectory().name  # not really used but necessary for trainer
 #output_path = f"vep_full_example_annotated_{model_name}.parquet"
 #output_dir = f"results_vep_full_example_annotated_{model_name}"  # not really used but necessary for trainer
 

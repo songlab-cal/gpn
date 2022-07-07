@@ -1,17 +1,29 @@
 import anndata as ad
 from Bio import SeqIO
 from Bio.Seq import Seq
+from datasets import load_dataset
 import h5py
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import OneHotEncoder
+import tempfile
+import torch.nn as nn
 from tqdm import tqdm
+from transformers import AutoTokenizer, Trainer, TrainingArguments
+
+from plantbert.mlm.convnet import ConvNetModel
 
 
-CONTEXT = 500  # total context twice this
+CONTEXT = 1000  # total context twice this
 
 
 metadata = pd.read_csv("metadata.tsv", sep="\t", index_col=0)
 print(metadata.shape)
+
+
+rule all:
+    input:
+        expand("embeddings/GPN_avgpool_{pool}.npy", pool=[2000, 500, 100])
 
 
 rule make_h5ad:
@@ -73,7 +85,7 @@ rule make_dataset:
         # TODO: make sure there's not a +-1 discrepancy between genes on
         # positive or negative strand
         df.start -= CONTEXT
-        df.end += CONTEXT
+        df.end += CONTEXT-1
 
         genome = SeqIO.to_dict(SeqIO.parse(input[2], "fasta"))
 
@@ -137,28 +149,67 @@ rule make_dataset:
             
         dataset = pd.concat(rows, axis=1).T.reset_index(drop=True)
         print(dataset)
+        dataset = dataset.merge(adata.obs[["admixture_group"]], how="left", left_on="accession", right_index=True)
+        print(dataset)
+        dataset.admixture_group = dataset.admixture_group.astype(str)
+        print(dataset.columns)
         dataset["seq"] = dataset.apply(check_reverse_complement, axis=1)
         dataset.to_parquet(output[0], index=False)
+
+
+class AverageModelAcrossSpace(nn.Module):
+    def __init__(self, model_path, pool):
+        super().__init__()
+        self.model = ConvNetModel.from_pretrained(model_path)
+        self.pooler = nn.AvgPool1d(kernel_size=pool, stride=pool)
+
+    def forward(self, input_ids=None, **kwargs):
+        x = self.model(input_ids=input_ids).last_hidden_state
+        batch_size = len(x)
+        return self.pooler(x.transpose(1,2)).reshape(batch_size, -1)
 
 
 rule embed_seqs_model:
     input:
         "dataset.parquet",
-        "../../plantbert/mlm/results_512_ftAth_alone/checkpoint-600000",
+        directory("../../plantbert/mlm/results_512_convnet_ftAth_alone/checkpoint-800000"),
     output:
-        "embeddings/model.npy",
+        "embeddings/GPN_avgpool_{pool}.npy",
+    threads:
+        workflow.cores
     run:
-        dataset = pd.read_parquet(input[0])
-        # TODO: transform into huggingface dataset, and tokenize
+        dataset = load_dataset('parquet', data_files={"test": input[0]})["test"]
+        print(dataset)
+
+        tokenizer = AutoTokenizer.from_pretrained(input[1])
+        print(tokenizer)
+
+        def encode(examples):
+            return tokenizer(examples['seq'], return_token_type_ids=False, return_attention_mask=False,)
+
+        dataset = dataset.map(encode, batched=True)
+        print(dataset)
+
+        model = AverageModelAcrossSpace(input[1], int(wildcards["pool"]))
 
         training_args = TrainingArguments(
-            output_dir="/dev/null",
+            output_dir=tempfile.TemporaryDirectory().name,
             per_device_eval_batch_size=128,
             dataloader_num_workers=0,
         )
         trainer = Trainer(model=model, args=training_args)
         embedding = trainer.predict(test_dataset=dataset).predictions
-
-
+        print(embedding.shape)
         np.save(output[0], embedding)
-# should do both GPN and 1-hot
+
+
+rule embed_seqs_one_hot:
+    input:
+        "dataset.parquet",
+    output:
+        "embeddings/one_hot.npy",
+    run:
+        dataset = pd.read_parquet(input[0])
+        embedding = OneHotEncoder(sparse=False).fit_transform(np.concatenate(dataset.seq.map(list).map(np.array).values).reshape(-1, 1)).reshape(len(dataset), -1)
+        print(embedding.shape)
+        np.save(output[0], embedding)

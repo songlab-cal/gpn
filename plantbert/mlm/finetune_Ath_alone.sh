@@ -26,11 +26,11 @@ WANDB_PROJECT=PlantBERT_MLM_512 python ./run_mlm_custom.py \
     --weight_decay 0.01 \
     --optim adamw_torch \
     --adam_epsilon 1e-4 \
-    --seed 44 \
+    --seed 45 \
     --prediction_loss_only True \
     --lr_scheduler_type constant_with_warmup \
     --tokenizer_name ../../data/mlm/tokenizer_bare \
-    --resume_from_checkpoint ./results_512_convnet_ftAth_alone/checkpoint-600000 \
+    --resume_from_checkpoint ./results_512_convnet_ftAth_alone/checkpoint-900000 \
     --ignore_data_skip \
 
 #    --model_name_or_path ./results_512_convnet/checkpoint-1000000/ \

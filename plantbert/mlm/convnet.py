@@ -133,7 +133,6 @@ class ConvNetModel(ConvNetPreTrainedModel):
         #self.species_embedding = nn.Embedding(self.n_species, config.hidden_size)
 
         self.dilation_schedule = get_dilation_schedule(config)
-        print(self.dilation_schedule)
         self.encoder = nn.Sequential(*[
             ConvLayer(
                 hidden_size=config.hidden_size,
