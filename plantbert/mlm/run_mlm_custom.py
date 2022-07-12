@@ -23,6 +23,7 @@ https://huggingface.co/models?filter=fill-mask
 
 import logging
 import math
+import numpy as np
 import os
 import sys
 from dataclasses import dataclass, field
@@ -399,7 +400,7 @@ def main():
     # Preprocessing the datasets.
     # First we tokenize all the texts.
     column_names = raw_datasets["validation"].column_names
-    text_column_name = "text" if "text" in column_names else column_names[0]
+    text_column_name = "seq"
 
     if data_args.max_seq_length is None:
         max_seq_length = tokenizer.model_max_length
@@ -426,17 +427,21 @@ def main():
             examples[text_column_name] = [
                 line for line in examples[text_column_name] if len(line) > 0 and not line.isspace()
             ]
-            return tokenizer(
+            res = tokenizer(
                 examples[text_column_name],
-                padding=padding,
-                truncation=True,
-                max_length=max_seq_length,
+                #padding=padding,
+                #truncation=True,
+                #max_length=max_seq_length,
                 # We use this option because DataCollatorForLanguageModeling (see below) is more efficient when it
                 # receives the `special_tokens_mask`.
-                return_special_tokens_mask=True,
+                #return_special_tokens_mask=True,
                 return_attention_mask=False,
                 return_token_type_ids=False,
             )
+            res["special_tokens_mask"] = np.char.islower(np.vstack([np.array(list(seq)) for seq in examples[text_column_name]]))
+            #print(examples[text_column_name], res["special_tokens_mask"])
+            #raise Exception("debug eval")
+            return res
 
         with training_args.main_process_first(desc="dataset map tokenization"):
             tokenized_datasets = raw_datasets.map(

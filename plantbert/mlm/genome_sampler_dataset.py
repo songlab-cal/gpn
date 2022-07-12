@@ -96,8 +96,6 @@ class GenomeSamplerDataset(IterableDataset):
             #x["input_ids"] = x["input_ids"].flatten()
             #x["attention_mask"] = x["attention_mask"].flatten()
 
-            #seq = insert_spaces(seq, 0.02)
-
             x = tokenizer(
                 seq,
                 return_token_type_ids=False,
@@ -105,6 +103,9 @@ class GenomeSamplerDataset(IterableDataset):
                 return_tensors="pt",
             )
             x["input_ids"] = x["input_ids"].flatten()
+            x["special_tokens_mask"] = torch.tensor(np.char.islower(np.array(list(seq))))
+            #print(seq, x["special_tokens_mask"])
+            #raise Exception("debug")
             #if "species_id" in contig:
             #    x["species_id"] = torch.tensor(contig.species_id, dtype=torch.int64)
 

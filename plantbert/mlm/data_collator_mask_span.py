@@ -13,6 +13,8 @@ values = torch.range(1, 5).float()
 span_mean = torch.dot(probs, values)
 print("span_mean: ", span_mean)
 
+N_NON_SPECIAL_TOKENS = 4
+
 
 class DataCollatorForLanguageModelingSpan(DataCollatorForLanguageModeling):
     def torch_mask_tokens(self, inputs: Any, special_tokens_mask: Optional[Any] = None) -> Tuple[Any, Any]:
@@ -32,7 +34,8 @@ class DataCollatorForLanguageModelingSpan(DataCollatorForLanguageModeling):
             special_tokens_mask = torch.tensor(special_tokens_mask, dtype=torch.bool)
         else:
             special_tokens_mask = special_tokens_mask.bool()
-            #print(special_tokens_mask.float().mean())
+            #print("mean: ", special_tokens_mask.float().mean())
+            #raise Exception("collator debug")
 
         probability_matrix.masked_fill_(special_tokens_mask, value=0.0)
         masked_indices = torch.bernoulli(probability_matrix).bool()
@@ -55,7 +58,9 @@ class DataCollatorForLanguageModelingSpan(DataCollatorForLanguageModeling):
 
         # 10% of the time, we replace masked input tokens with random word
         indices_random = torch.bernoulli(torch.full(labels.shape, 0.5)).bool() & masked_indices & ~indices_replaced
-        random_words = torch.randint(len(self.tokenizer), labels.shape, dtype=torch.long)
+        # modification introduced by gbenegas:
+        # only replace with non-special tokens
+        random_words = torch.randint(len(self.tokenizer)-N_NON_SPECIAL_TOKENS, len(self.tokenizer), labels.shape, dtype=torch.long)
         inputs[indices_random] = random_words[indices_random]
 
         # The rest of the time (10% of the time) we keep the masked input tokens unchanged

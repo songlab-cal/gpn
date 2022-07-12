@@ -11,7 +11,7 @@ class ConvNetConfig(PretrainedConfig):
 
     def __init__(
         self,
-        vocab_size=6,
+        vocab_size=7,
         hidden_size=512,
         n_layers=30,
         kernel_size=9,
