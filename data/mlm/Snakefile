@@ -21,14 +21,16 @@ split_chromosomes = {
     "test": ["Chr5",],
 }
 
+
+REPEATS_CUT_AWAY_FROM_BORDER = 128
 MIN_CONTIG_LEN = 512
 
 
 rule all:
     input:
-        "genomes/all.spike_target_0.5.contigs.parquet",
+        #"genomes/all.spike_target_0.5.contigs.parquet",
         #"genomes/all.contigs.parquet",
-        #"windows/val/1000/100/seqs.txt",
+        "windows/val/512/256/seqs.txt",
         #expand("windows/{feature}.test/512/128/seqs.txt", feature=features),
         #expand("dataset/{feature}.parquet", feature=features),
 
@@ -37,7 +39,7 @@ rule download_reference:
     output:
         "tair10.raw.fa",
     shell:
-        "wget https://www.arabidopsis.org/download_files/Genes/TAIR10_genome_release/TAIR10_chromosome_files/TAIR10_chr_all.fas -O {output}"
+        "wget http://ftp.ensemblgenomes.org/pub/plants/release-53/fasta/arabidopsis_thaliana/dna/Arabidopsis_thaliana.TAIR10.dna_sm.toplevel.fa.gz -O - | gunzip -c > {output}"
 
 
 rule clean_reference:
@@ -50,7 +52,7 @@ rule clean_reference:
         with open(input[0]) as input_handle:
             for record in SeqIO.parse(input_handle, "fasta"):
                 print(record.id)
-                if record.id in ["M", "chloroplast"]: continue
+                if record.id in ["M", "chloroplast", "Mt", "Pt"]: continue
                 record.id = "Chr" + record.id
                 print(record.id)
                 records.append(record)
@@ -103,49 +105,54 @@ rule extract_seq_lm:
     output:
         "{anything}/seqs.txt",
     shell:
-        """bedtools getfasta -fi {input[1]} -bed {input[0]} -s | grep -v "[^ACTG]" > {output}"""
+        """bedtools getfasta -fi {input[1]} -bed {input[0]} -s | grep -v "[^ACGTacgt]" > {output}"""
 
 
-rule filter_fasta_train:
+# non-repetitive and non-N
+rule find_good_intervals:
     input:
         "tair10.fa",
-        "intervals/train.bed",
     output:
-        "tair10.train.fa",
-    run:
-        intervals = pd.read_csv(input[1], sep="\t", header=None, names=["chromosome", "start", "end"]).set_index("chromosome")
-
-        records = []
-        with open(input[0]) as input_handle:
-            for record in SeqIO.parse(input_handle, "fasta"):
-                if record.id in intervals.index.values:
-                    records.append(record[intervals.loc[record.id, "start"]:intervals.loc[record.id, "end"]])
-
-        with open(output[0], "w") as output_handle:
-            SeqIO.write(records, output_handle, "fasta")
+        "intervals/Ath.bed",
+    shell:
+        "python find_good_intervals.py {input} {output} {REPEATS_CUT_AWAY_FROM_BORDER} {MIN_CONTIG_LEN}"
 
 
-rule split_into_contigs:
+rule split_good_intervals:
     input:
-        "{anything}.fa.gz",
+        "intervals/Ath.bed",
     output:
-        "{anything}.contigs.parquet",
+        expand("intervals/Ath.{split}.bed", split=splits),
     run:
-        with gzip.open(input[0], "rt") as handle:
-            sequence = '\n'.join([str(record.seq).strip() for record in SeqIO.parse(handle, "fasta")])
-        m = re.sub('[^ACGTacgt]+', '\n', sequence).split('\n')
-        m = [x for x in m if len(x) >= MIN_CONTIG_LEN]
-        df = pd.DataFrame(dict(
-            contig_id=[f"contig_{i}" for i in range(len(m))],
-            seq=m,
-        ))
-        df["species"] = wildcards["anything"]
+        intervals = pd.read_csv(input[0], sep="\t", header=None, names=["chrom", "start", "end"])
+        for split, path in zip(splits, output):
+            intervals[intervals.chrom.isin(split_chromosomes[split])].to_csv(path, sep="\t", index=False, header=False)
+
+
+
+rule make_train_dataset:
+    input:
+        "tair10.fa",
+        "intervals/Ath.train.bed",
+    output:
+        "dataset/Ath.train.parquet",
+    run:
+        genome = SeqIO.to_dict(SeqIO.parse(input[0], "fasta"))
+        df = pd.read_csv(input[1], sep="\t", header=None, names=["chromosome", "start", "end"])
+        print(df)
+        df["contig_id"] = df.chromosome.astype(str) + ":" + df.start.astype(str) + "-" + df.end.astype(str)
+        df["seq"] = df.apply(lambda row: str(genome[row.chromosome][row.start:row.end].seq), axis=1)
+        print(df)
         df["contig_len"] = df.seq.str.len()
         print(df)
         df.to_parquet(output[0], index=False)
 
 
-rule concat_genomes:
+# TODO
+# rule make_test_dataset
+
+
+"""rule concat_genomes:
     input:
         expand("genomes/{genome}.contigs.parquet", genome=genomes),
     output:
@@ -157,7 +164,7 @@ rule concat_genomes:
         df["species_id"] = pd.Categorical(df.species).codes
         print(df)
         print(df[df.species_id==0])
-        df.to_parquet(output[0], index=False)
+        df.to_parquet(output[0], index=False)"""
 
 
 rule find_specific_regions:

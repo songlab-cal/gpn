@@ -23,14 +23,14 @@ print("output_path: ", output_path)
 
 dataset = load_dataset("text", data_files={"test": data_path})["test"]
 #dataset = dataset.select(np.arange(100))
-#print(dataset)
+print(dataset)
 text_column_name = "text"
 
 tokenizer = AutoTokenizer.from_pretrained(model_path)
 
 
 def tokenize_function(examples):
-    return tokenizer(
+    res = tokenizer(
         examples[text_column_name],
         # We use this option because DataCollatorForLanguageModeling (see below) is more efficient when it
         # receives the `special_tokens_mask`.
@@ -38,6 +38,16 @@ def tokenize_function(examples):
         return_attention_mask=False,
         return_token_type_ids=False,
     )
+    res["special_tokens_mask"] = np.array(res["special_tokens_mask"]).astype(bool)
+    res["special_tokens_mask"] = res["special_tokens_mask"] | np.char.islower(np.vstack([np.array(list(seq)) for seq in examples[text_column_name]]))
+    #print(res["input_ids"][0])
+    #print(res["special_tokens_mask"][0])
+    #print(res["special_tokens_mask"])
+    #print(res["special_tokens_mask"].sum())
+    #print(type(res["special_tokens_mask"]))
+    #raise Exception("debug")
+    return res
+
 
 dataset = dataset.map(
     tokenize_function,
@@ -45,8 +55,20 @@ dataset = dataset.map(
     num_proc=N_CPU_WORKERS,
     remove_columns=[text_column_name],
     desc="Running tokenizer on dataset.",
-)
+).shuffle(seed=42)
+print(dataset)
 
+dataset = dataset.filter(
+    lambda example: not np.array(example["special_tokens_mask"]).all(),
+    num_proc=N_CPU_WORKERS,
+)
+print(dataset)
+#raise Exception("debug")
+
+#dataset = dataset.select([0, 10, 100])
+#print(dataset)
+#print(dataset["special_tokens_mask"])
+#raise Exception("debug")
 
 data_collator = DataCollatorForLanguageModelingSpan(
     tokenizer=tokenizer,
@@ -57,11 +79,12 @@ model = AutoModelForMaskedLM.from_pretrained(model_path)
 
 training_args = TrainingArguments(
     output_dir=tempfile.TemporaryDirectory().name,
-    per_device_eval_batch_size=128,
+    per_device_eval_batch_size=256,
     dataloader_num_workers=N_CPU_WORKERS,
     prediction_loss_only=True,
     report_to="none",
     seed=42,
+    remove_unused_columns=False,
 )
 
 trainer = Trainer(
