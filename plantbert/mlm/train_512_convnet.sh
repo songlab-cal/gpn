@@ -13,11 +13,11 @@ WANDB_PROJECT=PlantBERT_MLM_512_NO_REPEATS python ./run_mlm_custom.py \
     --save_steps 100000 \
     --max_steps 1000000 \
     --evaluation_strategy steps \
-    --eval_steps 1000 \
+    --eval_steps 100000 \
     --dataloader_num_workers 8 \
     --preprocessing_num_workers 8 \
     --warmup_steps 10000 \
-    --logging_steps 1000 \
+    --logging_steps 100000 \
     --output_dir results/checkpoints/512_no_repeats/convnet \
     --tokenizer_name ../../data/mlm/tokenizer_bare2 \
     --per_device_train_batch_size 250 \

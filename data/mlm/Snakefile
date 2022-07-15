@@ -11,151 +11,113 @@ from tqdm import tqdm
 tqdm.pandas()
 
 
-genomes = pd.read_csv("genome_list.tsv", header=None).values.ravel()
-print(genomes)
+species_metadata = pd.read_csv("species_metadata.tsv", sep="\t").set_index("species", drop=False)
+species_train = species_metadata.species.replace("Arabidopsis_thaliana", "Arabidopsis_thaliana.train")
+species_test = ["Arabidopsis_thaliana.test"]
+
+#genomes = pd.read_csv("genome_list.tsv", header=None).values.ravel()
+#print(genomes)
 
 features = ["CDS", "five_prime_UTR", "three_prime_UTR"]
 splits = ["train", "test"]
 split_chromosomes = {
-    "train": ["Chr1", "Chr2", "Chr3", "Chr4"],
-    "test": ["Chr5",],
+    #"train": ["Chr1", "Chr2", "Chr3", "Chr4"],
+    #"test": ["Chr5",],
+    "train": [1, 2, 3, 4],
+    "test": [5],
 }
 
 
-REPEATS_CUT_AWAY_FROM_BORDER = 128
+REPEATS_CUT_AWAY_FROM_BORDER = 256-1
 MIN_CONTIG_LEN = 512
+
+
+ruleorder: copy_Ath_genome > download_reference
 
 
 rule all:
     input:
+        "dataset/train/all.parquet",
+        #expand("genome/{species}.fa.gz", species=species_metadata.index.values),
+        expand("intervals/{species}.tsv.gz", species=species_metadata.species),
+        expand("intervals/Arabidopsis_thaliana.{split}.tsv.gz", split=splits),
+        expand("dataset/train/{species}.parquet", species=species_train),
+        expand("dataset/test/{species}.512.256.parquet", species=species_test),
         #"genomes/all.spike_target_0.5.contigs.parquet",
         #"genomes/all.contigs.parquet",
-        "windows/val/512/256/seqs.txt",
+        #"windows/val/512/256/seqs.txt",
         #expand("windows/{feature}.test/512/128/seqs.txt", feature=features),
         #expand("dataset/{feature}.parquet", feature=features),
 
 
 rule download_reference:
     output:
-        "tair10.raw.fa",
+        "genome/{species}.fa.gz",
+    params:
+        lambda wildcards: species_metadata.loc[wildcards.species, "fasta_url"] 
     shell:
-        "wget http://ftp.ensemblgenomes.org/pub/plants/release-53/fasta/arabidopsis_thaliana/dna/Arabidopsis_thaliana.TAIR10.dna_sm.toplevel.fa.gz -O - | gunzip -c > {output}"
-
-
-rule clean_reference:
-    input:
-        "tair10.raw.fa",
-    output:
-        "tair10.fa",
-    run:
-        records = []
-        with open(input[0]) as input_handle:
-            for record in SeqIO.parse(input_handle, "fasta"):
-                print(record.id)
-                if record.id in ["M", "chloroplast", "Mt", "Pt"]: continue
-                record.id = "Chr" + record.id
-                print(record.id)
-                records.append(record)
-
-        with open(output[0], "w") as output_handle:
-            SeqIO.write(records, output_handle, "fasta")
-
-
-rule make_windows_lm_raw:
-    input:
-       "intervals/{split}.bed"
-    output:
-        "windows/{split}/{window_size}/{step_size}/raw.bed"
-    shell:
-        "bedtools makewindows -b {input} -w {wildcards.window_size} -s {wildcards.step_size} | awk '$3-$2=={wildcards.window_size}' > {output}"
-
-
-rule make_windows_lm_pos:
-    input:
-        "{anything}/raw.bed"
-    output:
-        "{anything}/pos.bed"
-    shell:
-        """awk '{{print $0 "\t.\t.\t+"}}' {input} > {output}"""
-
-
-rule make_windows_lm_neg:
-    input:
-        "{anything}/raw.bed"
-    output:
-        "{anything}/neg.bed"
-    shell:
-        """awk '{{print $0 "\t.\t.\t-"}}' {input} > {output}"""
-
-
-rule make_windows_lm:
-    input:
-        "{anything}/pos.bed",
-        "{anything}/neg.bed",
-    output:
-        "{anything}/all.bed",
-    shell:
-        "cat {input} > {output}"
-
-
-rule extract_seq_lm:
-    input:
-        "{anything}/all.bed",
-        "tair10.fa",
-    output:
-        "{anything}/seqs.txt",
-    shell:
-        """bedtools getfasta -fi {input[1]} -bed {input[0]} -s | grep -v "[^ACGTacgt]" > {output}"""
+        "wget {params} -O {output}"
 
 
 # non-repetitive and non-N
 rule find_good_intervals:
     input:
-        "tair10.fa",
+        "genome/{species}.fa.gz",
     output:
-        "intervals/Ath.bed",
+        "intervals/{species}.tsv.gz",
     shell:
         "python find_good_intervals.py {input} {output} {REPEATS_CUT_AWAY_FROM_BORDER} {MIN_CONTIG_LEN}"
 
 
-rule split_good_intervals:
+rule split_Ath_intervals:
     input:
-        "intervals/Ath.bed",
+        "intervals/Arabidopsis_thaliana.tsv.gz",
     output:
-        expand("intervals/Ath.{split}.bed", split=splits),
+        expand("intervals/Arabidopsis_thaliana.{split}.tsv.gz", split=splits),
     run:
-        intervals = pd.read_csv(input[0], sep="\t", header=None, names=["chrom", "start", "end"])
+        intervals = pd.read_csv(input[0], sep="\t")
         for split, path in zip(splits, output):
-            intervals[intervals.chrom.isin(split_chromosomes[split])].to_csv(path, sep="\t", index=False, header=False)
+            intervals[intervals.chrom.isin(split_chromosomes[split])].to_csv(path, sep="\t", index=False)
+
+    
+rule copy_Ath_genome:
+    input:
+        "genome/Arabidopsis_thaliana.fa.gz",
+    output:
+        "genome/Arabidopsis_thaliana.{split}.fa.gz",
+    shell:
+        "cp {input} {output}"
 
 
 rule make_train_dataset:
     input:
-        "tair10.fa",
-        "intervals/Ath.train.bed",
+        "genome/{species}.fa.gz",
+        "intervals/{species}.tsv.gz",
     output:
-        "dataset/Ath.train.parquet",
+        "dataset/train/{species}.parquet",
     run:
-        genome = SeqIO.to_dict(SeqIO.parse(input[0], "fasta"))
-        df = pd.read_csv(input[1], sep="\t", header=None, names=["chromosome", "start", "end"])
+        with gzip.open(input[0], "rt") as handle:
+            genome = SeqIO.to_dict(SeqIO.parse(handle, "fasta"))
+        df = pd.read_csv(input[1], sep="\t")
+        df.chrom = df.chrom.astype(str)
+        df["species"] = wildcards["species"]
         print(df)
-        df["contig_id"] = df.chromosome.astype(str) + ":" + df.start.astype(str) + "-" + df.end.astype(str)
-        df["seq"] = df.apply(lambda row: str(genome[row.chromosome][row.start:row.end].seq), axis=1)
-        print(df)
-        df["contig_len"] = df.seq.str.len()
+        df["seq"] = df.apply(lambda row: str(genome[row.chrom][row.start:row.end].seq), axis=1)
         print(df)
         df.to_parquet(output[0], index=False)
 
 
 rule make_test_dataset:
     input:
-        "tair10.fa",
-        "intervals/Ath.test.bed",
+        "genome/{species}.fa.gz",
+        "intervals/{species}.tsv.gz",
     output:
-        "dataset/Ath.test.{window_size}.{step_size}.parquet",
+        "dataset/test/{species}.{window_size}.{step_size}.parquet",
     run:
-        genome = SeqIO.to_dict(SeqIO.parse(input[0], "fasta"))
-        contigs = pd.read_csv(input[1], sep="\t", header=None, names=["chromosome", "start", "end"])
+        with gzip.open(input[0], "rt") as handle:
+            genome = SeqIO.to_dict(SeqIO.parse(handle, "fasta"))
+        contigs = pd.read_csv(input[1], sep="\t")
+        contigs.chrom = contigs.chrom.astype(str)
 
         window_size = int(wildcards["window_size"])
         step_size = int(wildcards["step_size"])
@@ -163,7 +125,7 @@ rule make_test_dataset:
         def get_contig_windows(contig):
             windows = pd.DataFrame(dict(start=np.arange(contig.start, contig.end-window_size, step_size)))
             windows["end"] = windows.start + window_size
-            windows["chromosome"] = contig.chromosome
+            windows["chrom"] = contig.chrom
             windows["strand"] = "+"
             windows_neg = windows.copy()
             windows_neg.strand = "-"
@@ -174,7 +136,7 @@ rule make_test_dataset:
         print(windows)
 
         def get_window_seq(window):
-            seq = genome[window.chromosome][window.start:window.end].seq
+            seq = genome[window.chrom][window.start:window.end].seq
             if window.strand == "-":
                 seq = seq.reverse_complement()
             return str(seq)
@@ -184,22 +146,18 @@ rule make_test_dataset:
         windows.to_parquet(output[0])
 
 
-"""rule concat_genomes:
+rule concat_train_datasets:
     input:
-        expand("genomes/{genome}.contigs.parquet", genome=genomes),
+        expand("dataset/train/{species}.parquet", species=species_train),
     output:
-        "genomes/all.contigs.parquet",
+        "dataset/train/all.parquet",
     run:
         df = pd.concat([pd.read_parquet(input_path) for input_path in input], ignore_index=True)
         print(df)
-        df.species.replace({"genomes/Arabidopsis_thaliana_train": "genomes/AAA_Arabidopsis_thaliana_train"}, inplace=True)  # to ensure it's sorted first
-        df["species_id"] = pd.Categorical(df.species).codes
-        print(df)
-        print(df[df.species_id==0])
-        df.to_parquet(output[0], index=False)"""
+        df.to_parquet(output[0], index=False)
 
 
-rule find_specific_regions:
+"""rule find_specific_regions:
     input:
         "../vep/tair10.gff",
         #"../vep/tss.bed",
@@ -319,3 +277,4 @@ rule make_latex_table_train_sizes:
         df.contig_len = (df.contig_len / 1000000).round(decimals=0).astype(int).astype(str) + " Mb"
         print(df)
         df.to_latex(output[0], index=False, escape=False)
+"""

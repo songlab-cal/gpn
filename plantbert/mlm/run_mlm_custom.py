@@ -448,7 +448,7 @@ def main():
                 tokenize_function,
                 batched=True,
                 num_proc=data_args.preprocessing_num_workers,
-                remove_columns=[text_column_name],
+                remove_columns=column_names, #[text_column_name],
                 load_from_cache_file=not data_args.overwrite_cache,
                 desc="Running tokenizer on dataset line_by_line",
             )

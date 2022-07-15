@@ -45,6 +45,7 @@ class GenomeSamplerDataset(IterableDataset):
 
         print("Loading parquet.")
         self.contigs = pd.read_parquet(self.fasta_path)
+        self.contigs["contig_len"] = self.contigs.seq.str.len()
         print(self.contigs.shape)
         self.contigs = self.contigs[self.contigs.contig_len >= self.min_contig_size]
         print(self.contigs.shape)
@@ -57,10 +58,7 @@ class GenomeSamplerDataset(IterableDataset):
         print(self.contigs[["contig_len", "contig_weight", "contig_prob"]])
         print("Done.")
 
-
     def __iter__(self):
-
-
         print("Loading tokenizer.")
         #tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_path, use_fast=self.use_fast_tokenizer)
         tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_path)
