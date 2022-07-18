@@ -12,7 +12,8 @@ tqdm.pandas()
 
 
 species_metadata = pd.read_csv("species_metadata.tsv", sep="\t").set_index("species", drop=False)
-species_train = species_metadata.species.replace("Arabidopsis_thaliana", "Arabidopsis_thaliana.train")
+#species_train = species_metadata.species.replace("Arabidopsis_thaliana", "Arabidopsis_thaliana.train")
+species_train = ["Arabidopsis_thaliana.train"]
 species_test = ["Arabidopsis_thaliana.test"]
 
 #genomes = pd.read_csv("genome_list.tsv", header=None).values.ravel()
@@ -28,7 +29,7 @@ split_chromosomes = {
 }
 
 
-REPEATS_CUT_AWAY_FROM_BORDER = 256-1
+#REPEATS_CUT_AWAY_FROM_BORDER = 256-1
 MIN_CONTIG_LEN = 512
 
 
@@ -37,10 +38,9 @@ ruleorder: copy_Ath_genome > download_reference
 
 rule all:
     input:
-        "dataset/train/all.parquet",
+        #"dataset/train/all.parquet",
         #expand("genome/{species}.fa.gz", species=species_metadata.index.values),
-        expand("intervals/{species}.tsv.gz", species=species_metadata.species),
-        expand("intervals/Arabidopsis_thaliana.{split}.tsv.gz", split=splits),
+        #expand("intervals/{species}.tsv.gz", species=species_metadata.species),
         expand("dataset/train/{species}.parquet", species=species_train),
         expand("dataset/test/{species}.512.256.parquet", species=species_test),
         #"genomes/all.spike_target_0.5.contigs.parquet",
@@ -66,7 +66,8 @@ rule find_good_intervals:
     output:
         "intervals/{species}.tsv.gz",
     shell:
-        "python find_good_intervals.py {input} {output} {REPEATS_CUT_AWAY_FROM_BORDER} {MIN_CONTIG_LEN}"
+        "python find_intervals_defined.py {input} {output} {MIN_CONTIG_LEN}"
+        #"python find_intervals_non_repeat.py {input} {output} {REPEATS_CUT_AWAY_FROM_BORDER} {MIN_CONTIG_LEN}"
 
 
 rule split_Ath_intervals:
@@ -142,11 +143,12 @@ rule make_test_dataset:
             return str(seq)
 
         windows["seq"] = windows.progress_apply(get_window_seq, axis=1)
+        windows = windows.sample(frac=1.0, random_state=42)
         print(windows)
         windows.to_parquet(output[0])
 
 
-rule concat_train_datasets:
+"""rule concat_train_datasets:
     input:
         expand("dataset/train/{species}.parquet", species=species_train),
     output:
@@ -154,7 +156,7 @@ rule concat_train_datasets:
     run:
         df = pd.concat([pd.read_parquet(input_path) for input_path in input], ignore_index=True)
         print(df)
-        df.to_parquet(output[0], index=False)
+        df.to_parquet(output[0], index=False)"""
 
 
 """rule find_specific_regions:
