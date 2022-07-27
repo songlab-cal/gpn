@@ -223,11 +223,11 @@ rule process_conservation:
         "conservation/Ath_PhastCons.bedGraph.gz",
         "conservation/Ath_PhyloP.bedGraph.gz",
     output:
-        "conservation/Chr5.tsv.gz",
+        "conservation/{chrom}.tsv.gz",
     run:
         def load_conservation(model):
             conservation = pd.read_csv(f"./conservation/Ath_{model}.bedGraph.gz", sep="\t", header=None, names=["chromosome", "pos", "end", model])
-            conservation = conservation[conservation.chromosome=="Chr5"]
+            conservation = conservation[conservation.chromosome==wildcards["chrom"]]
             conservation = conservation[["pos", model]]
             return conservation
         phastcons = load_conservation("PhastCons")

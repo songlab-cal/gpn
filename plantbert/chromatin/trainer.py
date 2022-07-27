@@ -12,7 +12,7 @@ from data import DeepSEADataModule, DNABERTDataModule, PlantBertDataModule
 from model import DeepSEAModel, DNABERTModel, PlantBertModel, DSSModel
 
 
-from plantbert.mlm.convnet import ConvNetModel
+#from plantbert.mlm.convnet import ConvNetModel
 
 
 pl.utilities.seed.seed_everything(seed=42)
@@ -54,8 +54,9 @@ def main(hparams):
             model_class = PlantBertModel
             #model_args["language_model_path"] = "../mlm/old_bpe/results/checkpoint-200000/"
             #model_args["pretrained_model_path"] = "../mlm/results_512_convnet/checkpoint-400000/"
-            model_args["pretrained_model_path"] = "../mlm/results_512_convnet_finetuning_v2/checkpoint-1000000/"
-            model_args["pretrained_model_class"] = ConvNetModel
+            #model_args["pretrained_model_path"] = "../mlm/results_512_convnet_finetuning_v2/checkpoint-1000000/"
+            model_args["pretrained_model_path"] = "../mlm/results_512_convnet_only_athaliana_lower_lr_v2/checkpoint-80000/"
+            #model_args["pretrained_model_class"] = ConvNetModel
             model_args["max_length"] = 1000 #1024
             #model_args["max_length"] = 222#200 # 170 #1024
             #model_args["batch_size"] = 85
@@ -129,7 +130,7 @@ def main(hparams):
 
         wandb_logger = WandbLogger(
             project="PlantBERT_Chromatin",
-            name="ConvNet_512_ft",
+            name="ConvNet_512_ft_lowlr",
             log_model=False,
         )
 
