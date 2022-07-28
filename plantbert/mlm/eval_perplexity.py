@@ -21,10 +21,10 @@ output_path = f"results/perplexity/{data_path.replace('/', '_')}/{model_path.rep
 print("output_path: ", output_path)
 
 
-dataset = load_dataset("text", data_files={"test": data_path})["test"]
+dataset = load_dataset("parquet", data_files={"test": data_path})["test"]
 #dataset = dataset.select(np.arange(100))
 print(dataset)
-text_column_name = "text"
+text_column_name = "seq"
 
 tokenizer = AutoTokenizer.from_pretrained(model_path)
 
@@ -34,12 +34,12 @@ def tokenize_function(examples):
         examples[text_column_name],
         # We use this option because DataCollatorForLanguageModeling (see below) is more efficient when it
         # receives the `special_tokens_mask`.
-        return_special_tokens_mask=True,
+        return_special_tokens_mask=False,
         return_attention_mask=False,
         return_token_type_ids=False,
     )
-    res["special_tokens_mask"] = np.array(res["special_tokens_mask"]).astype(bool)
-    res["special_tokens_mask"] = res["special_tokens_mask"] | np.char.islower(np.vstack([np.array(list(seq)) for seq in examples[text_column_name]]))
+    #res["special_tokens_mask"] = np.array(res["special_tokens_mask"]).astype(bool)
+    #res["special_tokens_mask"] = res["special_tokens_mask"] | np.char.islower(np.vstack([np.array(list(seq)) for seq in examples[text_column_name]]))
     #print(res["input_ids"][0])
     #print(res["special_tokens_mask"][0])
     #print(res["special_tokens_mask"])
@@ -58,11 +58,11 @@ dataset = dataset.map(
 ).shuffle(seed=42)
 print(dataset)
 
-dataset = dataset.filter(
-    lambda example: not np.array(example["special_tokens_mask"]).all(),
-    num_proc=N_CPU_WORKERS,
-)
-print(dataset)
+#dataset = dataset.filter(
+#    lambda example: not np.array(example["special_tokens_mask"]).all(),
+#    num_proc=N_CPU_WORKERS,
+#)
+#print(dataset)
 #raise Exception("debug")
 
 #dataset = dataset.select([0, 10, 100])
@@ -84,7 +84,7 @@ training_args = TrainingArguments(
     prediction_loss_only=True,
     report_to="none",
     seed=42,
-    remove_unused_columns=False,
+    remove_unused_columns=True,
 )
 
 trainer = Trainer(

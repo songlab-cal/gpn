@@ -28,7 +28,7 @@ class VEPDataset(torch.utils.data.Dataset):
 
         self.variants = pd.read_parquet(self.variants_path)
         #self.variants = self.variants.iloc[:len(self.variants)//2]
-        self.variants = self.variants.iloc[len(self.variants)//2:]
+        #self.variants = self.variants.iloc[len(self.variants)//2:]
 
         df_ref_pos = self.variants.copy()
         df_ref_pos["start"] = df_ref_pos.pos - self.window_size // 2
@@ -112,12 +112,12 @@ class DNABERTVEPDataset(VEPDataset):
 model_type = sys.argv[1]
 
 
-variants_path = "../../data/vep/variants/filt.parquet"
+variants_path = "../../data/vep/variants/filt.Chr5.parquet"
 genome_path = "../../data/vep/tair10.fa"
 max_length = 200
 window_size = 1000
-output_path = f"vep_full_half2_{model_type}.parquet"
-output_dir = f"results_vep_full_half2_{model_type}"  # not really used but necessary for trainer
+output_path = f"vep_full_{model_type}.parquet"
+output_dir = f"results_vep_full_{model_type}"  # not really used but necessary for trainer
 
 
 if model_type == "DeepSEA":
@@ -146,8 +146,8 @@ elif model_type =="ConvNet":
     model_class = PlantBertModel
     #model_ckpt = "lightning_logs/version_3kimm4yz/epoch_6-step_23324.ckpt"
     #tokenizer_path = "../mlm/results_128_cycle/checkpoint-200000/"
-    model_ckpt = "lightning_logs/version_148q8xs0/epoch_5-step_19992.ckpt"
-    tokenizer_path = "../mlm/results_512_convnet/checkpoint-400000/"
+    model_ckpt = "lightning_logs/version_3lsbu8l6/epoch_7-step_26656.ckpt"
+    tokenizer_path = "../../data/mlm/tokenizer_bare"
     max_length = 1000
     per_device_eval_batch_size = 512
 
