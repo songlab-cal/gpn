@@ -11,55 +11,35 @@ from tqdm import tqdm
 tqdm.pandas()
 
 
-species_metadata = pd.read_csv("species_metadata.tsv", sep="\t").set_index("species", drop=False)
-#species_train = species_metadata.species.replace("Arabidopsis_thaliana", "Arabidopsis_thaliana.train")
 species_train = ["Arabidopsis_thaliana.train"]
 species_test = ["Arabidopsis_thaliana.test"]
 
-#genomes = pd.read_csv("genome_list.tsv", header=None).values.ravel()
-#print(genomes)
 
-features = ["CDS", "five_prime_UTR", "three_prime_UTR"]
-splits = ["train", "test"]
 split_chromosomes = {
-    #"train": ["Chr1", "Chr2", "Chr3", "Chr4"],
-    #"test": ["Chr5",],
     "train": [1, 2, 3, 4],
     "test": [5],
 }
+splits = split_chromosomes.keys()
 
 
-#REPEATS_CUT_AWAY_FROM_BORDER = 256-1
 MIN_CONTIG_LEN = 512
-
-
-ruleorder: copy_Ath_genome > download_reference
+FASTA_URL = "http://ftp.ensemblgenomes.org/pub/plants/release-54/fasta/arabidopsis_thaliana/dna/Arabidopsis_thaliana.TAIR10.dna_sm.toplevel.fa.gz"
 
 
 rule all:
     input:
-        #"dataset/train/all.parquet",
-        #expand("genome/{species}.fa.gz", species=species_metadata.index.values),
-        #expand("intervals/{species}.tsv.gz", species=species_metadata.species),
         expand("dataset/train/{species}.parquet", species=species_train),
         expand("dataset/test/{species}.512.256.parquet", species=species_test),
-        #"genomes/all.spike_target_0.5.contigs.parquet",
-        #"genomes/all.contigs.parquet",
-        #"windows/val/512/256/seqs.txt",
-        #expand("windows/{feature}.test/512/128/seqs.txt", feature=features),
-        #expand("dataset/{feature}.parquet", feature=features),
 
 
 rule download_reference:
     output:
-        "genome/{species}.fa.gz",
-    params:
-        lambda wildcards: species_metadata.loc[wildcards.species, "fasta_url"] 
+        "genome/Arabidopsis_thaliana.fa.gz",
     shell:
-        "wget {params} -O {output}"
+        "wget {FASTA_URL} -O {output}"
 
 
-# non-repetitive and non-N
+# only defined nucleotides (ACGTacgt)
 rule find_good_intervals:
     input:
         "genome/{species}.fa.gz",
@@ -67,7 +47,6 @@ rule find_good_intervals:
         "intervals/{species}.tsv.gz",
     shell:
         "python find_intervals_defined.py {input} {output} {MIN_CONTIG_LEN}"
-        #"python find_intervals_non_repeat.py {input} {output} {REPEATS_CUT_AWAY_FROM_BORDER} {MIN_CONTIG_LEN}"
 
 
 rule split_Ath_intervals:
@@ -146,137 +125,3 @@ rule make_test_dataset:
         windows = windows.sample(frac=1.0, random_state=42)
         print(windows)
         windows.to_parquet(output[0])
-
-
-"""rule concat_train_datasets:
-    input:
-        expand("dataset/train/{species}.parquet", species=species_train),
-    output:
-        "dataset/train/all.parquet",
-    run:
-        df = pd.concat([pd.read_parquet(input_path) for input_path in input], ignore_index=True)
-        print(df)
-        df.to_parquet(output[0], index=False)"""
-
-
-"""rule find_specific_regions:
-    input:
-        "../vep/tair10.gff",
-        #"../vep/tss.bed",
-    output:
-        expand("intervals/{feature}.{split}.bed", feature=features, split=splits)
-        #"intervals/promoter.bed",
-    run:
-        gtf = pd.read_csv(
-            input[0], sep="\t", header=None, comment="#",
-            names=['chromosome', 'source', 'feature', 'start', 'end', 'score', 'strand', 'frame', 'attribute']
-        )
-        print(gtf)
-
-        chromosomes = ["Chr1", "Chr2", "Chr3", "Chr4", "Chr5"]
-        gtf = gtf[gtf.chromosome.isin(chromosomes)]
-
-        gtf.start -= MIN_CONTIG_LEN // 2
-        gtf.end += MIN_CONTIG_LEN // 2
-
-        for split in splits:
-            print(split)
-            gtf_split = gtf[gtf.chromosome.isin(split_chromosomes[split])]
-            for feature in features:
-                print(feature)
-                gtf_split[gtf_split.feature==feature][["chromosome", "start", "end"]].drop_duplicates().to_csv(f"intervals/{feature}.{split}.bed", sep="\t", index=False, header=False)
-        # TODO remove duplicate positions in tss.bed
-
-
-rule make_train_data_region:
-    input:
-        "intervals/{feature}.train.bed",
-        "tair10.fa",
-        "genomes/Arabidopsis_thaliana_train.contigs.parquet",
-    output:
-        "dataset/{feature}.parquet",
-    run:
-        df = pd.read_csv(input[0], sep="\t", header=None, names=["chromosome", "start", "end"])
-        print(df)
-        genome = SeqIO.to_dict(SeqIO.parse(input[1], "fasta"))
-        df["seq"] = df.apply(lambda row: str(genome[row.chromosome][row.start:row.end].seq), axis=1)
-        print(df)
-        df["contig_id"] = df.chromosome.astype(str) + ":" + df.start.astype(str) + "-" + df.end.astype(str)
-        df.drop(columns=["chromosome", "start", "end"], inplace=True)
-        df["contig_len"] = df.seq.str.len()
-        print(df)
-        print(df.contig_len.describe())
-
-        df["contig_type"] = "target"
-
-        df2 = pd.read_parquet(input[2])
-        df2["contig_type"] = "background"
-
-        df = pd.concat([df, df2], ignore_index=True)
-        print(df)
-        print(df.contig_type.value_counts())
-
-        df["contig_weight"] = (1 + df.contig_len - MIN_CONTIG_LEN).clip(lower=1)
-
-        contig_weight_by_type = df.groupby("contig_type").contig_weight.sum()
-        print(contig_weight_by_type)
-        print(contig_weight_by_type / contig_weight_by_type.sum())
-
-        target_ratio = 0.5
-        weight_multiplier = (contig_weight_by_type["background"]*target_ratio) / (contig_weight_by_type["target"]*(1-target_ratio))
-        print(weight_multiplier)
-
-        df.loc[df.contig_type=="target", "contig_weight"] *= weight_multiplier
-        contig_weight_by_type = df.groupby("contig_type").contig_weight.sum()
-        print(contig_weight_by_type)
-        print(contig_weight_by_type / contig_weight_by_type.sum())
-
-        df.to_parquet(output[0], index=False)
-
-
-rule make_train_data_spike_arabidopsis:
-    input:
-        "genomes/all.contigs.parquet",
-    output:
-        "genomes/all.spike_target_{target_ratio}.contigs.parquet",
-    run:
-        df = pd.read_parquet(input[0])
-        df["contig_type"] = "background"
-        df.loc[df.species_id==0, "contig_type"] = "target"
-
-        df["contig_weight"] = (1 + df.contig_len - MIN_CONTIG_LEN).clip(lower=1)
-
-        contig_weight_by_type = df.groupby("contig_type").contig_weight.sum()
-        print(contig_weight_by_type)
-        print(contig_weight_by_type / contig_weight_by_type.sum())
-
-        target_ratio = float(wildcards["target_ratio"])
-        weight_multiplier = (contig_weight_by_type["background"]*target_ratio) / (contig_weight_by_type["target"]*(1-target_ratio))
-        print(weight_multiplier)
-
-        df.loc[df.contig_type=="target", "contig_weight"] *= weight_multiplier
-        contig_weight_by_type = df.groupby("contig_type").contig_weight.sum()
-        print(contig_weight_by_type)
-        print(contig_weight_by_type / contig_weight_by_type.sum())
-
-        df.to_parquet(output[0], index=False)
-
-
-rule make_latex_table_train_sizes:
-    input:
-        "genomes/all.contigs.parquet",
-    output:
-        "table_train_sizes.txt",
-    run:
-        df = pd.read_parquet(input[0])
-        df = df.groupby("species").contig_len.sum().to_frame().reset_index()
-        print(df)
-        df.species = df.species.str.replace("genomes/", "").str.replace("_", " ")
-        df.species.replace({"AAA Arabidopsis thaliana train": "Arabidopsis thaliana"}, inplace=True)
-        df.species = "\textit{" + df.species + "}"
-        print(df)
-        print("Total: ", df.contig_len.sum()) 
-        df.contig_len = (df.contig_len / 1000000).round(decimals=0).astype(int).astype(str) + " Mb"
-        print(df)
-        df.to_latex(output[0], index=False, escape=False)
-"""

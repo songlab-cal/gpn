@@ -14,7 +14,7 @@ tqdm.pandas(desc="my bar!")
 
 rule all:
     input:
-        "variants/filt.parquet",
+        "variants/filt.Chr5.parquet",
 
 
 rule download_reference:
@@ -238,6 +238,3 @@ rule process_conservation:
         print(conservation.shape)
         print(conservation)
         conservation.to_csv(output[0], sep="\t", index=False)
-
-
-
