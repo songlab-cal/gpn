@@ -172,7 +172,7 @@ class DNABERTDataModule(DataModule):
         print(len(self.train_dataset), len(self.val_dataset), len(self.test_dataset))
 
 
-class PlantBertDataset(Dataset):
+class GPNDataset(Dataset):
     def __init__(self, data_path, language_model_path, max_length, bpe_dropout=None):
         self.df = pd.read_parquet(data_path)
         self.tokenizer = AutoTokenizer.from_pretrained(
@@ -217,7 +217,7 @@ class PlantBertDataset(Dataset):
         return d
 
 
-class PlantBertDataModule(DataModule):
+class GPNDataModule(DataModule):
     def __init__(
         self, data_dir, batch_size, language_model_path, num_workers, max_length,
     ):
@@ -230,20 +230,20 @@ class PlantBertDataModule(DataModule):
 
     def prepare_data(self):
         print("Loading train dataset")
-        self.train_dataset = PlantBertDataset(
+        self.train_dataset = GPNDataset(
             os.path.join(self.data_dir, "train.parquet"),
             self.language_model_path,
             self.max_length,
             #bpe_dropout=0.5,
         )
         print("Loading val dataset")
-        self.val_dataset = PlantBertDataset(
+        self.val_dataset = GPNDataset(
             os.path.join(self.data_dir, "val.parquet"),
             self.language_model_path,
             self.max_length,
         )
         print("Loading test dataset")
-        self.test_dataset = PlantBertDataset(
+        self.test_dataset = GPNDataset(
             os.path.join(self.data_dir, "test.parquet"),
             self.language_model_path,
             self.max_length,

@@ -11,7 +11,6 @@ from torch.optim import AdamW
 import torchmetrics
 
 import plantbert.mlm
-from dss import DSS
 
 
 def calculate_auroc(outputs, feature_names):
@@ -251,7 +250,7 @@ class DNABERTModel(Module):
         return dict(optimizer=optimizer, lr_scheduler=lr_scheduler, monitor=monitor)
 
 
-class PlantBertModel(Module):
+class GPNModel(Module):
     def __init__(
         self,
         pretrained_model_path=None,
@@ -340,64 +339,3 @@ class BertMaxPooler(nn.Module):
         pooled_output = self.dense(pooled_output)
         pooled_output = self.activation(pooled_output)
         return pooled_output
-
-
-class DSSModel(Module):
-    def __init__(
-        self,
-        n_input=None,
-        n_output=None,
-        lr=None,
-        reduce_lr_on_plateau_patience=None,
-        feature_names=None,
-        pos_weight=None,
-        **kwargs,
-    ):
-        super().__init__()
-        self.save_hyperparameters()
-
-        self.n_input = n_input
-        self.n_output = n_output
-        self.lr = lr
-        self.reduce_lr_on_plateau_patience = reduce_lr_on_plateau_patience
-        self.feature_names = feature_names
-
-        self.n_layers = 4
-        self.n_hidden = 256
-        self.weight_decay = 0.01
-        self.embedding = nn.Embedding(self.n_input, self.n_hidden)
-        self.dss = nn.Sequential(*[
-            DSS(
-                d_model=self.n_hidden,
-                bidirectional=True,
-                dropout=0.1,
-                transposed=False,
-            )
-            for _ in range(self.n_layers)
-        ])
-        self.pooler = BertAvgPooler(self.n_hidden)
-        self.dropout = nn.Dropout(0.1)
-        self.classifier = nn.Linear(self.n_hidden, n_output)
-
-        self.register_buffer("pos_weight", torch.tensor(pos_weight, dtype=torch.float))
-
-    def forward(self, input_ids=None):
-        x = self.embedding(input_ids)
-        x = self.dss(x)
-        x = self.pooler(x)
-        x = self.dropout(x)
-        x = self.classifier(x)
-        return x
-
-    def configure_optimizers(self):
-        optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
-        lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer,
-            patience=self.reduce_lr_on_plateau_patience,
-            factor=0.1,
-            threshold=0.0,
-            threshold_mode="abs",
-            verbose=True,
-        )
-        monitor = "val/neg_median_auroc"
-        return dict(optimizer=optimizer, lr_scheduler=lr_scheduler, monitor=monitor)
