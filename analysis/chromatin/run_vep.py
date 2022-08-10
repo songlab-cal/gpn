@@ -6,8 +6,8 @@ import sys
 import torch
 from transformers import AutoTokenizer, Trainer, TrainingArguments
 
-from plantbert.chromatin.data import encode_dna_seq, seq2kmer
-from plantbert.chromatin.model import PlantBertModel, DeepSEAModel, DNABERTModel
+from gpn.chromatin.data import encode_dna_seq, seq2kmer
+from gpn.chromatin.model import GPNModel, DeepSEAModel, DNABERTModel
 
 
 # TODO: should load both genome and tokenizer later, to avoid memory leak with num_workers>0
@@ -73,7 +73,7 @@ class VEPDataset(torch.utils.data.Dataset):
         return x
 
 
-class PlantBertVEPDataset(VEPDataset):
+class GPNVEPDataset(VEPDataset):
     def tokenize_seq(self, seq):
         x = self.tokenizer(
             seq,
@@ -133,17 +133,9 @@ elif model_type =="DNABERT":
     model_ckpt = "DNABERT/checkpoints/epoch=7-step=27079.ckpt"
     tokenizer_path = "armheb/DNA_bert_6"
     per_device_eval_batch_size = 64
-elif model_type =="PlantBert":
-    data_class = PlantBertVEPDataset
-    model_class = PlantBertModel
-    #model_ckpt = "version_6/checkpoints/epoch=9-step=33449.ckpt"
-    #model_ckpt = "lightning_logs/version_33/checkpoints/epoch=7-step=26655.ckpt"
-    model_ckpt = "lightning_logs/version_2znci1qx/epoch_6-step_46648.ckpt"  # bpe dropout version
-    tokenizer_path = "../mlm/old_bpe/results/checkpoint-200000/"
-    per_device_eval_batch_size = 512
-elif model_type =="ConvNet":
-    data_class = PlantBertVEPDataset
-    model_class = PlantBertModel
+elif model_type =="GPN":
+    data_class = GPNVEPDataset
+    model_class = GPNModel
     #model_ckpt = "lightning_logs/version_3kimm4yz/epoch_6-step_23324.ckpt"
     #tokenizer_path = "../mlm/results_128_cycle/checkpoint-200000/"
     model_ckpt = "lightning_logs/version_3lsbu8l6/epoch_7-step_26656.ckpt"
@@ -160,12 +152,7 @@ d = data_class(
     window_size=window_size,
 )
 
-if model_type == "PlantBert":
-    model = model_class.load_from_checkpoint(
-        model_ckpt, language_model_path=tokenizer_path
-    )
-else:
-    model = model_class.load_from_checkpoint(model_ckpt,)
+model = model_class.load_from_checkpoint(model_ckpt,)
 
 training_args = TrainingArguments(
     output_dir=output_dir, per_device_eval_batch_size=per_device_eval_batch_size, dataloader_num_workers=0,

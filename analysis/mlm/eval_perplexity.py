@@ -5,8 +5,8 @@ import sys
 import tempfile
 from transformers import AutoTokenizer, AutoModelForMaskedLM, Trainer, TrainingArguments
 
-import plantbert.mlm  # to register auto models
-from plantbert.mlm.data_collator_mask_span import DataCollatorForLanguageModelingSpan
+import gpn.mlm  # to register auto models
+from gpn.mlm.data_collator_mask_span import DataCollatorForLanguageModelingSpan
 
 
 N_CPU_WORKERS = 8

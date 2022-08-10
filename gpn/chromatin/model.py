@@ -10,7 +10,7 @@ from transformers import get_scheduler, AutoModel, PretrainedConfig, BertModel
 from torch.optim import AdamW
 import torchmetrics
 
-import plantbert.mlm
+import gpn.mlm
 
 
 def calculate_auroc(outputs, feature_names):
