@@ -54,8 +54,9 @@ from transformers.utils.versions import require_version
 import torchinfo
 
 
-from data_collator_mask_span import DataCollatorForLanguageModelingSpan
-from genome_sampler_dataset import GenomeSamplerDataset
+import gpn.mlm
+from gpn.mlm.data_collator_mask_span import DataCollatorForLanguageModelingSpan
+from gpn.mlm.genome_sampler_dataset import GenomeSamplerDataset
 
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.

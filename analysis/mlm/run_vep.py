@@ -8,7 +8,7 @@ import tempfile
 import torch
 from transformers import AutoTokenizer, Trainer, TrainingArguments, AutoModelForMaskedLM
 
-from convnet import ConvNetForMaskedLM
+import gpn.mlm
 
 
 # TODO: should load both genome and tokenizer later, to avoid memory leak with num_workers>0
@@ -211,7 +211,7 @@ model_path = sys.argv[2]
 
 max_length = 512
 window_size = 512
-model_class = ConvNetForMaskedLM
+model_class = AutoModelForMaskedLM
 data_class = VEPDataset
 batch_size = 128
 
