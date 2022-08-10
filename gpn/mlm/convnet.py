@@ -34,7 +34,7 @@ class ConvNetConfig(PretrainedConfig):
 
 class ConvNetPreTrainedModel(PreTrainedModel):
     config_class = ConvNetConfig
-    base_model_prefix = "model" #"ConvNet"
+    base_model_prefix = "model"
     #supports_gradient_checkpointing = True
     _keys_to_ignore_on_load_missing = [r"position_ids"]
 
@@ -64,7 +64,6 @@ class TransposeLayer(nn.Module):
     def forward(self, x):
         x = torch.transpose(x, 1, 2)
         return x
-
 
 
 class ConvLayer(nn.Module):
@@ -126,11 +125,7 @@ class ConvNetModel(ConvNetPreTrainedModel):
         super().__init__(config)
         self.config = config
 
-        #self.embedding = nn.Embedding(self.vocab_size, self.hidden_size)
         self.embedding = OneHotEmbedding(config.hidden_size)
-
-        #self.n_species = 18
-        #self.species_embedding = nn.Embedding(self.n_species, config.hidden_size)
 
         self.dilation_schedule = get_dilation_schedule(config)
         self.encoder = nn.Sequential(*[
@@ -138,24 +133,13 @@ class ConvNetModel(ConvNetPreTrainedModel):
                 hidden_size=config.hidden_size,
                 kernel_size=config.kernel_size,
                 dilation=self.dilation_schedule[i],
-                #groups=self.hidden_size,  # depthwise convolution
             )
             for i in range(config.n_layers)
         ])
         self.post_init()
 
-    #def forward(self, input_ids=None, species_id=None, **kwargs):
     def forward(self, input_ids=None, **kwargs):
-        #B, L = input_ids.shape
-        #if species_id is None:
-        #    species_id = torch.zeros(B, dtype=torch.int64, device=input_ids.device)
-
         x = self.embedding(input_ids)
-
-        #sp_embedding = self.species_embedding(species_id)
-        #sp_embedding = sp_embedding.unsqueeze(1).repeat(1, L, 1)
-        #x = x + sp_embedding
-
         x = self.encoder(x)
         return BaseModelOutput(last_hidden_state=x)
 
@@ -189,7 +173,6 @@ class ConvNetForMaskedLM(ConvNetPreTrainedModel):
         self.post_init()
 
     def forward(self, input_ids=None, labels=None, **kwargs):
-        #print(input_ids.shape)
         hidden_state = self.model(input_ids=input_ids, **kwargs).last_hidden_state
         logits = self.cls(hidden_state)
         loss = None
@@ -200,15 +183,3 @@ class ConvNetForMaskedLM(ConvNetPreTrainedModel):
             loss=loss,
             logits=logits,
         )
-
-
-    #def _set_gradient_checkpointing(self, module, value=False):
-        #if isinstance(module, ConvNetEncoder):
-        #    module.gradient_checkpointing = value
-
-##model = ConvNetModel(vocab_size=5, n_layers=2, hidden_size=64)
-#model = ConvNetForMaskedLM(vocab_size=5, n_layers=2, hidden_size=64)
-#x = torch.randint(low=0, high=5, size=(8, 100))
-##y = model(x)["hidden_state"]
-#y = model(input_ids=x)["logits"]
-#print(x.shape, y.shape)

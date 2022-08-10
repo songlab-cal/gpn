@@ -18,7 +18,7 @@ setup(
     name='GPN',
     version='0.1',
     description='GPN',
-    url='http://github.com/gonzalobenegas/gpn',
+    url='http://github.com/songlab-cal/gpn',
     author='Gonzalo Benegas',
     author_email='gbenegas@berkeley.edu',
     license='MIT',

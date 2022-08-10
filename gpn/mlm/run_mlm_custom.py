@@ -57,18 +57,6 @@ import torchinfo
 from data_collator_mask_span import DataCollatorForLanguageModelingSpan
 from genome_sampler_dataset import GenomeSamplerDataset
 
-from convnet import ConvNetForMaskedLM, ConvNetConfig
-from kmertransformer import KmerTransformerForMaskedLM, KmerTransformerConfig
-#from convtransformer import ConvTransformerForMaskedLM, ConvTransformerConfig
-#from s4dnet import S4DNetForMaskedLM, S4DNetConfig
-
-
-AutoConfig.register("ConvNet", ConvNetConfig)
-AutoModelForMaskedLM.register(ConvNetConfig, ConvNetForMaskedLM)
-
-AutoConfig.register("KmerTransformer", KmerTransformerConfig)
-AutoModelForMaskedLM.register(KmerTransformerConfig, KmerTransformerForMaskedLM)
-
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
 check_min_version("4.18.0.dev0")
@@ -374,28 +362,7 @@ def main():
 
     #model.resize_token_embeddings(len(tokenizer))
 
-
-    #config = ConvTransformerConfig(
-    #    conv_hidden_size=512,
-    #    vocab_size=len(tokenizer),
-    #    conv_n_layers=4,
-    #    kernel_size=7,
-    #    position_embedding_type="relative_key",
-    #    dilation_double_every=1,
-    #    dilation_max=8,
-    #    dilation_cycle=3,
-    #)
-    #model = ConvTransformerForMaskedLM(config)
-
-    #config = S4DNetConfig(
-    #    vocab_size=len(tokenizer),
-    #    n_layers=16,
-    #    hidden_size=512,
-    #)
-    #model = S4DNetForMaskedLM(config)
     print(torchinfo.summary(model))
-    #raise Exception("debug")
-
 
     # Preprocessing the datasets.
     # First we tokenize all the texts.

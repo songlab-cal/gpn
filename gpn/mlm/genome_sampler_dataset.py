@@ -1,22 +1,10 @@
 from Bio import SeqIO
 from Bio.Seq import Seq
-#import gzip
 import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import DataLoader, IterableDataset, get_worker_info
 from transformers import AutoTokenizer
-
-
-#def insert_spaces(seq, prob):
-#    new_seq = []
-#    for x in seq:
-#        if np.random.random() < prob:
-#            new_seq += [" ", x, " "]
-#        else:
-#            new_seq.append(x)
-#    new_seq = "".join(new_seq)
-#    return new_seq
 
 
 class GenomeSamplerDataset(IterableDataset):
@@ -28,7 +16,6 @@ class GenomeSamplerDataset(IterableDataset):
         max_length=None,
         random_seed=None,
         min_contig_size=None,
-        #use_fast_tokenizer=None,
     ):
         super().__init__()
         self.fasta_path = fasta_path
@@ -37,11 +24,6 @@ class GenomeSamplerDataset(IterableDataset):
         self.max_length = max_length
         self.random_seed = random_seed
         self.min_contig_size = min_contig_size
-        #self.use_fast_tokenizer = use_fast_tokenizer
-        #print("self.use_fast_tokenizer: ", self.use_fast_tokenizer)
-        # TODO: figure out if fasta and tokenizer should be loaded and instantiated in __init__
-        # on in __iter__ (for good memory/compute performance with multiple workers)
-        # also some data structures are better than others (e.g. np array better than python list)
 
         print("Loading parquet.")
         self.contigs = pd.read_parquet(self.fasta_path)
@@ -60,7 +42,6 @@ class GenomeSamplerDataset(IterableDataset):
 
     def __iter__(self):
         print("Loading tokenizer.")
-        #tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_path, use_fast=self.use_fast_tokenizer)
         tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_path)
         print("Done.")
 
@@ -69,7 +50,6 @@ class GenomeSamplerDataset(IterableDataset):
         if worker_info is not None:
             seed = seed * (worker_info.id + 1)
         rs = np.random.RandomState(seed=seed)
-        print("worker_info: ", worker_info, " seed: ", seed)
 
         while True:
             contig_index = rs.choice(len(self.contigs), p=self.contigs.contig_prob.values)
@@ -83,16 +63,6 @@ class GenomeSamplerDataset(IterableDataset):
             strand = rs.choice(["+", "-"])
             if strand == "-":
                 seq = str(Seq(seq).reverse_complement())
-            #x = tokenizer(
-            #    seq,
-            #    padding="max_length",
-            #    max_length=self.max_length,
-            #    return_token_type_ids=False,
-            #    return_tensors="pt",
-            #    truncation=True,
-            #)
-            #x["input_ids"] = x["input_ids"].flatten()
-            #x["attention_mask"] = x["attention_mask"].flatten()
 
             x = tokenizer(
                 seq,
@@ -101,21 +71,4 @@ class GenomeSamplerDataset(IterableDataset):
                 return_tensors="pt",
             )
             x["input_ids"] = x["input_ids"].flatten()
-            #x["special_tokens_mask"] = torch.tensor(np.char.islower(np.array(list(seq))))
-            #print(seq, x["special_tokens_mask"])
-            #raise Exception("debug")
-            #if "species_id" in contig:
-            #    x["species_id"] = torch.tensor(contig.species_id, dtype=torch.int64)
-
-            # x["global_attention_mask"] = torch.zeros_like(x["input_ids"])
-            # x["global_attention_mask"][0] = 1
             yield x
-
-
-#d = GenomeSamplerDataset(fasta_path="../../data/mlm/genomes/all.contigs.parquet", tokenizer_path="../../data/mlm/tokenizer_bare/", window_size=512, random_seed=42, min_contig_size=512)
-#dl = DataLoader(d, batch_size=4, num_workers=0)
-#i = 0
-#for x in dl:
-#    print(x)
-#    i += 1
-#    if i > 3: break

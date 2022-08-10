@@ -33,6 +33,5 @@ WANDB_PROJECT=PlantBERT_MLM_512 python ./run_mlm_custom.py \
     --model_name_or_path ./results_512_convnet_only_athaliana/checkpoint-1000000/ \
 
 #    --config_overrides vocab_size=6 \
-
 #    --resume_from_checkpoint ./results_512_convnet_only_athaliana/checkpoint-1300000 \
 #    --ignore_data_skip \
