@@ -15,14 +15,14 @@ install_requires = [
 
 
 setup(
-    name='GPN',
+    name='gpn',
     version='0.1',
-    description='GPN',
+    description='gpn',
     url='http://github.com/songlab-cal/gpn',
     author='Gonzalo Benegas',
     author_email='gbenegas@berkeley.edu',
     license='MIT',
-    packages=['gpn'],
+    packages=['gpn', 'gpn.mlm', 'gpn.chromatin'],
     zip_safe=False,
-    install_requires=install_requires
+    install_requires=install_requires,
 )
