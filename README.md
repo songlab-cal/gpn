@@ -12,5 +12,6 @@ from transformers import AutoModelForMaskedLM
 model = AutoModelForMaskedLM.from_pretrained("gonzalobenegas/gpn-arabidopsis")
 ```
 Example scripts for different tasks:
+- Preparing data: `data/mlm/Snakefile`
 - Training: `analysis/mlm/train_512_convnet_only_athaliana.sh`
 - Variant effect prediction: `analysis/mlm/run_vep.py`
