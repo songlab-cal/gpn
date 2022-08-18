@@ -1,4 +1,4 @@
-# GPN (Genomic Pretrained Network)
+# GPN (Genomic Pre-trained Network)
 ## Installation
 ```bash
 pip install git+https://github.com/songlab-cal/gpn.git
