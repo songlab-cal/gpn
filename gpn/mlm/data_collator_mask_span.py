@@ -33,6 +33,8 @@ class DataCollatorForLanguageModelingSpan(DataCollatorForLanguageModeling):
             special_tokens_mask = torch.tensor(special_tokens_mask, dtype=torch.bool)
         else:
             special_tokens_mask = special_tokens_mask.bool()
+            #print("mean: ", special_tokens_mask.float().mean())
+            #raise Exception("collator debug")
 
         probability_matrix.masked_fill_(special_tokens_mask, value=0.0)
         masked_indices = torch.bernoulli(probability_matrix).bool()

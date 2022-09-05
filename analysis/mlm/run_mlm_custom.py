@@ -406,7 +406,7 @@ def main():
                 return_attention_mask=False,
                 return_token_type_ids=False,
             )
-            #res["special_tokens_mask"] = np.char.islower(np.vstack([np.array(list(seq)) for seq in examples[text_column_name]]))
+            res["special_tokens_mask"] = np.char.islower(np.vstack([np.array(list(seq)) for seq in examples[text_column_name]]))
             #print(examples[text_column_name], res["special_tokens_mask"])
             #raise Exception("debug eval")
             return res

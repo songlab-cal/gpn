@@ -71,4 +71,5 @@ class GenomeSamplerDataset(IterableDataset):
                 return_tensors="pt",
             )
             x["input_ids"] = x["input_ids"].flatten()
+            x["special_tokens_mask"] = torch.tensor(np.char.islower(np.array(list(seq))))
             yield x

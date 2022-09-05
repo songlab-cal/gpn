@@ -1,6 +1,7 @@
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO, bgzf
+import bioframe as bf
 import gzip
 import matplotlib.pyplot as plt
 import numpy as np
@@ -23,7 +24,9 @@ splits = split_chromosomes.keys()
 
 
 MIN_CONTIG_LEN = 512
-FASTA_URL = "http://ftp.ensemblgenomes.org/pub/plants/release-54/fasta/arabidopsis_thaliana/dna/Arabidopsis_thaliana.TAIR10.dna_sm.toplevel.fa.gz"
+REPEATS_CUT_AWAY_FROM_BORDER = 256-1
+FASTA_URL = "http://ftp.ensemblgenomes.org/pub/plants/release-54/fasta/arabidopsis_thaliana/dna/Arabidopsis_thaliana.TAIR10.dna.toplevel.fa.gz"
+#FASTA_URL = "http://ftp.ensemblgenomes.org/pub/plants/release-54/fasta/arabidopsis_thaliana/dna/Arabidopsis_thaliana.TAIR10.dna_sm.toplevel.fa.gz"
 
 
 rule all:
@@ -34,9 +37,57 @@ rule all:
 
 rule download_reference:
     output:
-        "genome/Arabidopsis_thaliana.fa.gz",
+        "genome/Arabidopsis_thaliana.raw.fa.gz",
     shell:
         "wget {FASTA_URL} -O {output}"
+
+
+rule uncompress_reference:
+    input:
+        "genome/Arabidopsis_thaliana.raw.fa.gz",
+    output:
+        "genome/Arabidopsis_thaliana.raw.fa",
+    shell:
+        "gunzip -c {input} > {output}"
+
+
+rule prepare_mask_intervals:
+    input:
+        "repeats.bed.gz"
+    output:
+        "mask_intervals.bed"
+    run:
+        repeats = pd.read_csv("../../data/mlm/repeats.bed.gz", sep="\t").rename(columns=dict(genoName="chrom", genoStart="start", genoEnd="end"))
+
+        # crucial: filtering step
+        print(repeats.shape)
+        repeats = repeats[(~repeats.repClass.isin(["Low_complexity", "Simple_repeat"])) & (repeats.milliDiv <= 100)]
+        print(repeats.shape)
+
+        repeats = bf.merge(repeats).drop(columns="n_intervals")
+        print(repeats.chrom.value_counts())
+        repeats.chrom = repeats.chrom.str.replace("Chr", "")
+        print(repeats.chrom.value_counts())
+        repeats.to_csv(output[0], sep="\t", index=False, header=False)
+
+
+rule mask_reference:
+    input:
+        "genome/Arabidopsis_thaliana.raw.fa",
+        "mask_intervals.bed"
+    output:
+        "genome/Arabidopsis_thaliana.fa",
+    shell:
+        "bedtools maskfasta -soft -fi {input[0]} -bed {input[1]} -fo {output}"
+
+
+rule compress_reference:
+    input:
+        "genome/Arabidopsis_thaliana.fa",
+    output:
+        "genome/Arabidopsis_thaliana.fa.gz",
+    shell:
+        "gzip -c {input} > {output}"
 
 
 # only defined nucleotides (ACGTacgt)
@@ -46,7 +97,7 @@ rule find_good_intervals:
     output:
         "intervals/{species}.tsv.gz",
     shell:
-        "python find_intervals_defined.py {input} {output} {MIN_CONTIG_LEN}"
+        "python find_good_intervals.py {input} {output} {REPEATS_CUT_AWAY_FROM_BORDER} {MIN_CONTIG_LEN}"
 
 
 rule split_Ath_intervals:
