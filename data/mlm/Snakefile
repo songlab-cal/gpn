@@ -24,7 +24,7 @@ splits = split_chromosomes.keys()
 
 
 MIN_CONTIG_LEN = 512
-REPEATS_CUT_AWAY_FROM_BORDER = 256-1
+REPEATS_CUT_AWAY_FROM_BORDER = 64-1 #256-1
 FASTA_URL = "http://ftp.ensemblgenomes.org/pub/plants/release-54/fasta/arabidopsis_thaliana/dna/Arabidopsis_thaliana.TAIR10.dna.toplevel.fa.gz"
 #FASTA_URL = "http://ftp.ensemblgenomes.org/pub/plants/release-54/fasta/arabidopsis_thaliana/dna/Arabidopsis_thaliana.TAIR10.dna_sm.toplevel.fa.gz"
 
@@ -33,6 +33,9 @@ rule all:
     input:
         expand("dataset/train/{species}.parquet", species=species_train),
         expand("dataset/test/{species}.512.256.parquet", species=species_test),
+        #expand("dataset/test/{species}.2048.1024.parquet", species=species_test),
+        #expand("dataset/test/{species}.2048.1024.parquet", species=species_test),
+
 
 
 rule download_reference:
@@ -58,16 +61,28 @@ rule prepare_mask_intervals:
         "mask_intervals.bed"
     run:
         repeats = pd.read_csv("../../data/mlm/repeats.bed.gz", sep="\t").rename(columns=dict(genoName="chrom", genoStart="start", genoEnd="end"))
-
-        # crucial: filtering step
-        print(repeats.shape)
-        repeats = repeats[(~repeats.repClass.isin(["Low_complexity", "Simple_repeat"])) & (repeats.milliDiv <= 100)]
+        repeats["length"] = repeats.end - repeats.start        
+        # v3:
+        # dataset_2
+        #repeats = repeats[(~repeats.repClass.isin(["Low_complexity", "Simple_repeat"])) & (repeats.milliDiv <= 100)]
+        # v4:
+        # dataset_3
+        repeats = repeats[repeats.repClass != "Low_complexity"]
+        repeats = repeats[
+            (repeats.repFamily == "centr") |
+            (repeats.length > 1000) |
+            (repeats.milliDiv <= 100) |
+            ((repeats.repClass=="Simple_repeat") & (repeats.length > 100))
+        ]
         print(repeats.shape)
 
         repeats = bf.merge(repeats).drop(columns="n_intervals")
-        print(repeats.chrom.value_counts())
+        #print(repeats.chrom.value_counts())
         repeats.chrom = repeats.chrom.str.replace("Chr", "")
         print(repeats.chrom.value_counts())
+
+        # dataset_1
+        #repeats = repeats.head(0)
         repeats.to_csv(output[0], sep="\t", index=False, header=False)
 
 
