@@ -22,7 +22,7 @@ setup(
     author='Gonzalo Benegas',
     author_email='gbenegas@berkeley.edu',
     license='MIT',
-    packages=['gpn', 'gpn.mlm', 'gpn.chromatin'],
+    packages=['gpn', 'gpn.mlm', 'gpn.chromatin', 'gpn.data'],
     zip_safe=False,
     install_requires=install_requires,
 )
