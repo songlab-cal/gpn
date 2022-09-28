@@ -16,53 +16,71 @@ MASKED_SYMBOLS = list("acgt")
 
 def filter_undefined(intervals, genome, min_contig_len):
     print("filter_undefined")
+
     def find_defined(interval):
-        seq = np.array(list(str(genome[interval.chrom][interval.start:interval.end].seq)))
+        seq = np.array(
+            list(str(genome[interval.chrom][interval.start : interval.end].seq))
+        )
         intervals = interval.to_frame().T
         intervals = bf.sanitize_bedframe(intervals)
-        undefined = pd.DataFrame(dict(start=interval.start + np.where(~np.isin(seq, DEFINED_SYMBOLS))[0]))
+        undefined = pd.DataFrame(
+            dict(start=interval.start + np.where(~np.isin(seq, DEFINED_SYMBOLS))[0])
+        )
         if len(undefined) > 0:
             undefined["chrom"] = interval.chrom
             undefined["end"] = undefined.start + 1
             undefined = bf.merge(undefined)
             intervals = bf.subtract(intervals, undefined)
-        intervals = intervals[intervals.end-intervals.start>=min_contig_len]
+        intervals = intervals[intervals.end - intervals.start >= min_contig_len]
         return intervals
-    intervals = pd.concat(intervals.progress_apply(find_defined, axis=1).values, ignore_index=True)
+
+    intervals = pd.concat(
+        intervals.progress_apply(find_defined, axis=1).values, ignore_index=True
+    )
     return intervals
 
 
 def filter_masked(intervals, genome, min_contig_len, mask_incl_context):
     print("filter_masked")
+
     def find_unmasked(interval):
-        seq = np.array(list(str(genome[interval.chrom][interval.start:interval.end].seq)))
+        seq = np.array(
+            list(str(genome[interval.chrom][interval.start : interval.end].seq))
+        )
         intervals = interval.to_frame().T
         intervals = bf.sanitize_bedframe(intervals)
-        masked = pd.DataFrame(dict(start=interval.start + np.where(np.isin(seq, MASKED_SYMBOLS))[0]))
+        masked = pd.DataFrame(
+            dict(start=interval.start + np.where(np.isin(seq, MASKED_SYMBOLS))[0])
+        )
         if len(masked > 0):
             masked["chrom"] = interval.chrom
             masked["end"] = masked.start + 1
             masked = bf.merge(masked)
             masked.start += mask_incl_context
             masked.end -= mask_incl_context
-            masked = masked.query('end-start > 0')
+            masked = masked.query("end-start > 0")
             if len(masked) > 0:
                 intervals = bf.subtract(intervals, masked)
-        intervals = intervals[intervals.end-intervals.start>=min_contig_len]
+        intervals = intervals[intervals.end - intervals.start >= min_contig_len]
         return intervals
 
-    intervals = pd.concat(intervals.progress_apply(find_unmasked, axis=1).values, ignore_index=True)
+    intervals = pd.concat(
+        intervals.progress_apply(find_unmasked, axis=1).values, ignore_index=True
+    )
     return intervals
 
 
 def filter_feature(intervals, gtf, feature, min_contig_len):
-    print("filter_feature")
-    gtf = bf.merge(bf.sanitize_bedframe(gtf[gtf.feature==feature]))
-    gtf = bf.expand(gtf, pad=min_contig_len//2)
-    # intervals = bf.intersect(intervals, gtf)  # unfortunately does not exist
-    intervals["name"] = intervals.chrom.astype(str)+":"+intervals.start.astype(str)+"-"+intervals.end.astype(str)
-    intervals = bf.subtract(intervals, bf.complement(gtf, intervals)).drop(columns="name")
-    intervals = intervals[intervals.end-intervals.start>=min_contig_len]
+    gtf = gtf[(gtf.feature == feature) & (gtf.chrom.isin(intervals.chrom.unique()))][
+        ["chrom", "start", "end"]
+    ]
+    gtf = bf.sanitize_bedframe(gtf)
+    gtf = bf.merge(gtf)
+    gtf = bf.expand(gtf, pad=min_contig_len // 2)
+    intervals = bf.overlap(intervals, gtf, how="inner", return_overlap=True)[
+        ["chrom", "overlap_start", "overlap_end"]
+    ].rename(columns=dict(overlap_start="start", overlap_end="end"))
+    intervals = intervals[intervals.end - intervals.start >= min_contig_len]
     return intervals
 
 
@@ -81,22 +99,39 @@ def main(args):
     intervals.chrom = intervals.chrom.astype(str)
     intervals = bf.sanitize_bedframe(intervals)
     intervals = bf.merge(intervals)
-    print(intervals)
+    print(intervals.shape)
 
     if args.filter_feature is not None:
         gtf = pd.read_csv(
-            args.gtf_path, sep='\t', header=None, comment="#",
-            names=['chrom', 'source', 'feature', 'start', 'end', 'score', 'strand', 'frame', 'attribute'],
+            args.gtf_path,
+            sep="\t",
+            header=None,
+            comment="#",
+            names=[
+                "chrom",
+                "source",
+                "feature",
+                "start",
+                "end",
+                "score",
+                "strand",
+                "frame",
+                "attribute",
+            ],
         )
-        gtf = bf.sanitize_bedframe(gtf)
-        intervals = filter_feature(intervals, gtf, args.filter_feature, args.min_contig_len)
-        print(intervals)
+        gtf.chrom = gtf.chrom.astype(str)
+        intervals = filter_feature(
+            intervals, gtf, args.filter_feature, args.min_contig_len
+        )
+        print(intervals.shape)
     if args.filter_undefined:
         intervals = filter_undefined(intervals, genome, args.min_contig_len)
-        print(intervals)
+        print(intervals.shape)
     if args.filter_masked:
-        intervals = filter_masked(intervals, genome, args.min_contig_len, args.mask_incl_context)
-        print(intervals)
+        intervals = filter_masked(
+            intervals, genome, args.min_contig_len, args.mask_incl_context
+        )
+        print(intervals.shape)
     print(intervals)
     intervals.to_csv(args.output_path, sep="\t", index=False)
 
@@ -113,7 +148,11 @@ if __name__ == "__main__":
     )
     parser.add_argument("--output-path", help="Output path", type=str)
     parser.add_argument("--min-contig-len", help="Minimum contig length", type=int)
-    parser.add_argument("--mask-incl-context", help="Border of masked regions included as context", type=int)
+    parser.add_argument(
+        "--mask-incl-context",
+        help="Border of masked regions included as context",
+        type=int,
+    )
     parser.add_argument(
         "--filter-undefined",
         help="Exclude undefined nucleotides (e.g. N)",
@@ -124,7 +163,11 @@ if __name__ == "__main__":
         help="Exclude masked nucleotides (represented in lowercase)",
         action="store_true",
     )
-    parser.add_argument("--filter-feature", help="Filter to a specific feature of GTF in GTF_PATH", type=str)
+    parser.add_argument(
+        "--filter-feature",
+        help="Filter to a specific feature of GTF in GTF_PATH",
+        type=str,
+    )
     parser.add_argument("--gtf-path", help="GTF path", type=str)
     args = parser.parse_args()
     main(args)

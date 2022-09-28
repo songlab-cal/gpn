@@ -1,6 +1,8 @@
 import argparse
 from Bio import SeqIO
 import gzip
+import numpy as np
+import pandas as pd
 from tqdm import tqdm
 
 
@@ -28,7 +30,6 @@ def get_window_seq(window, genome):
 
 
 def main(args):
-    print(args)
     with gzip.open(args.fasta_path, "rt") if args.fasta_path.endswith(".gz") else open(
         args.fasta_path
     ) as handle:
@@ -49,12 +50,12 @@ def main(args):
             lambda window: get_window_seq(window, genome), axis=1
         )
     else:
-        df["seq"] = df.progres_apply(
+        df["seq"] = df.progress_apply(
             lambda row: str(genome[row.chrom][row.start:row.end].seq), axis=1
         )
     df = df.sample(frac=1.0, random_state=42)
     print(df)
-    df.to_parquet(data_args.output_path, index=False)
+    df.to_parquet(args.output_path, index=False)
 
 
 if __name__ == "__main__":
