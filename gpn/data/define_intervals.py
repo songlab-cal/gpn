@@ -55,6 +55,17 @@ def filter_masked(intervals, genome, min_contig_len, mask_incl_context):
     return intervals
 
 
+def filter_feature(intervals, gtf, feature, min_contig_len):
+    print("filter_feature")
+    gtf = bf.merge(bf.sanitize_bedframe(gtf[gtf.feature==feature]))
+    gtf = bf.expand(gtf, pad=min_contig_len//2)
+    # intervals = bf.intersect(intervals, gtf)  # unfortunately does not exist
+    intervals["name"] = intervals.chrom.astype(str)+":"+intervals.start.astype(str)+"-"+intervals.end.astype(str)
+    intervals = bf.subtract(intervals, bf.complement(gtf, intervals)).drop(columns="name")
+    intervals = intervals[intervals.end-intervals.start>=min_contig_len]
+    return intervals
+
+
 def main(args):
     with gzip.open(args.fasta_path, "rt") if args.fasta_path.endswith(".gz") else open(
         args.fasta_path
@@ -72,16 +83,20 @@ def main(args):
     intervals = bf.merge(intervals)
     print(intervals)
 
+    if args.filter_feature is not None:
+        gtf = pd.read_csv(
+            args.gtf_path, sep='\t', header=None, comment="#",
+            names=['chrom', 'source', 'feature', 'start', 'end', 'score', 'strand', 'frame', 'attribute'],
+        )
+        gtf = bf.sanitize_bedframe(gtf)
+        intervals = filter_feature(intervals, gtf, args.filter_feature, args.min_contig_len)
+        print(intervals)
     if args.filter_undefined:
         intervals = filter_undefined(intervals, genome, args.min_contig_len)
         print(intervals)
     if args.filter_masked:
         intervals = filter_masked(intervals, genome, args.min_contig_len, args.mask_incl_context)
         print(intervals)
-        raise Exception("debug")
-    if args.filter_feature is not None:
-        gtf = 0 #pass
-        intervals = filter_feature(intervals, gtf, args.filter_feature, args.min_contig_len)
     print(intervals)
     intervals.to_csv(args.output_path, sep="\t", index=False)
 
@@ -109,5 +124,7 @@ if __name__ == "__main__":
         help="Exclude masked nucleotides (represented in lowercase)",
         action="store_true",
     )
+    parser.add_argument("--filter-feature", help="Filter to a specific feature of GTF in GTF_PATH", type=str)
+    parser.add_argument("--gtf-path", help="GTF path", type=str)
     args = parser.parse_args()
     main(args)
