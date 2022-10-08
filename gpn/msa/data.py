@@ -1,5 +1,8 @@
 from Bio.AlignIO.MafIO import MafIndex
+from Bio.Seq import Seq
 from collections.abc import Mapping
+from einops import rearrange, reduce, repeat
+import h5py
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -13,65 +16,56 @@ from typing import Any, Callable, Dict, List, NewType, Optional, Tuple, Union
 tqdm.pandas()
 
 
-def find_pos_incl_gaps(seq, pos):
-    seen = -1
-    for i, x in enumerate(seq):
-        if x != "-":
-            seen += 1
-        if seen == pos:
-            return i
-    raise Exception("find_pos_incl_gaps off-limits")
+class GenomeMSA:
+    def __init__(self,
+        path,
+        load_into_memory=False,
+        chroms=None,
+    ):
+        self.f = h5py.File(path, "r")
+        if chroms is None:
+            chroms = f.keys()
+        
+        if load_into_memory:
+            print("Loading ref_coord...")
+            self.ref_coord = {chrom: self.f['coord'][chrom][:] for chrom in chroms}
+            print("Done.")
 
-
-class GenomeMafIndex:
-    def __init__(self, path=None, chroms=None, species_path=None):
-        self.species = pd.read_csv(species_path, header=None).values.astype(str).ravel()
-        print(self.species)
-        self.target_species = self.species[0]
-        self.maf_indices = {
-            chrom: MafIndex(
-                Path(path) / f"{chrom}.mafindex",
-                Path(path) / f"{chrom}.maf",
-                f"{self.target_species}.chr{chrom}",  # be careful about the chr prefix
-            )
-            for chrom in chroms
-        }
-
-    def access(self, chrom, start, end, strand, max_length=None):
-        maf_index = self.maf_indices[chrom]
-        if strand == "+":
-            strand_id = 1
-        elif strand == "-":
-            strand_id = -1
+            self.msas = {}
+            for chrom in chroms:
+                print(f"Loading {chrom}...")
+                self.msas[chrom] = self.f['MSA'][chrom][:]
+            #self.msas = {chrom: f['MSA'][chrom][:] for chrom in chroms}
+            self.f.close()
         else:
-            raise Exception(f"Strand {strand} not supported.")
+            print("Loading ref_coord (not in memory)...")
+            self.ref_coord = {chrom: self.f['coord'][chrom] for chrom in chroms}
+            print("Done.")
 
-        alignment = maf_index.get_spliced([start], [end], strand=strand_id)
-        all_species = [record.id.split(".")[0] for record in alignment]
+            self.msas = {}
+            for chrom in chroms:
+                print(f"Loading {chrom} (not in memory)...")
+                self.msas[chrom] = self.f['MSA'][chrom]
+                print("Done.")
+            #self.msas = {chrom: self.f['MSA'][chrom] for chrom in chroms}
 
-        if max_length is not None:
-            seq = str(alignment[all_species.index(self.target_species)].seq)
-            # print("seq: ", seq)
-            if strand == "+":
-                target_pos = max_length // 2
-            else:
-                target_pos = max_length // 2 - 1
-            center = find_pos_incl_gaps(seq, target_pos)
-            if strand == "+":
-                left = center - max_length // 2
-                right = center + max_length // 2
-            else:
-                left = center - max_length // 2 + 1
-                right = center + max_length // 2 + 1
-            alignment = alignment[:, left:right]
-            # print(target_pos, center, left, right)
+    def access(self, chrom, msa_start, msa_end, strand):
+        window = self.msas[chrom][msa_start:msa_end].T
+        window = [row.tobytes().decode('ascii') for row in window]
+        if strand == "-":
+            window = [str(Seq(row).reverse_complement()) for row in window]
+        return window
 
-        return [
-            str(alignment[all_species.index(s)].seq)
-            if s in all_species
-            else "-" * max_length
-            for s in self.species
-        ]
+    def access_pos_winsize(self, chrom, pos, window_size, strand):
+        msa_pos = self.ref_coord[chrom][pos]
+        msa_start = msa_pos-window_size//2
+        msa_end = msa_pos+window_size//2
+        return self.access(chrom, msa_start, msa_end, strand)
+
+    def access_start_end(self, chrom, start, end, strand):
+        msa_start = self.ref_coord[chrom][start]
+        msa_end = self.ref_coord[chrom][end]
+        return self.access(chrom, msa_start, msa_end, strand)
 
 
 class GenomeMSASamplerDataset(IterableDataset):
@@ -82,7 +76,7 @@ class GenomeMSASamplerDataset(IterableDataset):
         tokenizer_path=None,
         window_size=None,
         random_seed=None,
-        species_path=None,
+        load_into_memory=False,
     ):
         super().__init__()
         self.intervals_path = intervals_path
@@ -90,10 +84,11 @@ class GenomeMSASamplerDataset(IterableDataset):
         self.tokenizer_path = tokenizer_path
         self.window_size = window_size
         self.random_seed = random_seed
-        self.species_path = species_path
+        self.load_into_memory = load_into_memory
 
         print("Loading intervals...")
         self.contigs = pd.read_csv(self.intervals_path, sep="\t")
+        self.contigs.chrom = self.contigs.chrom.astype(str)
         self.contigs["contig_len"] = self.contigs.end - self.contigs.start
         print(self.contigs.shape)
         self.contigs = self.contigs[self.contigs.contig_len >= self.window_size]
@@ -116,11 +111,11 @@ class GenomeMSASamplerDataset(IterableDataset):
         tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_path)
         print("Done.")
 
-        print("Loading MAF...")
-        self.maf_index = GenomeMafIndex(
-            path=self.data_path,
-            chroms=self.contigs.chrom.unique(),
-            species_path=self.species_path,
+        print("Loading GenomeMSA...")
+        self.genome_msa = GenomeMSA(
+            self.data_path,
+            chroms=sorted(self.contigs.chrom.unique()),
+            load_into_memory=self.load_into_memory,
         )
         print("Done.")
 
@@ -139,14 +134,13 @@ class GenomeMSASamplerDataset(IterableDataset):
                 start = rs.randint(contig.contig_len - self.window_size)
             else:
                 start = 0
-            end = start + self.window_size
+            pos = contig.start + start + self.window_size//2
             strand = rs.choice(["+", "-"])
-            seqs = self.maf_index.access(
+            seqs = self.genome_msa.access_pos_winsize(
                 contig.chrom,
-                contig.start + start,
-                contig.start + end,
+                pos,
+                self.window_size,
                 strand,
-                max_length=self.window_size,
             )
             # print(worker_info, seqs)
             x = tokenizer(
@@ -168,7 +162,7 @@ class GenomeMSAFixedDataset(Dataset):
         tokenizer_path=None,
         window_size=None,
         step_size=None,
-        species_path=None,
+        load_into_memory=False,
     ):
         super().__init__()
         self.intervals_path = intervals_path
@@ -176,10 +170,11 @@ class GenomeMSAFixedDataset(Dataset):
         self.tokenizer_path = tokenizer_path
         self.window_size = window_size
         self.step_size = step_size
-        self.species_path = species_path
+        self.load_into_memory = load_into_memory
 
         print("Loading intervals...")
         contigs = pd.read_csv(self.intervals_path, sep="\t")
+        contigs.chrom = contigs.chrom.astype(str)
         print("Done.")
 
         def get_contig_windows(contig):
@@ -206,12 +201,12 @@ class GenomeMSAFixedDataset(Dataset):
         self.tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_path)
         print("Done.")
 
-    def load_maf(self):
-        print("Loading MAF...")
-        self.maf_index = GenomeMafIndex(
-            path=self.data_path,
-            chroms=self.windows.chrom.unique(),
-            species_path=self.species_path,
+    def load_genome_msa(self):
+        print("Loading GenomeMSA...")
+        self.genome_msa = GenomeMSA(
+            self.data_path,
+            chroms=sorted(self.windows.chrom.unique()),
+            load_into_memory=self.load_into_memory,
         )
         print("Done.")
 
@@ -221,15 +216,15 @@ class GenomeMSAFixedDataset(Dataset):
     def __getitem__(self, idx):
         if not hasattr(self, "tokenizer"):
             self.load_tokenizer()
-            self.load_maf()
+            self.load_genome_msa()
 
         window = self.windows.iloc[idx]
-        seqs = self.maf_index.access(
+        pos = (window.start+window.end)//2
+        seqs = self.genome_msa.access_pos_winsize(
             window.chrom,
-            window.start,
-            window.end,
+            pos,
+            self.window_size,
             window.strand,
-            max_length=self.window_size,
         )
         # print(window, seqs)
         x = self.tokenizer(
@@ -243,7 +238,7 @@ class GenomeMSAFixedDataset(Dataset):
         return x
 
 
-class DataCollatorForLanguageModelingMSA(DataCollatorForLanguageModeling):
+class DataCollatorForLanguageModelingMSAHybrid(DataCollatorForLanguageModeling):
     def torch_mask_tokens(
         self, inputs: Any, special_tokens_mask: Optional[Any] = None
     ) -> Tuple[Any, Any]:
@@ -251,8 +246,13 @@ class DataCollatorForLanguageModelingMSA(DataCollatorForLanguageModeling):
         Prepare masked tokens inputs/labels for masked language modeling: 80% MASK, 10% random, 10% original.
         """
         # print(inputs.shape)  # b r c
+        B, R, C = inputs.shape
         # raise Exception("debug")
         labels = inputs.clone()
+
+        # We first choose whole columns for masking
+        probability_matrix_cols = torch.full((B, C), self.mlm_probability)
+        masked_indices_cols = repeat(torch.bernoulli(probability_matrix_cols).bool(), "B C -> B R C", R=R)
 
         # We sample a few tokens in each sequence for MLM training (with probability `self.mlm_probability`)
         probability_matrix = torch.full(labels.shape, self.mlm_probability)
@@ -266,6 +266,10 @@ class DataCollatorForLanguageModelingMSA(DataCollatorForLanguageModeling):
 
         # probability_matrix.masked_fill_(special_tokens_mask, value=0.0)
         masked_indices = torch.bernoulli(probability_matrix).bool()
+
+        # we combine the col masking and pos masking (independently)
+        masked_indices = masked_indices | masked_indices_cols
+
         labels[~masked_indices] = -100  # We only compute loss on masked tokens
 
         # 80% of the time, we replace masked input tokens with tokenizer.mask_token ([MASK])
@@ -287,12 +291,65 @@ class DataCollatorForLanguageModelingMSA(DataCollatorForLanguageModeling):
         )
         inputs[indices_random] = random_words[indices_random]
 
-        # print(labels)
-        # raise Exception("debug")
+        #print(labels)
+        #raise Exception("debug")
 
         # The rest of the time (10% of the time) we keep the masked input tokens unchanged
         return inputs, labels
 
+
+class DataCollatorForLanguageModelingMSA(DataCollatorForLanguageModeling):
+    def torch_mask_tokens(
+        self, inputs: Any, special_tokens_mask: Optional[Any] = None
+    ) -> Tuple[Any, Any]:
+        """
+        Prepare masked tokens inputs/labels for masked language modeling: 80% MASK, 10% random, 10% original.
+        """
+        labels = inputs.clone()
+
+        # We sample a few tokens in each sequence for MLM training (with probability `self.mlm_probability`)
+        probability_matrix = torch.full(labels.shape, self.mlm_probability)
+        probability_matrix[:, 1:, :] = 0.0
+        FLANK = 8
+        probability_matrix[:, :, :FLANK] = 0.0
+        probability_matrix[:, :, -FLANK:] = 0.0
+        # if special_tokens_mask is None:
+        #    special_tokens_mask = [
+        #        self.tokenizer.get_special_tokens_mask(val, already_has_special_tokens=True) for val in labels.tolist()
+        #    ]
+        #    special_tokens_mask = torch.tensor(special_tokens_mask, dtype=torch.bool)
+        # else:
+        #    special_tokens_mask = special_tokens_mask.bool()
+
+        # probability_matrix.masked_fill_(special_tokens_mask, value=0.0)
+        masked_indices = torch.bernoulli(probability_matrix).bool()
+
+        labels[~masked_indices] = -100  # We only compute loss on masked tokens
+
+        # 80% of the time, we replace masked input tokens with tokenizer.mask_token ([MASK])
+        indices_replaced = (
+            torch.bernoulli(torch.full(labels.shape, 0.8)).bool() & masked_indices
+        )
+        inputs[indices_replaced] = self.tokenizer.convert_tokens_to_ids(
+            self.tokenizer.mask_token
+        )
+
+        # 10% of the time, we replace masked input tokens with random word
+        indices_random = (
+            torch.bernoulli(torch.full(labels.shape, 0.5)).bool()
+            & masked_indices
+            & ~indices_replaced
+        )
+        random_words = torch.randint(
+            len(self.tokenizer), labels.shape, dtype=torch.long
+        )
+        inputs[indices_random] = random_words[indices_random]
+
+        #print(labels)
+        #raise Exception("debug")
+
+        # The rest of the time (10% of the time) we keep the masked input tokens unchanged
+        return inputs, labels
 
 # d = GenomeMSASamplerDataset(
 #    intervals_path="intervals/Homo_sapiens.train.tsv.gz",

@@ -18,9 +18,10 @@ class MSAConvNetConfig(PretrainedConfig):
         n_layers=9,
         kernel_size=9,
         dilation_double_every=1,
-        dilation_max=32,
+        dilation_max=9999,
         dilation_cycle=4,
         initializer_range=0.02,
+        transformer_n_heads=8,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -32,6 +33,7 @@ class MSAConvNetConfig(PretrainedConfig):
         self.dilation_double_every = dilation_double_every
         self.dilation_max = dilation_max
         self.dilation_cycle = dilation_cycle
+        self.transformer_n_heads = transformer_n_heads
         self.initializer_range = initializer_range
 
 
@@ -125,6 +127,26 @@ class SetConvLayer(nn.Module):
         return x
 
 
+class RowAttentionLayer(nn.Module):
+    def __init__(
+        self, hidden_size=None, nhead=None, **kwargs,
+    ):
+        super().__init__()
+        self.layer = nn.TransformerEncoderLayer(
+            d_model=hidden_size,
+            nhead=nhead,  # TODO: make part of config
+            dim_feedforward=4*hidden_size,
+            batch_first=True,
+        )
+
+    def forward(self, x):
+        b, r, c, h = x.shape
+        x = rearrange(x, "b r c h -> (b c) r h")
+        x = self.layer(x)
+        x = rearrange(x, "(b c) r h -> b r c h", b=b)
+        return x
+
+
 class OneHotEmbedding(nn.Module):
     def __init__(
         self, hidden_size=None,
@@ -166,7 +188,8 @@ class MSAConvNetModel(MSAConvNetPreTrainedModel):
                         kernel_size=config.kernel_size,
                         dilation=self.dilation_schedule[i],
                     ),
-                    SetConvLayer(hidden_size=config.hidden_size),
+                    #SetConvLayer(hidden_size=config.hidden_size),
+                    RowAttentionLayer(hidden_size=config.hidden_size, nhead=config.transformer_n_heads),
                 )
                 for i in range(config.n_layers)
             ]

@@ -170,8 +170,11 @@ class DataTrainingArguments:
     data_path: Optional[str] = field(
         default=None, metadata={"help": "Dir with alignments."}
     )
-    species_path: Optional[str] = field(
-        default=None, metadata={"help": "Path to file with one species per line. First should go the target species."}
+    load_into_memory: bool = field(
+        default=False,
+        metadata={
+            "help": "Whether to load hdf5 into memory."
+        },
     )
     train_file: Optional[str] = field(
         default=None, metadata={"help": "The input training data file (a text file)."}
@@ -344,7 +347,7 @@ def main():
             tokenizer_path=model_args.tokenizer_name,
             window_size=data_args.window_size,
             random_seed=training_args.seed,
-            species_path=data_args.species_path,
+            load_into_memory=data_args.load_into_memory,
         )
 
     if training_args.do_eval:
@@ -354,7 +357,7 @@ def main():
             tokenizer_path=model_args.tokenizer_name,
             window_size=data_args.window_size,
             step_size=data_args.window_size,  # // 2,
-            species_path=data_args.species_path,
+            load_into_memory=data_args.load_into_memory,
         )
 
     # Data collator
