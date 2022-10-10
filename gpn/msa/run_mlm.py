@@ -167,7 +167,10 @@ class DataTrainingArguments:
     window_size: Optional[int] = field(
         default=None, metadata={"help": "Genomic window size (base pairs)"}
     )
-    data_path: Optional[str] = field(
+    train_data_path: Optional[str] = field(
+        default=None, metadata={"help": "Dir with alignments."}
+    )
+    validation_data_path: Optional[str] = field(
         default=None, metadata={"help": "Dir with alignments."}
     )
     load_into_memory: bool = field(
@@ -340,10 +343,48 @@ def main():
 
     print(torchinfo.summary(model))
 
-    if training_args.do_train:
+    data_files = {}
+    if data_args.train_file is not None:
+        data_files["train"] = data_args.train_file
+    if data_args.validation_file is not None:
+        data_files["validation"] = data_args.validation_file
+    raw_datasets = load_dataset(
+        'parquet',
+        data_files=data_files,
+        cache_dir=model_args.cache_dir,
+        use_auth_token=True if model_args.use_auth_token else None,
+    )
+    print(raw_datasets)
+
+    text_column_name = "seqs"
+
+    def tokenize_function(example):
+        return tokenizer(
+            example[text_column_name],
+            padding=False,
+            truncation=False,
+            return_token_type_ids=False,
+            return_attention_mask=False,
+            return_special_tokens_mask=False,
+        )
+
+    tokenized_datasets = raw_datasets.map(
+        tokenize_function,
+        batched=False,
+        num_proc=data_args.preprocessing_num_workers,
+        remove_columns=[text_column_name, "chrom", "start", "end", "strand"],
+        load_from_cache_file=not data_args.overwrite_cache,
+        desc="Running tokenizer on dataset",
+    )
+    print(tokenized_datasets)
+
+    train_dataset = tokenized_datasets["train"]
+    eval_dataset = tokenized_datasets["validation"]
+    
+    """if training_args.do_train:
         train_dataset = GenomeMSASamplerDataset(
             intervals_path=data_args.train_file,
-            data_path=data_args.data_path,
+            data_path=data_args.train_data_path,
             tokenizer_path=model_args.tokenizer_name,
             window_size=data_args.window_size,
             random_seed=training_args.seed,
@@ -353,12 +394,12 @@ def main():
     if training_args.do_eval:
         eval_dataset = GenomeMSAFixedDataset(
             intervals_path=data_args.validation_file,
-            data_path=data_args.data_path,
+            data_path=data_args.validation_data_path,
             tokenizer_path=model_args.tokenizer_name,
             window_size=data_args.window_size,
             step_size=data_args.window_size,  # // 2,
             load_into_memory=data_args.load_into_memory,
-        )
+        )"""
 
     # Data collator
     # This one will take care of randomly masking the tokens.

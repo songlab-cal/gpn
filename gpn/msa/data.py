@@ -33,12 +33,12 @@ class GenomeMSA:
 
             self.msas = {}
             for chrom in chroms:
-                print(f"Loading {chrom}...")
+                #print(f"Loading {chrom}...")
                 self.msas[chrom] = self.f['MSA'][chrom][:]
             #self.msas = {chrom: f['MSA'][chrom][:] for chrom in chroms}
             self.f.close()
         else:
-            print("Loading ref_coord (not in memory)...")
+            #print("Loading ref_coord (not in memory)...")
             self.ref_coord = {chrom: self.f['coord'][chrom] for chrom in chroms}
             print("Done.")
 
@@ -245,7 +245,7 @@ class DataCollatorForLanguageModelingMSAHybrid(DataCollatorForLanguageModeling):
         """
         Prepare masked tokens inputs/labels for masked language modeling: 80% MASK, 10% random, 10% original.
         """
-        # print(inputs.shape)  # b r c
+        #print(inputs.shape)  # b r c
         B, R, C = inputs.shape
         # raise Exception("debug")
         labels = inputs.clone()
@@ -305,6 +305,8 @@ class DataCollatorForLanguageModelingMSA(DataCollatorForLanguageModeling):
         """
         Prepare masked tokens inputs/labels for masked language modeling: 80% MASK, 10% random, 10% original.
         """
+        #print(inputs.shape)
+        #raise Exception("debug")
         labels = inputs.clone()
 
         # We sample a few tokens in each sequence for MLM training (with probability `self.mlm_probability`)
