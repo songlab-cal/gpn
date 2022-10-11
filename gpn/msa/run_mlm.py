@@ -56,8 +56,8 @@ import torchinfo
 
 import gpn.msa
 from gpn.msa.data import (
-    GenomeMSASamplerDataset,
-    GenomeMSAFixedDataset,
+    #GenomeMSASamplerDataset,
+    #GenomeMSAFixedDataset,
     DataCollatorForLanguageModelingMSA,
 )
 
@@ -404,7 +404,7 @@ def main():
     # Data collator
     # This one will take care of randomly masking the tokens.
     data_collator = DataCollatorForLanguageModelingMSA(
-        tokenizer=tokenizer, mlm_probability=data_args.mlm_probability,
+        tokenizer=tokenizer,
     )
 
     # Initialize our Trainer

@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss
-from transformers import PretrainedConfig, PreTrainedModel
+from transformers import PretrainedConfig, PreTrainedModel, BertConfig, BertLayer
 from transformers.modeling_outputs import MaskedLMOutput, BaseModelOutput
 
 
@@ -132,17 +132,17 @@ class RowAttentionLayer(nn.Module):
         self, hidden_size=None, nhead=None, **kwargs,
     ):
         super().__init__()
-        self.layer = nn.TransformerEncoderLayer(
-            d_model=hidden_size,
-            nhead=nhead,  # TODO: make part of config
-            dim_feedforward=4*hidden_size,
-            batch_first=True,
+        config = BertConfig(
+            hidden_size=hidden_size,
+            intermediate_size=4*hidden_size,
+            num_attention_heads=nhead,
         )
+        self.layer = BertLayer(config)
 
     def forward(self, x):
         b, r, c, h = x.shape
         x = rearrange(x, "b r c h -> (b c) r h")
-        x = self.layer(x)
+        x = self.layer(x)[0]
         x = rearrange(x, "(b c) r h -> b r c h", b=b)
         return x
 
