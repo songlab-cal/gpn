@@ -4,6 +4,8 @@ import torch
 from transformers import DataCollatorForLanguageModeling
 from typing import Any, Callable, Dict, List, NewType, Optional, Tuple, Union
 
+from collections.abc import Mapping
+
 
 rv = geom(0.1)
 probs = np.array([rv.pmf(i) for i in range(1, 6)])
