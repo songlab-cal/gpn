@@ -5,7 +5,7 @@ from torch.nn import CrossEntropyLoss
 from transformers import PretrainedConfig, PreTrainedModel
 from transformers.modeling_outputs import MaskedLMOutput, BaseModelOutput
 
-from modules import TransposeLayer, ConvLayer, OneHotEmbedding, get_dilation_schedule
+from .modules import TransposeLayer, ConvLayer, OneHotEmbedding, get_dilation_schedule
 
 
 class ConvNetConfig(PretrainedConfig):
