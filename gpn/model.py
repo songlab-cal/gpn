@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss
-from transformers import PretrainedConfig, PreTrainedModel
+from transformers import AutoConfig, AutoModel, AutoModelForMaskedLM, PretrainedConfig, PreTrainedModel
 from transformers.modeling_outputs import MaskedLMOutput, BaseModelOutput
 
 from .modules import TransposeLayer, ConvLayer, OneHotEmbedding, get_dilation_schedule
@@ -126,3 +126,19 @@ class ConvNetForMaskedLM(ConvNetPreTrainedModel):
             loss=loss,
             logits=logits,
         )
+
+    def vep(self, pos=None, ref=None, alt=None, **kwargs):
+        logits = self.forward(**kwargs).logits
+        logits = logits[torch.arange(len(pos)), pos]
+        logits_ref = logits[torch.arange(len(ref)), ref]
+        logits_alt = logits[torch.arange(len(alt)), alt]
+        llr = logits_alt - logits_ref
+        return llr
+
+
+AutoConfig.register("ConvNet", ConvNetConfig)
+AutoModel.register(ConvNetConfig, ConvNetModel)
+AutoModelForMaskedLM.register(ConvNetConfig, ConvNetForMaskedLM)
+
+from transformers import BertForMaskedLM
+BertForMaskedLM.vep = ConvNetForMaskedLM.vep  # so it works with DNABERT

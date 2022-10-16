@@ -7,7 +7,7 @@ import tempfile
 import torch
 from transformers import AutoTokenizer, Trainer, TrainingArguments, AutoModelForMaskedLM
 
-import gpn
+import gpn.model
 
 
 class MLMforVEPModel(torch.nn.Module):
@@ -15,13 +15,8 @@ class MLMforVEPModel(torch.nn.Module):
         super().__init__()
         self.model = AutoModelForMaskedLM.from_pretrained(model_path)
 
-    def forward(self, pos=None, ref=None, alt=None, **kwargs):
-        logits = self.model(**kwargs).logits
-        logits = logits[torch.arange(len(pos)), pos]
-        logits_ref = logits[torch.arange(len(ref)), ref]
-        logits_alt = logits[torch.arange(len(alt)), alt]
-        llr = logits_alt - logits_ref
-        return llr
+    def forward(self, **kwargs):
+        return self.model.vep(**kwargs)
 
 
 def main(args):
@@ -38,8 +33,8 @@ def main(args):
             return_attention_mask=False,
             return_special_tokens_mask=False,
         )["input_ids"]
-        example["ref"] = tokenizer.get_vocab()[example["ref"].lower()]
-        example["alt"] = tokenizer.get_vocab()[example["alt"].lower()]
+        example["ref"] = tokenizer.encode(example["ref"], add_special_tokens=False)[0]
+        example["alt"] = tokenizer.encode(example["alt"], add_special_tokens=False)[0]
         return example
 
     tokenized_dataset = raw_dataset.map(

@@ -22,3 +22,14 @@ def load_table(path):
         df.pos -= 1
     df.chrom = df.chrom.astype(str)
     return df
+
+
+class Genome:
+    def __init__(self, path):
+        self.genome = load_fasta(path)
+
+    def get_window_seq(self, window):
+        seq = self.genome[window.chrom][window.start:window.end].seq
+        if window.strand == "-":
+            seq = seq.reverse_complement()
+        return str(seq)
