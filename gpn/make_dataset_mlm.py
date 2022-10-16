@@ -60,9 +60,9 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create dataset in parquet format.")
-    parser.add_argument("--fasta-path", help="Genome fasta path", type=str)
-    parser.add_argument("--intervals-path", help="Intervals path", type=str)
-    parser.add_argument("--output-path", help="Output path", type=str)
+    parser.add_argument("fasta_path", help="Genome fasta path", type=str)
+    parser.add_argument("intervals_path", help="Intervals path", type=str)
+    parser.add_argument("output_path", help="Output path", type=str)
     parser.add_argument(
         "--split-into-windows",
         help="Split into windows of window_size and step_size",

@@ -1,8 +1,5 @@
 import argparse
-from Bio import SeqIO
-from Bio.Seq import Seq
 from datasets import load_dataset
-import gzip
 import numpy as np
 import os
 import pandas as pd
