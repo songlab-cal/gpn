@@ -11,7 +11,6 @@ tqdm.pandas()
 
 def get_intervals_mask(intervals, genome, mask_lowercase, mask_flank):
     intervals["strand"] = "+"
-    # TODO: paralelize
     intervals["seq"] = intervals.progress_apply(
         lambda i: np.array(list(genome.get_window_seq(i))),
         axis=1,
@@ -43,6 +42,7 @@ if __name__ == "__main__":
         "--mask-flank", help="Mask flank by this amount.", type=int, default=0,
     )
     args = parser.parse_args()
+    print(args)
 
     intervals = load_table(args.intervals_path)
     intervals.chrom = intervals.chrom.astype(str)

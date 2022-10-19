@@ -11,6 +11,7 @@ install_requires = [
     "biopython",
     "wandb",
     "einops",
+    "pandarallel",
 ]
 
 
