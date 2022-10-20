@@ -10,17 +10,24 @@ from .utils import Genome, load_table
 
 
 def get_contig_windows(contig, window_size, step_size):
+    window_no_loss_flank = window_size // 8
+    max_no_loss_window = 0.95
     windows = pd.DataFrame(
         dict(start=np.arange(contig.start, contig.end-window_size+1, step_size))
     )
     windows["end"] = windows.start + window_size
     windows["chrom"] = contig.chrom
     windows["strand"] = "+"
+
+    def prepare_no_loss_mask(w):
+        m = contig.no_loss_mask[w.start-contig.start:w.end-contig.start].copy()
+        m[:window_no_loss_flank] = True
+        m[-window_no_loss_flank:] = True
+        return m
+
     if 'no_loss_mask' in contig: 
-        windows["no_loss_mask"] = windows.apply(
-            lambda w: contig.no_loss_mask[w.start-contig.start:w.end-contig.start],
-            axis=1,
-        )
+        windows["no_loss_mask"] = windows.apply(prepare_no_loss_mask, axis=1)
+        windows = windows[windows.no_loss_mask.apply(np.mean) <= max_no_loss_window]
     windows_neg = windows.copy()
     windows_neg.strand = "-"
     if 'no_loss_mask' in contig:
