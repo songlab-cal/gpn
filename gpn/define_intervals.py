@@ -5,7 +5,9 @@ import gzip
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+from pandarallel import pandarallel
 
+pandarallel.initialize(progress_bar=True)
 
 tqdm.pandas()
 
@@ -35,7 +37,7 @@ def filter_undefined(intervals, genome, min_contig_len):
         return intervals
 
     intervals = pd.concat(
-        intervals.progress_apply(find_defined, axis=1).values, ignore_index=True
+        intervals.parallel_apply(find_defined, axis=1).values, ignore_index=True
     )
     return intervals
 
@@ -65,18 +67,25 @@ def filter_masked(intervals, genome, min_contig_len, mask_incl_context):
         return intervals
 
     intervals = pd.concat(
-        intervals.progress_apply(find_unmasked, axis=1).values, ignore_index=True
+        intervals.parallel_apply(find_unmasked, axis=1).values, ignore_index=True
     )
     return intervals
 
 
-def filter_feature(intervals, gtf, feature, min_contig_len):
-    gtf = gtf[(gtf.feature == feature) & (gtf.chrom.isin(intervals.chrom.unique()))][
-        ["chrom", "start", "end"]
-    ]
+def filter_feature(
+    intervals, gtf, feature, min_contig_len, feature_flank, filter_protein_coding
+):
+    gtf = gtf[(gtf.feature == feature) & (gtf.chrom.isin(intervals.chrom.unique()))]
+    if filter_protein_coding:
+        gtf["transcript_biotype"] = gtf.attribute.str.extract(
+            r'transcript_biotype "([^;]*)";'
+        )
+        gtf = gtf[gtf.transcript_biotype=="protein_coding"]
+    gtf = gtf[["chrom", "start", "end"]]
     gtf = bf.sanitize_bedframe(gtf)
     gtf = bf.merge(gtf)
-    gtf = bf.expand(gtf, pad=min_contig_len // 2)
+    gtf = bf.expand(gtf, pad=feature_flank)
+    gtf = bf.merge(gtf)
     intervals = bf.overlap(intervals, gtf, how="inner", return_overlap=True)[
         ["chrom", "overlap_start", "overlap_end"]
     ].rename(columns=dict(overlap_start="start", overlap_end="end"))
@@ -121,7 +130,8 @@ def main(args):
         )
         gtf.chrom = gtf.chrom.astype(str)
         intervals = filter_feature(
-            intervals, gtf, args.filter_feature, args.min_contig_len
+            intervals, gtf, args.filter_feature, args.min_contig_len,
+            args.feature_flank, args.filter_protein_coding,
         )
         print(intervals.shape)
     if args.filter_undefined:
@@ -140,14 +150,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Define genomic intervals for language modeling."
     )
-    parser.add_argument("--fasta-path", help="Genome fasta path", type=str)
+    parser.add_argument("fasta_path", help="Genome fasta path", type=str)
     parser.add_argument(
-        "--input-intervals-path",
+        "input_intervals_path",
         help="Input intervals path. If ommitted, will use full chromosomes in fasta.",
         type=str,
     )
-    parser.add_argument("--output-path", help="Output path", type=str)
-    parser.add_argument("--min-contig-len", help="Minimum contig length", type=int)
+    parser.add_argument("output_path", help="Output path", type=str)
+    parser.add_argument("--min-contig-len", help="Minimum contig length", type=int, default=128)
     parser.add_argument(
         "--mask-incl-context",
         help="Border of masked regions included as context",
@@ -168,6 +178,12 @@ if __name__ == "__main__":
         help="Filter to a specific feature of GTF in GTF_PATH",
         type=str,
     )
+    parser.add_argument(
+        "--feature-flank",
+        help="Add flank to GTF feature.",
+        type=int,
+    )
     parser.add_argument("--gtf-path", help="GTF path", type=str)
+    parser.add_argument("--filter-protein-coding", action="store_true")
     args = parser.parse_args()
     main(args)

@@ -1,8 +1,8 @@
 import argparse
 import numpy as np
 import pandas as pd
-from pandarallel import pandarallel
-pandarallel.initialize(progress_bar=True)
+#from pandarallel import pandarallel
+#pandarallel.initialize(progress_bar=True)
 from tqdm import tqdm
 tqdm.pandas()
 
@@ -39,12 +39,12 @@ def get_contig_windows(contig, window_size, step_size):
 def make_dataset(intervals, genome, window_size, step_size):
     intervals.chrom = intervals.chrom.astype(str)
     windows = pd.concat(
-        intervals.parallel_apply(
+        intervals.progress_apply(
             lambda contig: get_contig_windows(contig, window_size, step_size), axis=1,
         ).values,
         ignore_index=True,
     )
-    windows["seq"] = windows.parallel_apply(genome.get_window_seq, axis=1)
+    windows["seq"] = windows.progress_apply(genome.get_window_seq, axis=1)
     windows = windows.sample(frac=1.0, random_state=42)
     return windows
 

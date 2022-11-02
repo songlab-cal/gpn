@@ -17,8 +17,9 @@ def get_intervals_mask(intervals, genome, mask_lowercase, mask_flank):
     )
     def get_mask_flank(seq):
         mask = np.zeros_like(seq, dtype=bool)
-        mask[:mask_flank] = True
-        mask[-mask_flank:] = True
+        if mask_flank > 0:
+            mask[:mask_flank] = True
+            mask[-mask_flank:] = True  # mask[-0:] == mask
         return mask
     intervals["no_loss_mask"] = intervals.seq.progress_apply(get_mask_flank)
     if mask_lowercase:
