@@ -34,7 +34,7 @@ def filter_undefined(intervals, genome, min_contig_len):
             undefined = bf.merge(undefined)
             intervals = bf.subtract(intervals, undefined)
         intervals = intervals[intervals.end - intervals.start >= min_contig_len]
-        return intervals
+        return intervals[["chrom", "start", "end"]]
 
     intervals = pd.concat(
         intervals.parallel_apply(find_defined, axis=1).values, ignore_index=True
