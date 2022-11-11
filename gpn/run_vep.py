@@ -1,5 +1,5 @@
 import argparse
-from datasets import load_dataset
+from datasets import load_dataset, Features, Sequence, Value
 import numpy as np
 import os
 import pandas as pd
@@ -16,13 +16,38 @@ class MLMforVEPModel(torch.nn.Module):
         self.model = AutoModelForMaskedLM.from_pretrained(model_path)
 
     def forward(self, **kwargs):
-        return self.model.vep(**kwargs)
+        preds = self.model.vep(**kwargs)
+        loss = torch.zeros_like(preds)  # not used
+        return loss, preds
 
 
 def main(args):
-    tokenizer = AutoTokenizer.from_pretrained(args.model_path)
-    raw_dataset = load_dataset('parquet', data_files={'test': args.data_path})['test']
+    if args.disable_caching:
+        print("Disabling caching")
+        datasets.disable_caching()
+    tokenizer = AutoTokenizer.from_pretrained(
+        args.tokenizer_path if args.tokenizer_path else args.model_path
+    )
+
+    raw_features = Features({
+        "seq": Value("string"),
+        "pos": Value("int16"),
+        "ref": Value("string"),
+        "alt": Value("string"),
+    })
+
+    raw_dataset = load_dataset(
+        'parquet', data_files={'test': args.data_path},
+        features=raw_features,
+    )['test']
     print(raw_dataset)
+
+    tokenized_features = Features({
+        "input_ids": Sequence(Value("int8")),
+        "pos": Value("int16"),
+        "ref": Value("int8"),
+        "alt": Value("int8"),
+    })
 
     def tokenize_function(example):
         example["input_ids"] = tokenizer(
@@ -33,8 +58,8 @@ def main(args):
             return_attention_mask=False,
             return_special_tokens_mask=False,
         )["input_ids"]
-        example["ref"] = tokenizer.encode(example["ref"], add_special_tokens=False)[0]
-        example["alt"] = tokenizer.encode(example["alt"], add_special_tokens=False)[0]
+        example["ref"] = tokenizer.get_vocab()[example["ref"].lower()]
+        example["alt"] = tokenizer.get_vocab()[example["alt"].lower()]
         return example
 
     tokenized_dataset = raw_dataset.map(
@@ -42,6 +67,7 @@ def main(args):
         batched=False,
         num_proc=args.dataloader_num_workers,
         remove_columns=["seq"],
+        features=tokenized_features,
         desc="Running tokenizer on dataset",
     )
     print(tokenized_dataset)
@@ -83,5 +109,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dataloader-num-workers", help="Dataloader num workers", type=int, default=8
     )
+    parser.add_argument("--disable-caching", help="Disable caching of tokenized dataset", action="store_true")
+    parser.add_argument("--tokenizer-path", help="Tokenizer path (optional, else will use model_path)", type=str)
     args = parser.parse_args()
     main(args)
