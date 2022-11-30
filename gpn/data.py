@@ -61,3 +61,21 @@ class DataCollatorForLanguageModelingSpan(DataCollatorForLanguageModeling):
 
         # The rest of the time (10% of the time) we keep the masked input tokens unchanged
         return inputs, labels
+
+    def torch_call(self, examples: List[Union[List[int], Any, Dict[str, Any]]]) -> Dict[str, Any]:
+        batch = {key: torch.stack([torch.tensor(example[key]) for example in examples], dim=0) for key in examples[0].keys()}
+        # Handle dict or lists with proper padding and conversion to tensor.
+        #if isinstance(examples[0], Mapping):
+        #    batch = self.tokenizer.pad(examples, return_tensors="pt", pad_to_multiple_of=self.pad_to_multiple_of)
+        #else:
+        #    batch = {
+        #        "input_ids": _torch_collate_batch(examples, self.tokenizer, pad_to_multiple_of=self.pad_to_multiple_of)
+        #    }
+
+        # If special token mask has been preprocessed, pop it from the dict.
+        #no_loss_mask = batch.pop("no_loss_mask", None)
+        batch["input_ids"], batch["labels"] = self.torch_mask_tokens(
+            batch["input_ids"],
+            #no_loss_mask=no_loss_mask,
+        )
+        return batch
