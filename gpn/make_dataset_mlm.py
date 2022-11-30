@@ -54,7 +54,7 @@ if __name__ == "__main__":
     parser.add_argument("intervals_path", help="Intervals path", type=str)
     parser.add_argument("fasta_path", help="Genome fasta path", type=str)
     parser.add_argument("window_size", help="Window size", type=int)
-    parser.add_argument("step_size", help="Step size", type=int)    
+    parser.add_argument("step_size", help="Step size", type=int)
     parser.add_argument("output_path", help="Output path", type=str)
     args = parser.parse_args()
     print(args)

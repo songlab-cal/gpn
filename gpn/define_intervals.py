@@ -5,9 +5,8 @@ import gzip
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-from pandarallel import pandarallel
-
-pandarallel.initialize(progress_bar=True)
+#from pandarallel import pandarallel
+#pandarallel.initialize(progress_bar=True)
 
 tqdm.pandas()
 
@@ -37,7 +36,7 @@ def filter_undefined(intervals, genome, min_contig_len):
         return intervals[["chrom", "start", "end"]]
 
     intervals = pd.concat(
-        intervals.parallel_apply(find_defined, axis=1).values, ignore_index=True
+        intervals.apply(find_defined, axis=1).values, ignore_index=True
     )
     return intervals
 
@@ -67,7 +66,7 @@ def filter_masked(intervals, genome, min_contig_len, mask_incl_context):
         return intervals
 
     intervals = pd.concat(
-        intervals.parallel_apply(find_unmasked, axis=1).values, ignore_index=True
+        intervals.apply(find_unmasked, axis=1).values, ignore_index=True
     )
     return intervals
 
@@ -99,11 +98,13 @@ def main(args):
     ) as handle:
         genome = SeqIO.to_dict(SeqIO.parse(handle, "fasta"))
     if args.input_intervals_path is None:
+        print("All intervals")
         intervals = pd.DataFrame(
             [[chrom, 0, len(record)] for chrom, record in genome.items()],
             columns=["chrom", "start", "end"],
         )
     else:
+        print("User-defined intervals")
         intervals = pd.read_csv(args.input_intervals_path, sep="\t")
     intervals.chrom = intervals.chrom.astype(str)
     intervals = bf.sanitize_bedframe(intervals)
@@ -151,12 +152,12 @@ if __name__ == "__main__":
         description="Define genomic intervals for language modeling."
     )
     parser.add_argument("fasta_path", help="Genome fasta path", type=str)
+    parser.add_argument("output_path", help="Output path", type=str)
     parser.add_argument(
-        "input_intervals_path",
+        "--input-intervals-path",
         help="Input intervals path. If ommitted, will use full chromosomes in fasta.",
         type=str,
     )
-    parser.add_argument("output_path", help="Output path", type=str)
     parser.add_argument("--min-contig-len", help="Minimum contig length", type=int, default=128)
     parser.add_argument(
         "--mask-incl-context",
