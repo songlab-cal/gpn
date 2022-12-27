@@ -8,6 +8,7 @@ def load_fasta(path):
         return SeqIO.to_dict(SeqIO.parse(handle, "fasta"))
 
 
+# Some standard formats
 def load_table(path):
     if path.endswith('.parquet'):
         df = pd.read_parquet(path)
@@ -20,6 +21,32 @@ def load_table(path):
             path, sep="\t", header=None, comment="#", usecols=[0,1,2,3,4],
         ).rename(cols={0: 'chrom', 1: 'pos', 2: 'id', 3: 'ref', 4: 'alt'})
         df.pos -= 1
+    elif 'gtf' in path or gff in path:
+        df = pd.read_csv(
+            path,
+            sep="\t",
+            header=None,
+            comment="#",
+            names=[
+                "chrom",
+                "source",
+                "feature",
+                "start",
+                "end",
+                "score",
+                "strand",
+                "frame",
+                "attribute",
+            ],
+        )
+    df.chrom = df.chrom.astype(str)
+    return df
+
+
+def load_repeatmasker(path):
+    df = pd.read_csv(path, sep="\t").rename(
+        columns=dict(genoName="chrom", genoStart="start", genoEnd="end")
+    )
     df.chrom = df.chrom.astype(str)
     return df
 

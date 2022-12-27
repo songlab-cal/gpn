@@ -112,24 +112,7 @@ def main(args):
     print(intervals.shape)
 
     if args.filter_feature is not None:
-        gtf = pd.read_csv(
-            args.gtf_path,
-            sep="\t",
-            header=None,
-            comment="#",
-            names=[
-                "chrom",
-                "source",
-                "feature",
-                "start",
-                "end",
-                "score",
-                "strand",
-                "frame",
-                "attribute",
-            ],
-        )
-        gtf.chrom = gtf.chrom.astype(str)
+        gtf = load_table(args.gtf_path)
         intervals = filter_feature(
             intervals, gtf, args.filter_feature, args.min_contig_len,
             args.feature_flank, args.filter_protein_coding,
