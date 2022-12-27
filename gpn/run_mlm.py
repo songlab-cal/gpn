@@ -31,7 +31,7 @@ from itertools import chain
 from typing import Optional
 
 import datasets
-from datasets import load_dataset, load_metric
+from datasets import load_dataset, load_metric, Features, Sequence, Value
 
 import transformers
 from transformers import (
@@ -52,7 +52,7 @@ from transformers.utils.versions import require_version
 
 import torchinfo
 
-import gpn
+import gpn.model
 from gpn.data import DataCollatorForLanguageModelingSpan
 
 
@@ -321,11 +321,24 @@ def main():
         data_files["train"] = data_args.train_file
     if data_args.validation_file is not None:
         data_files["validation"] = data_args.validation_file
+
+    raw_features = Features({
+        "seq": Value("string"),
+        #"no_loss_mask": Sequence(Value("bool")),
+        # all these are not used at all, could remove them before
+        # so they don't use up space
+        "chrom": Value("string"),
+        "start": Value("int64"), 
+        "end": Value("int64"), 
+        "strand": Value("string"),
+    })
+
     raw_datasets = load_dataset(
         'parquet',
         data_files=data_files,
         cache_dir=model_args.cache_dir,
         use_auth_token=True if model_args.use_auth_token else None,
+        features=raw_features,
     )
     print(raw_datasets)
 
@@ -341,6 +354,12 @@ def main():
             return_special_tokens_mask=False,
         )
 
+    tokenized_features = Features({
+        "input_ids": Sequence(Value("int8")),
+        #"loss_weight": Sequence(Value("float32")),
+        #"no_loss_mask": Sequence(Value("bool")),
+    })
+
     tokenized_datasets = raw_datasets.map(
         tokenize_function,
         batched=False,
@@ -348,6 +367,7 @@ def main():
         remove_columns=[text_column_name, "chrom", "start", "end", "strand"],
         load_from_cache_file=not data_args.overwrite_cache,
         desc="Running tokenizer on dataset",
+        features=tokenized_features,
     )
     print(tokenized_datasets)
 
