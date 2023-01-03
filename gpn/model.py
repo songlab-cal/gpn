@@ -135,6 +135,11 @@ class ConvNetForMaskedLM(ConvNetPreTrainedModel):
         llr = logits_alt - logits_ref
         return llr
 
+    def get_logits(self, pos=None, **kwargs):
+        logits = self.forward(**kwargs).logits
+        logits = logits[torch.arange(len(pos)), pos]
+        return logits
+
 
 AutoConfig.register("ConvNet", ConvNetConfig)
 AutoModel.register(ConvNetConfig, ConvNetModel)
