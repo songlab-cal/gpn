@@ -60,3 +60,7 @@ class Genome:
         if window.strand == "-":
             seq = seq.reverse_complement()
         return str(seq)
+
+
+def add_space_every_k(seq, k):
+    return " ".join([seq[x:x+k] for x in range(0, len(seq), k)])
