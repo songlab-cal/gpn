@@ -16,9 +16,7 @@ class MLMforVEPModel(torch.nn.Module):
         self.model = AutoModelForMaskedLM.from_pretrained(model_path)
 
     def forward(self, **kwargs):
-        preds = self.model.vep(**kwargs)
-        loss = torch.zeros_like(preds)  # not used
-        return loss, preds
+        return self.model.vep(**kwargs)
 
 
 def main(args):

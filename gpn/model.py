@@ -15,7 +15,7 @@ class ConvNetConfig(PretrainedConfig):
         self,
         vocab_size=7,
         hidden_size=512,
-        n_layers=30,
+        n_layers=25,
         kernel_size=9,
         dilation_double_every=1,
         dilation_max=32,
@@ -115,13 +115,17 @@ class ConvNetForMaskedLM(ConvNetPreTrainedModel):
         self.cls = ConvNetOnlyMLMHead(config)
         self.post_init()
 
-    def forward(self, input_ids=None, labels=None, **kwargs):
+    def forward(self, input_ids=None, labels=None, loss_weight=None, **kwargs):
         hidden_state = self.model(input_ids=input_ids, **kwargs).last_hidden_state
         logits = self.cls(hidden_state)
         loss = None
         if labels is not None:
-            loss_fct = CrossEntropyLoss()
-            loss = loss_fct(logits.view(-1, self.config.vocab_size), labels.view(-1))
+            loss_fct = CrossEntropyLoss(reduction="none")
+            labels = labels.view(-1)
+            loss = loss_fct(logits.view(-1, self.config.vocab_size), labels)
+            loss_weight = loss_weight.view(-1)
+            loss_weight[labels==-100] = 0.0
+            loss = (loss * loss_weight / loss_weight.sum()).sum()
         return MaskedLMOutput(
             loss=loss,
             logits=logits,
