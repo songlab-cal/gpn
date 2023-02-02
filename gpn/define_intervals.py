@@ -127,7 +127,7 @@ def main(args):
         )
         print(intervals.shape)
     print(intervals)
-    intervals.to_csv(args.output_path, sep="\t", index=False)
+    intervals.to_parquet(args.output_path, index=False)
 
 
 if __name__ == "__main__":

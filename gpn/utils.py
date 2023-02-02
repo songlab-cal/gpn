@@ -1,11 +1,19 @@
 import gzip
 from Bio import SeqIO
+from Bio.Seq import Seq
 import pandas as pd
 
 
 def load_fasta(path):
     with gzip.open(path, "rt") if path.endswith(".gz") else open(path) as handle:
-        return SeqIO.to_dict(SeqIO.parse(handle, "fasta"))
+        genome = SeqIO.to_dict(SeqIO.parse(handle, "fasta"))
+    genome = pd.Series({c: str(rec.seq) for c, rec in genome.items()})
+    return genome
+
+
+def save_fasta(path, genome):
+    with bgzf.BgzfWriter(path, "wb") if path.endswith(".gz") else open(path, "w") as handle:
+        SeqIO.write(genome.values(), handle, "fasta")
 
 
 # Some standard formats
@@ -55,11 +63,16 @@ class Genome:
     def __init__(self, path):
         self.genome = load_fasta(path)
 
-    def get_window_seq(self, window):
-        seq = self.genome[window.chrom][window.start:window.end].seq
-        if window.strand == "-":
-            seq = seq.reverse_complement()
-        return str(seq)
+    def get_seq(self, chrom, start, end, strand="+"):
+        seq = self.genome[chrom][start:end]
+        if strand == "-":
+            seq = str(Seq(seq).reverse_complement())
+        return seq
+
+    def get_seq_fwd_rev(self, chrom, start, end):
+        seq_fwd = self.get_seq(chrom, start, end)
+        seq_rev = str(Seq(seq_fwd).reverse_complement())
+        return seq_fwd, seq_rev
 
 
 def add_space_every_k(seq, k):
