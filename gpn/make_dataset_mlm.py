@@ -24,6 +24,7 @@ def get_interval_windows(interval, window_size, step_size):
     )
     windows["end"] = windows.start + window_size
     windows["chrom"] = interval.chrom
+    windows = windows[["chrom", "start", "end"]]  # just re-ordering
     windows["strand"] = "+"
     windows_neg = windows.copy()
     windows_neg.strand = "-"

@@ -1,131 +1,80 @@
 import argparse
 from Bio import SeqIO
 import bioframe as bf
+from gpn.utils import load_table, Genome
 import gzip
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-#from pandarallel import pandarallel
-#pandarallel.initialize(progress_bar=True)
 
 tqdm.pandas()
 
 
-DEFINED_SYMBOLS = list("ACGTacgt")
-MASKED_SYMBOLS = list("acgt")
+def get_gtf_features(gtf, feature):
+    gtf_features = gtf[gtf.feature == feature]
+    return bf.merge(bf.sanitize_bedframe(gtf_features[["chrom", "start", "end"]]))
 
 
-def filter_undefined(intervals, genome, min_contig_len):
-    print("filter_undefined")
-
-    def find_defined(interval):
-        seq = np.array(
-            list(str(genome[interval.chrom][interval.start : interval.end].seq))
-        )
-        intervals = interval.to_frame().T
-        intervals = bf.sanitize_bedframe(intervals)
-        undefined = pd.DataFrame(
-            dict(start=interval.start + np.where(~np.isin(seq, DEFINED_SYMBOLS))[0])
-        )
-        if len(undefined) > 0:
-            undefined["chrom"] = interval.chrom
-            undefined["end"] = undefined.start + 1
-            undefined = bf.merge(undefined)
-            intervals = bf.subtract(intervals, undefined)
-        intervals = intervals[intervals.end - intervals.start >= min_contig_len]
-        return intervals[["chrom", "start", "end"]]
-
-    intervals = pd.concat(
-        intervals.apply(find_defined, axis=1).values, ignore_index=True
-    )
-    return intervals
-
-
-def filter_masked(intervals, genome, min_contig_len, mask_incl_context):
-    print("filter_masked")
-
-    def find_unmasked(interval):
-        seq = np.array(
-            list(str(genome[interval.chrom][interval.start : interval.end].seq))
-        )
-        intervals = interval.to_frame().T
-        intervals = bf.sanitize_bedframe(intervals)
-        masked = pd.DataFrame(
-            dict(start=interval.start + np.where(np.isin(seq, MASKED_SYMBOLS))[0])
-        )
-        if len(masked > 0):
-            masked["chrom"] = interval.chrom
-            masked["end"] = masked.start + 1
-            masked = bf.merge(masked)
-            masked.start += mask_incl_context
-            masked.end -= mask_incl_context
-            masked = masked.query("end-start > 0")
-            if len(masked) > 0:
-                intervals = bf.subtract(intervals, masked)
-        intervals = intervals[intervals.end - intervals.start >= min_contig_len]
-        return intervals
-
-    intervals = pd.concat(
-        intervals.apply(find_unmasked, axis=1).values, ignore_index=True
-    )
-    return intervals
-
-
-def filter_feature(
-    intervals, gtf, feature, min_contig_len, feature_flank, filter_protein_coding
-):
-    gtf = gtf[(gtf.feature == feature) & (gtf.chrom.isin(intervals.chrom.unique()))]
-    if filter_protein_coding:
-        gtf["transcript_biotype"] = gtf.attribute.str.extract(
-            r'transcript_biotype "([^;]*)";'
-        )
-        gtf = gtf[gtf.transcript_biotype=="protein_coding"]
-    gtf = gtf[["chrom", "start", "end"]]
-    gtf = bf.sanitize_bedframe(gtf)
-    gtf = bf.merge(gtf)
-    gtf = bf.expand(gtf, pad=feature_flank)
-    gtf = bf.merge(gtf)
-    intervals = bf.overlap(intervals, gtf, how="inner", return_overlap=True)[
+def intersect_intervals(a, b):
+    return bf.overlap(a, b, how="inner", return_overlap=True)[
         ["chrom", "overlap_start", "overlap_end"]
     ].rename(columns=dict(overlap_start="start", overlap_end="end"))
-    intervals = intervals[intervals.end - intervals.start >= min_contig_len]
-    return intervals
+
+
+def add_flank(intervals, flank):
+    return bf.merge(bf.expand(intervals, pad=feature_flank)).drop(columns="n_intervals")
+
+
+def filter_length(intervals, min_interval_len):
+    return intervals[intervals.end-intervals.start>=min_interval_len]
+
+
+def filter_defined(intervals, genome, include_flank=None):
+    defined = genome.get_defined_intervals()
+    if include_flank is not None:
+        defined = add_flank(defined, include_flank)
+    return intersect_intervals(intervals, defined)
+
+
+def filter_unmasked(intervals, genome, include_flank=None):
+    unmasked = genome.get_unmasked_intervals()
+    if include_flank is not None:
+        unmasked = add_flank(unmasked, include_flank)
+    return intersect_intervals(intervals, unmasked)
+
+
+def filter_gtf_features(intervals, gtf, feature, include_flank=None):
+    gtf_features = get_gtf_features(gtf, feature)
+    if include_flank is not None:
+        gtf_features = add_flank(gtf_features, include_flank)
+    return intersect_intervals(intervals, gtf_features)
 
 
 def main(args):
-    with gzip.open(args.fasta_path, "rt") if args.fasta_path.endswith(".gz") else open(
-        args.fasta_path
-    ) as handle:
-        genome = SeqIO.to_dict(SeqIO.parse(handle, "fasta"))
+    genome = Genome(args.fasta_path)
     if args.input_intervals_path is None:
         print("All intervals")
-        intervals = pd.DataFrame(
-            [[chrom, 0, len(record)] for chrom, record in genome.items()],
-            columns=["chrom", "start", "end"],
-        )
+        intervals = genome.get_all_intervals()
     else:
         print("User-defined intervals")
-        intervals = pd.read_csv(args.input_intervals_path, sep="\t")
-    intervals.chrom = intervals.chrom.astype(str)
-    intervals = bf.sanitize_bedframe(intervals)
-    intervals = bf.merge(intervals)
+        intervals = read_table(args.input_intervals_path)
+    intervals = bf.merge(bf.sanitize_bedframe(intervals))
     print(intervals.shape)
 
-    if args.filter_feature is not None:
+    if args.filter_gtf_features is not None:
         gtf = load_table(args.gtf_path)
-        intervals = filter_feature(
-            intervals, gtf, args.filter_feature, args.min_contig_len,
-            args.feature_flank, args.filter_protein_coding,
+        intervals = filter_gtf_features(
+            intervals, gtf, args.filter_feature, args.gtf_features_include_flank
         )
         print(intervals.shape)
-    if args.filter_undefined:
-        intervals = filter_undefined(intervals, genome, args.min_contig_len)
+    if args.filter_defined:
+        intervals = filter_defined(intervals, genome, args.defined_include_flank)
         print(intervals.shape)
-    if args.filter_masked:
-        intervals = filter_masked(
-            intervals, genome, args.min_contig_len, args.mask_incl_context
-        )
+    if args.filter_unmasked:
+        intervals = filter_unmasked(intervals, genome, args.unmasked_include_flank)
         print(intervals.shape)
+    if args.min_interval_len:
+        intervals = filter_length(intervals, args.min_interval_len)
     print(intervals)
     intervals.to_parquet(args.output_path, index=False)
 
@@ -141,33 +90,37 @@ if __name__ == "__main__":
         help="Input intervals path. If ommitted, will use full chromosomes in fasta.",
         type=str,
     )
-    parser.add_argument("--min-contig-len", help="Minimum contig length", type=int, default=128)
+    parser.add_argument("--min-interval-len", help="Minimum interval length", type=int)
     parser.add_argument(
-        "--mask-incl-context",
-        help="Border of masked regions included as context",
+        "--filter-defined",
+        help="Keep only ACGTacgt",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--defined-include-flank",
+        help="Flank of defined regions included",
         type=int,
     )
     parser.add_argument(
-        "--filter-undefined",
-        help="Exclude undefined nucleotides (e.g. N)",
+        "--filter-unmasked",
+        help="Keep only ACGT",
         action="store_true",
     )
     parser.add_argument(
-        "--filter-masked",
-        help="Exclude masked nucleotides (represented in lowercase)",
-        action="store_true",
+        "--unmasked-include-flank",
+        help="Flank of unmasked regions included",
+        type=int,
     )
     parser.add_argument(
-        "--filter-feature",
-        help="Filter to a specific feature of GTF in GTF_PATH",
+        "--filter-gtf-features",
+        help="Filter to a specific feature of GTF in GTF_PATH, e.g. exon, CDS. Could also be a custom feature annotation such as promoter, enhancer, etc.",
         type=str,
     )
     parser.add_argument(
-        "--feature-flank",
-        help="Add flank to GTF feature.",
+        "--gtf-feature-include-flank",
+        help="Flank of GTF features included",
         type=int,
     )
     parser.add_argument("--gtf-path", help="GTF path", type=str)
-    parser.add_argument("--filter-protein-coding", action="store_true")
     args = parser.parse_args()
     main(args)
