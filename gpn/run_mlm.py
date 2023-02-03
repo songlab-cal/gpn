@@ -61,71 +61,71 @@ from scipy.stats import geom
 from torch.utils.data import DataLoader, IterableDataset, get_worker_info
 
 
-class GenomeSamplerDataset(IterableDataset):
-    def __init__(
-        self,
-        dataset=None,
-        tokenizer_path=None,
-        window_size=None,
-        random_seed=None,
-        min_contig_size=None,
-        soft_masked_weight=None,
-    ):
-        super().__init__()
-        self.tokenizer_path = tokenizer_path
-        self.window_size = window_size
-        self.random_seed = random_seed
-        self.soft_masked_weight = soft_masked_weight
-
-        print("Loading parquet.")
-        self.contigs = dataset
-        self.contigs["contig_len"] = self.contigs.seq.str.len()
-        print(self.contigs.shape)
-        if min_contig_size is not None:
-            self.contigs = self.contigs[self.contigs.contig_len >= self.min_contig_size]
-            print(self.contigs.shape)
-        if not "contig_weight" in self.contigs.columns:
-            print("Setting contig weights according to lengths.")
-            self.contigs["contig_weight"] = (1 + self.contigs.contig_len - self.window_size).clip(lower=1)
-        else:
-            print("Using predefined contig weights.")
-        self.contigs["contig_prob"] = self.contigs.contig_weight / self.contigs.contig_weight.sum()
-        print("Done.")
-
-    def __iter__(self):
-        print("Loading tokenizer.")
-        tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_path)
-        print("Done.")
-
-        seed = self.random_seed
-        worker_info = get_worker_info()
-        if worker_info is not None:
-            seed = seed * (worker_info.id + 1)
-        rs = np.random.RandomState(seed=seed)
-
-        while True:
-            contig_index = rs.choice(len(self.contigs), p=self.contigs.contig_prob.values)
-            contig = self.contigs.iloc[contig_index]
-            if contig.contig_len > self.window_size:
-                start = rs.randint(contig.contig_len - self.window_size)
-            else:
-                start = 0
-            end = start + self.window_size
-            seq = contig.seq[start:end]
-            strand = rs.choice(["+", "-"])
-            if strand == "-":
-                seq = str(Seq(seq).reverse_complement())
-
-            x = tokenizer(
-                seq,
-                return_token_type_ids=False,
-                return_attention_mask=False,
-                return_tensors="pt",
-            )
-            x["input_ids"] = x["input_ids"].flatten()
-            x["loss_weight"] = np.ones_like(x["input_ids"], dtype=float)
-            x["loss_weight"][np.char.islower(list(seq))] = self.soft_masked_weight
-            yield x
+#class GenomeSamplerDataset(IterableDataset):
+#    def __init__(
+#        self,
+#        dataset=None,
+#        tokenizer_path=None,
+#        window_size=None,
+#        random_seed=None,
+#        min_contig_size=None,
+#        soft_masked_weight=None,
+#    ):
+#        super().__init__()
+#        self.tokenizer_path = tokenizer_path
+#        self.window_size = window_size
+#        self.random_seed = random_seed
+#        self.soft_masked_weight = soft_masked_weight
+#
+#        print("Loading parquet.")
+#        self.contigs = dataset
+#        self.contigs["contig_len"] = self.contigs.seq.str.len()
+#        print(self.contigs.shape)
+#        if min_contig_size is not None:
+#            self.contigs = self.contigs[self.contigs.contig_len >= self.min_contig_size]
+#            print(self.contigs.shape)
+#        if not "contig_weight" in self.contigs.columns:
+#            print("Setting contig weights according to lengths.")
+#            self.contigs["contig_weight"] = (1 + self.contigs.contig_len - self.window_size).clip(lower=1)
+#        else:
+#            print("Using predefined contig weights.")
+#        self.contigs["contig_prob"] = self.contigs.contig_weight / self.contigs.contig_weight.sum()
+#        print("Done.")
+#
+#    def __iter__(self):
+#        print("Loading tokenizer.")
+#        tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_path)
+#        print("Done.")
+#
+#        seed = self.random_seed
+#        worker_info = get_worker_info()
+#        if worker_info is not None:
+#            seed = seed * (worker_info.id + 1)
+#        rs = np.random.RandomState(seed=seed)
+#
+#        while True:
+#            contig_index = rs.choice(len(self.contigs), p=self.contigs.contig_prob.values)
+#            contig = self.contigs.iloc[contig_index]
+#            if contig.contig_len > self.window_size:
+#                start = rs.randint(contig.contig_len - self.window_size)
+#            else:
+#                start = 0
+#            end = start + self.window_size
+#            seq = contig.seq[start:end]
+#            strand = rs.choice(["+", "-"])
+#            if strand == "-":
+#                seq = str(Seq(seq).reverse_complement())
+#
+#            x = tokenizer(
+#                seq,
+#                return_token_type_ids=False,
+#                return_attention_mask=False,
+#                return_tensors="pt",
+#            )
+#            x["input_ids"] = x["input_ids"].flatten()
+#            x["loss_weight"] = np.ones_like(x["input_ids"], dtype=float)
+#            x["loss_weight"][np.char.islower(list(seq))] = self.soft_masked_weight
+#            yield x
 
 
 class DataCollatorForLanguageModelingSimplified(DataCollatorForLanguageModeling):
@@ -524,7 +524,6 @@ def main():
     with training_args.main_process_first(desc="dataset map tokenization"):
         tokenized_datasets = DatasetDict()
         for split, w in soft_masked_weight.items():
-            if split == "train": continue  # will be tokenized on-the-fly by GenomeSamplerDataset
             tokenized_datasets[split] = raw_datasets[split].map(
                 lambda examples: tokenize_function(examples, w),
                 batched=True,
@@ -535,16 +534,10 @@ def main():
             )
     
     if training_args.do_train:
-        train_dataset = GenomeSamplerDataset(
-            dataset=pd.DataFrame(raw_datasets["train"]),
-            tokenizer_path=model_args.tokenizer_name,
-            window_size=512,
-            random_seed=training_args.seed,
-            soft_masked_weight=data_args.soft_masked_loss_weight_train,
-        )
-        #if data_args.max_train_samples is not None:
-        #    max_train_samples = min(len(train_dataset), data_args.max_train_samples)
-        #    train_dataset = train_dataset.select(range(max_train_samples))
+        train_dataset = tokenized_datasets["train"]
+        if data_args.max_train_samples is not None:
+            max_train_samples = min(len(train_dataset), data_args.max_train_samples)
+            train_dataset = train_dataset.select(range(max_train_samples))
 
 
     if training_args.do_eval:

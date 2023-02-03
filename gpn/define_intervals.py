@@ -22,7 +22,7 @@ def intersect_intervals(a, b):
 
 
 def add_flank(intervals, flank):
-    return bf.merge(bf.expand(intervals, pad=feature_flank)).drop(columns="n_intervals")
+    return bf.merge(bf.expand(intervals, pad=flank)).drop(columns="n_intervals")
 
 
 def filter_length(intervals, min_interval_len):
@@ -57,14 +57,14 @@ def main(args):
         intervals = genome.get_all_intervals()
     else:
         print("User-defined intervals")
-        intervals = read_table(args.input_intervals_path)
+        intervals = load_table(args.input_intervals_path)
     intervals = bf.merge(bf.sanitize_bedframe(intervals))
     print(intervals.shape)
 
     if args.filter_gtf_features is not None:
         gtf = load_table(args.gtf_path)
         intervals = filter_gtf_features(
-            intervals, gtf, args.filter_feature, args.gtf_features_include_flank
+            intervals, gtf, args.filter_gtf_features, args.gtf_features_include_flank
         )
         print(intervals.shape)
     if args.filter_defined:
@@ -117,7 +117,7 @@ if __name__ == "__main__":
         type=str,
     )
     parser.add_argument(
-        "--gtf-feature-include-flank",
+        "--gtf-features-include-flank",
         help="Flank of GTF features included",
         type=int,
     )
