@@ -51,15 +51,17 @@ def filter_gtf_features(intervals, gtf, feature, include_flank=None):
 
 
 def main(args):
-    genome = Genome(args.fasta_path)
     if args.input_intervals_path is None:
         print("All intervals")
+        genome = Genome(args.fasta_path)
         intervals = genome.get_all_intervals()
     else:
         print("User-defined intervals")
         intervals = load_table(args.input_intervals_path)
     intervals = bf.merge(bf.sanitize_bedframe(intervals))
     print(intervals.shape)
+    if args.min_interval_len:
+        intervals = filter_length(intervals, args.min_interval_len)
 
     if args.filter_gtf_features is not None:
         gtf = load_table(args.gtf_path)
@@ -68,9 +70,11 @@ def main(args):
         )
         print(intervals.shape)
     if args.filter_defined:
+        if genome is None: genome = Genome(args.fasta_path)
         intervals = filter_defined(intervals, genome, args.defined_include_flank)
         print(intervals.shape)
     if args.filter_unmasked:
+        if genome is None: genome = Genome(args.fasta_path)
         intervals = filter_unmasked(intervals, genome, args.unmasked_include_flank)
         print(intervals.shape)
     if args.min_interval_len:
@@ -83,8 +87,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Define genomic intervals for language modeling."
     )
-    parser.add_argument("fasta_path", help="Genome fasta path", type=str)
     parser.add_argument("output_path", help="Output path", type=str)
+    parser.add_argument("--fasta-path", help="Genome fasta path", type=str)
     parser.add_argument(
         "--input-intervals-path",
         help="Input intervals path. If ommitted, will use full chromosomes in fasta.",

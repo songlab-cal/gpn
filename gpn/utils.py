@@ -8,8 +8,8 @@ from tqdm import tqdm
 tqdm.pandas()
 
 
-DEFINED_SYMBOLS = list("ACGTacgt")
-UNMASKED_SYMBOLS = list("ACGT")
+DEFINED_SYMBOLS = np.frombuffer("ACGTacgt".encode('ascii'), dtype="S1")
+UNMASKED_SYMBOLS = np.frombuffer("ACGT".encode('ascii'), dtype="S1") 
 
 
 def load_fasta(path):
@@ -94,7 +94,7 @@ class Genome:
     def get_intervals_matching_symbols(self, symbols):
         def get_intervals_matching_symbols_chrom(chrom):
             intervals = pd.DataFrame(dict(
-                start=np.where(np.isin(list(chrom.seq), symbols))[0]
+                start=np.where(np.isin(np.frombuffer(chrom.seq.encode("ascii"), dtype="S1"), symbols))[0]
             ))
             intervals["chrom"] = chrom.name
             intervals["end"] = intervals.start + 1
