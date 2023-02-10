@@ -10,9 +10,12 @@ from tqdm import tqdm
 tqdm.pandas()
 
 
-def get_gtf_features(gtf, feature):
-    gtf_features = gtf[gtf.feature == feature]
-    return bf.merge(bf.sanitize_bedframe(gtf_features[["chrom", "start", "end"]]))
+# TODO: maybe call it I or Is, or ivals instead of intervals
+
+
+def get_annotation_features(annotation, feature):
+    annotation_features = annotation[annotation.feature == feature]
+    return bf.merge(bf.sanitize_bedframe(annotation_features[["chrom", "start", "end"]]))
 
 
 def intersect_intervals(a, b):
@@ -21,8 +24,28 @@ def intersect_intervals(a, b):
     ].rename(columns=dict(overlap_start="start", overlap_end="end"))
 
 
+def union_intervals(a, b):
+    return bf.merge(pd.concat([a, b], ignore_index=True)).drop(columns="n_intervals")
+
+
+def intervals_size(intervals):
+    return (intervals.end-intervals.start).sum()
+
+
 def add_flank(intervals, flank):
     return bf.merge(bf.expand(intervals, pad=flank)).drop(columns="n_intervals")
+
+
+def add_jitter(intervals, magnitude, seed=42):
+    # After using this function, we recommend intersecting with
+    # Genome.get_all_intervals(), to avoid getting out of chromosome bounds
+    # or smaller subsets such as Genome.get_defined_intervals()
+    rng = np.random.default_rng(seed)
+    jitter = rng.integers(-magnitude, magnitude, size=len(intervals), endpoint=True)
+    new_intervals = intervals.copy()
+    new_intervals.start += jitter
+    new_intervals.end += jitter
+    return bf.merge(new_intervals)
 
 
 def filter_length(intervals, min_interval_len):
@@ -43,11 +66,46 @@ def filter_unmasked(intervals, genome, include_flank=None):
     return intersect_intervals(intervals, unmasked)
 
 
-def filter_gtf_features(intervals, gtf, feature, include_flank=None):
-    gtf_features = get_gtf_features(gtf, feature)
+def filter_annotation_features(intervals, annotation, feature, include_flank=None):
+    annotation_features = get_annotation_features(annotation, feature)
     if include_flank is not None:
-        gtf_features = add_flank(gtf_features, include_flank)
-    return intersect_intervals(intervals, gtf_features)
+        annotation_features = add_flank(annotation_features, include_flank)
+    return intersect_intervals(intervals, annotation_features)
+
+
+def get_promoters(annotation, upstream_size):
+    # not exactly getting promoters, just gettting regions upstream of TSS
+    
+    def get_promoter(transcript):
+        if transcript.strand == "+":
+            start, end = transcript.start-upstream_size, transcript.start
+        else:
+            start, end = transcript.end, transcript.end+upstream_size
+        return pd.Series(dict(chrom=transcript.chrom, start=start, end=end))
+
+    transcripts = annotation.query('feature=="transcript"')
+    promoters = transcripts.apply(get_promoter, axis=1)
+    return bf.merge(promoters)
+
+
+def get_random_intervals(intervals, size, n, seed=42):
+    rng = np.random.default_rng(seed)
+    interval_size = (intervals.end-intervals.start).values
+    # the number of random intervals that can be generated per interval
+    # e.g. if target size is 512, an interval of size 512 can produce 1 interval,
+    # and interval of size 513 can produce 2 intervals
+    interval_w = 1 + interval_size - size
+    interval_p = interval_w / interval_w.sum()
+    rand_interval_index = rng.choice(len(intervals), p=interval_p, size=n)
+
+    rand_intervals = []
+    for i in range(n):
+        interval = intervals.iloc[rand_interval_index[i]]
+        start = rng.integers((interval.end-interval.start) - size, endpoint=True)
+        end = start + size
+        rand_intervals.append([interval.chrom, start, end])
+    rand_intervals = pd.DataFrame(rand_intervals, columns=["chrom", "start", "end"])
+    return bf.merge(rand_intervals).drop(columns="n_intervals")
 
 
 def main(args):
@@ -63,10 +121,10 @@ def main(args):
     if args.min_interval_len:
         intervals = filter_length(intervals, args.min_interval_len)
 
-    if args.filter_gtf_features is not None:
-        gtf = load_table(args.gtf_path)
-        intervals = filter_gtf_features(
-            intervals, gtf, args.filter_gtf_features, args.gtf_features_include_flank
+    if args.filter_annotation_features is not None:
+        annotation = load_table(args.annotation_path)
+        intervals = filter_annotation_features(
+            intervals, annotation, args.filter_annotation_features, args.annotation_features_include_flank
         )
         print(intervals.shape)
     if args.filter_defined:
@@ -83,6 +141,8 @@ def main(args):
     intervals.to_parquet(args.output_path, index=False)
 
 
+# TODO: consider removing this. It's just too complicated and better to have 
+# the user manually call the functions from python
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Define genomic intervals for language modeling."
@@ -116,15 +176,15 @@ if __name__ == "__main__":
         type=int,
     )
     parser.add_argument(
-        "--filter-gtf-features",
-        help="Filter to a specific feature of GTF in GTF_PATH, e.g. exon, CDS. Could also be a custom feature annotation such as promoter, enhancer, etc.",
+        "--filter-annotation-features",
+        help="Filter to a specific feature of annotation in ANNOTATION_PATH, e.g. exon, CDS. Could also be a custom feature annotation such as promoter, enhancer, etc.",
         type=str,
     )
     parser.add_argument(
-        "--gtf-features-include-flank",
-        help="Flank of GTF features included",
+        "--annotation-features-include-flank",
+        help="Flank of annotation features included",
         type=int,
     )
-    parser.add_argument("--gtf-path", help="GTF path", type=str)
+    parser.add_argument("--annotation-path", help="annotation path", type=str)
     args = parser.parse_args()
     main(args)

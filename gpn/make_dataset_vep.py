@@ -12,7 +12,7 @@ tqdm.pandas()
 def get_seq(variant, genome, window_size):
     ref_str = variant.ref
     alt_str = variant.alt
-    seq = genome.get_window_seq(variant).upper()
+    seq = genome.get_seq(variant.chrom, variant.start, variant.end, variant.strand).upper()
     assert len(seq) == window_size
     window_pos = window_size // 2
     if variant.strand == "-":
