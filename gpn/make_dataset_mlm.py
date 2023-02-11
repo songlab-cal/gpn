@@ -26,9 +26,9 @@ def get_interval_windows(interval, window_size, step_size):
     windows["chrom"] = interval.chrom
     windows = windows[["chrom", "start", "end"]]  # just re-ordering
     windows["strand"] = "+"
-    windows_neg = windows.copy()
+    windows_neg = windows.copy()  # TODO: this should be optional
     windows_neg.strand = "-"
-    return  pd.concat([windows, windows_neg], ignore_index=True)
+    return pd.concat([windows, windows_neg], ignore_index=True)
 
 
 def get_seq(intervals, genome):

@@ -14,8 +14,7 @@ UNMASKED_SYMBOLS = np.frombuffer("ACGT".encode('ascii'), dtype="S1")
 
 def load_fasta(path):
     with gzip.open(path, "rt") if path.endswith(".gz") else open(path) as handle:
-        genome = SeqIO.to_dict(SeqIO.parse(handle, "fasta"))
-    genome = pd.Series({c: str(rec.seq) for c, rec in genome.items()})
+        genome = pd.Series({rec.id: str(rec.seq) for rec in SeqIO.parse(handle, "fasta")})
     return genome
 
 
@@ -93,12 +92,16 @@ class Genome:
 
     def get_intervals_matching_symbols(self, symbols):
         def get_intervals_matching_symbols_chrom(chrom):
+            complete_interval = pd.DataFrame({"chrom": [chrom.name], "start": [0], "end": [len(chrom.seq)]})
             intervals = pd.DataFrame(dict(
-                start=np.where(np.isin(np.frombuffer(chrom.seq.encode("ascii"), dtype="S1"), symbols))[0]
+                start=np.where(~np.isin(np.frombuffer(chrom.seq.encode("ascii"), dtype="S1"), symbols))[0]
             ))
-            intervals["chrom"] = chrom.name
-            intervals["end"] = intervals.start + 1
-            return bf.merge(intervals).drop(columns="n_intervals")
+            if len(intervals) > 0:
+                intervals["chrom"] = chrom.name
+                intervals["end"] = intervals.start + 1
+                intervals = bf.merge(intervals).drop(columns="n_intervals")
+                return bf.subtract(complete_interval, intervals)
+            return complete_interval
 
         return pd.concat(
             self._genome.rename("seq").to_frame().progress_apply(
