@@ -441,7 +441,9 @@ def main():
         data_args.dataset_config_name,
         cache_dir=model_args.cache_dir,
         use_auth_token=True if model_args.use_auth_token else None,
+        streaming=True,
     )
+    print(raw_datasets)
 
     # Load pretrained model and tokenizer
     #
@@ -494,12 +496,17 @@ def main():
         logger.info("Training new model from scratch")
         model = AutoModelForMaskedLM.from_config(config)
 
+    # let's define train & validation?
+    #print(raw_datasets)
+    #holdout_chrom = "4"
+    #print(f"Will hold out chr{holdout_chrom}.")
+    #full_dataset = concatenate_datasets([raw_datasets["train"], raw_datasets["validation"]])
+    #raw_datasets["train"] = full_dataset.filter(lambda w: w["chrom"]!=holdout_chrom)
+    #raw_datasets["validation"] = full_dataset.filter(lambda w: w["chrom"]==holdout_chrom)
+    #print(raw_datasets)
+
     # Preprocessing the datasets.
     # First we tokenize all the texts.
-    if training_args.do_train:
-        column_names = raw_datasets["train"].column_names
-    else:
-        column_names = raw_datasets["validation"].column_names
 
     def tokenize_function(examples, soft_masked_weight):
         res = tokenizer(
@@ -521,30 +528,40 @@ def main():
         "validation": data_args.soft_masked_loss_weight_evaluation,
     }
 
-    with training_args.main_process_first(desc="dataset map tokenization"):
-        tokenized_datasets = DatasetDict()
-        for split, w in soft_masked_weight.items():
-            tokenized_datasets[split] = raw_datasets[split].map(
-                lambda examples: tokenize_function(examples, w),
-                batched=True,
-                num_proc=data_args.preprocessing_num_workers,
-                remove_columns=column_names,
-                load_from_cache_file=not data_args.overwrite_cache,
-                desc=f"Running tokenizer in {split} dataset with soft masked loss weight {w}",
-            )
+    from copy import copy
+
+    #with training_args.main_process_first(desc="dataset map tokenization"):
+    tokenized_datasets = DatasetDict()
+    #for split, w in soft_masked_weight.items():
+    #    print("here: ", split, w)
+    #    tokenized_datasets[split] = raw_datasets[split].map(
+    #        lambda examples: tokenize_function(examples, w),  # is it possible this w get's captured in the lambda and doesn't get updated? maybe do it by hand instead of for loop?
+    #        batched=True,
+    #        # num_proc=data_args.preprocessing_num_workers,  # doesn't work with IterableDataset/streaming=True
+    #        remove_columns=["assembly", "chrom", "start", "end", "strand", "seq"],
+    #    )
+    tokenized_datasets["train"] = raw_datasets["train"].map(
+        lambda examples: tokenize_function(examples, data_args.soft_masked_loss_weight_train),
+        batched=True,
+        remove_columns=["assembly", "chrom", "start", "end", "strand", "seq"],
+    )
+    tokenized_datasets["validation"] = raw_datasets["validation"].map(
+        lambda examples: tokenize_function(examples, data_args.soft_masked_loss_weight_evaluation),
+        batched=True,
+        remove_columns=["assembly", "chrom", "start", "end", "strand", "seq"],
+    )
+
+    #print(list(raw_datasets["train"].take(1)))
+    #print(list(tokenized_datasets["train"].take(1)))
+    #print(list(raw_datasets["validation"].take(1)))
+    #print(list(tokenized_datasets["validation"].take(1)))
+    #raise Exception("debug")
     
     if training_args.do_train:
         train_dataset = tokenized_datasets["train"]
-        if data_args.max_train_samples is not None:
-            max_train_samples = min(len(train_dataset), data_args.max_train_samples)
-            train_dataset = train_dataset.select(range(max_train_samples))
-
 
     if training_args.do_eval:
         eval_dataset = tokenized_datasets["validation"]
-        if data_args.max_eval_samples is not None:
-            max_eval_samples = min(len(eval_dataset), data_args.max_eval_samples)
-            eval_dataset = eval_dataset.select(range(max_eval_samples))
 
     # Data collator
     # This one will take care of randomly masking the tokens.
