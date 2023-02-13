@@ -154,9 +154,6 @@ if __name__ == "__main__":
     # TODO: there should be more flexibility here, including loading
     # from a local file, and having different split names
     variants = load_dataset(args.variants_path, streaming=True, split="test")
-
-    variants = variants.take(1000)
-
     genome = Genome(args.genome_path)
     tokenizer = AutoTokenizer.from_pretrained(
         args.tokenizer_path if args.tokenizer_path else args.model_path
