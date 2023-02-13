@@ -9,16 +9,16 @@ tqdm.pandas()
 from .utils import Genome, load_table
 
 
-def make_windows(intervals, window_size, step_size):
+def make_windows(intervals, window_size, step_size, add_rc=False):
     return pd.concat(
         intervals.progress_apply(
-            lambda interval: get_interval_windows(interval, window_size, step_size), axis=1,
+            lambda interval: get_interval_windows(interval, window_size, step_size, add_rc), axis=1,
         ).values,
         ignore_index=True,
     )
 
 
-def get_interval_windows(interval, window_size, step_size):
+def get_interval_windows(interval, window_size, step_size, add_rc):
     windows = pd.DataFrame(
         dict(start=np.arange(interval.start, interval.end-window_size+1, step_size))
     )
@@ -26,9 +26,11 @@ def get_interval_windows(interval, window_size, step_size):
     windows["chrom"] = interval.chrom
     windows = windows[["chrom", "start", "end"]]  # just re-ordering
     windows["strand"] = "+"
-    windows_neg = windows.copy()  # TODO: this should be optional
-    windows_neg.strand = "-"
-    return pd.concat([windows, windows_neg], ignore_index=True)
+    if add_rc:
+        windows_neg = windows.copy()  # TODO: this should be optional
+        windows_neg.strand = "-"
+        return pd.concat([windows, windows_neg], ignore_index=True)
+    return windows
 
 
 def get_seq(intervals, genome):
@@ -46,6 +48,7 @@ if __name__ == "__main__":
     parser.add_argument("output_path", help="Output path", type=str)
     parser.add_argument("--window_size", help="Window size", type=int)
     parser.add_argument("--step_size", help="Step size", type=int)
+    parser.add_argument('--add_rc', help="Add reverse complement as data augmentation", action='store_true')
     args = parser.parse_args()
     print(args)
 
@@ -53,7 +56,7 @@ if __name__ == "__main__":
     if args.window_size is not None:
         print("Making windows...")
         assert args.step_size is not None
-        intervals = make_windows(intervals, args.window_size, args.step_size)
+        intervals = make_windows(intervals, args.window_size, args.step_size, args.add_rc)
     if "strand" not in intervals.columns:
         intervals["strand"] = "+"
     print("Loading genome...")
