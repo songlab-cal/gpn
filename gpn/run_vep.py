@@ -3,6 +3,7 @@ from Bio import SeqIO, bgzf
 from Bio.Seq import Seq
 from datasets import load_dataset
 import gzip
+import numpy as np
 import os
 import pandas as pd
 import tempfile
@@ -54,9 +55,9 @@ def run_vep(
     ))
     original_cols = list(variants.take(1))[0].keys()
 
-    def tokenize(seq):
+    def tokenize(seqs):
         return tokenizer(
-            seq,
+            seqs,
             padding=False,
             truncation=False,
             return_token_type_ids=False,
@@ -67,45 +68,48 @@ def run_vep(
     def token_input_id(token):
         return tokenizer(token)["input_ids"][n_prefix]
 
-    def get_tokenized_seq(v):
+    def get_tokenized_seq(vs):
         # we convert from 1-based coordinate (standard in VCF) to 
         # 0-based, to use with Genome
-        pos = v["pos"] - 1
+        chrom = np.array(vs["chrom"])
+        n = len(chrom)
+        pos = np.array(vs["pos"]) - 1
         start = pos - window_size//2
         end = pos + window_size//2
-        
-        seq_fwd, seq_rev = genome.get_seq_fwd_rev(v["chrom"], start, end)
-        seq_fwd = list(seq_fwd.upper())
-        seq_rev = list(seq_rev.upper())
-        assert len(seq_fwd) == window_size
-        assert len(seq_rev) == window_size
-        
-        ref_fwd = v["ref"]
-        alt_fwd = v["alt"]
-        ref_rev = str(Seq(ref_fwd).reverse_complement())
-        alt_rev = str(Seq(alt_fwd).reverse_complement())
-
+        seq_fwd, seq_rev = zip(*(
+            genome.get_seq_fwd_rev(chrom[i], start[i], end[i]) for i in range(n)
+        ))
+        seq_fwd = np.array([list(seq.upper()) for seq in seq_fwd])
+        seq_rev = np.array([list(seq.upper()) for seq in seq_rev])
+        assert seq_fwd.shape[1] == window_size
+        assert seq_rev.shape[1] == window_size
+        ref_fwd = np.array(vs["ref"])
+        alt_fwd = np.array(vs["alt"])
+        ref_rev = np.array([str(Seq(x).reverse_complement()) for x in ref_fwd])
+        alt_rev = np.array([str(Seq(x).reverse_complement()) for x in alt_fwd])
         pos_fwd = window_size // 2
         pos_rev = pos_fwd - 1 if window_size % 2 == 0 else pos_fwd
-        assert seq_fwd[pos_fwd] == ref_fwd, f"{seq_fwd[pos_fwd]}, {ref_fwd}"
-        seq_fwd[pos_fwd] = tokenizer.mask_token
-        assert seq_rev[pos_rev] == ref_rev, f"{seq_rev[pos_rev]}, {ref_rev}"
-        seq_rev[pos_rev] = tokenizer.mask_token
 
-        v["input_ids_fwd"] = tokenize("".join(seq_fwd))
-        v["pos_fwd"] = pos_fwd + n_prefix
-        v["ref_fwd"] = token_input_id(ref_fwd)
-        v["alt_fwd"] = token_input_id(alt_fwd)
-        
-        v["input_ids_rev"] = tokenize("".join(seq_rev))
-        v["pos_rev"] = pos_rev + n_prefix
-        v["ref_rev"] = token_input_id(ref_rev)
-        v["alt_rev"] = token_input_id(alt_rev)
-        
-        return v
+        def prepare_output(seq, pos, ref, alt):
+            assert (seq[:, pos] == ref).all(), f"{seq[:, pos]}, {ref}"
+            seq[:, pos] = tokenizer.mask_token
+            return (
+                tokenize(["".join(x) for x in seq]),
+                [pos + n_prefix for _ in range(n)],
+                [token_input_id(x) for x in ref],
+                [token_input_id(x) for x in alt],
+            )
+
+        vs["input_ids_fwd"], vs["pos_fwd"], vs["ref_fwd"], vs["alt_fwd"] = prepare_output(
+            seq_fwd, pos_fwd, ref_fwd, alt_fwd
+        )
+        vs["input_ids_rev"], vs["pos_rev"], vs["ref_rev"], vs["alt_rev"] = prepare_output(
+            seq_rev, pos_rev, ref_rev, alt_rev
+        )
+        return vs
 
     # TODO: batched mapping might improve performance
-    variants = variants.map(get_tokenized_seq, remove_columns=original_cols)
+    variants = variants.map(get_tokenized_seq, remove_columns=original_cols, batched=True)
     # Ugly hack to be able to display a progress bar
     # Warning: this will override len() for all instances of datasets.IterableDataset
     # Didn't find a way to just override for this instance
