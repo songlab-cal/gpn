@@ -83,7 +83,7 @@ def get_promoters(annotation, upstream_size):
             start, end = transcript.end, transcript.end+upstream_size
         return pd.Series(dict(chrom=transcript.chrom, start=start, end=end))
 
-    transcripts = annotation.query('feature=="transcript"')
+    transcripts = annotation[annotation.feature.isin(["mRNA", "transcript"])]
     promoters = transcripts.apply(get_promoter, axis=1)
     return bf.merge(promoters)
 
@@ -101,7 +101,7 @@ def get_random_intervals(intervals, size, n, seed=42):
     rand_intervals = []
     for i in range(n):
         interval = intervals.iloc[rand_interval_index[i]]
-        start = rng.integers((interval.end-interval.start) - size, endpoint=True)
+        start = rng.integers(interval.start, interval.end - size, endpoint=True)
         end = start + size
         rand_intervals.append([interval.chrom, start, end])
     rand_intervals = pd.DataFrame(rand_intervals, columns=["chrom", "start", "end"])
