@@ -70,8 +70,6 @@ class ConvNetModel(ConvNetPreTrainedModel):
         self.embedding = OneHotEmbedding(config.hidden_size)
 
         self.dilation_schedule = get_dilation_schedule(config)
-        print(self.dilation_schedule)
-        #raise Exception("debug")
         self.encoder = nn.Sequential(*[
             ConvLayer(
                 hidden_size=config.hidden_size,
@@ -132,18 +130,6 @@ class ConvNetForMaskedLM(ConvNetPreTrainedModel):
             logits=logits,
         )
 
-    def vep(self, pos=None, ref=None, alt=None, **kwargs):
-        logits = self.forward(**kwargs).logits
-        logits = logits[torch.arange(len(pos)), pos]
-        logits_ref = logits[torch.arange(len(ref)), ref]
-        logits_alt = logits[torch.arange(len(alt)), alt]
-        llr = logits_alt - logits_ref
-        return llr
-
-    def get_logits(self, pos=None, **kwargs):
-        logits = self.forward(**kwargs).logits
-        logits = logits[torch.arange(len(pos)), pos]
-        return logits
 
 
 AutoConfig.register("ConvNet", ConvNetConfig)
@@ -151,7 +137,6 @@ AutoModel.register(ConvNetConfig, ConvNetModel)
 AutoModelForMaskedLM.register(ConvNetConfig, ConvNetForMaskedLM)
 
 from transformers import BertForMaskedLM, RoFormerForMaskedLM
-BertForMaskedLM.vep = ConvNetForMaskedLM.vep  # so it works with DNABERT
 
 
 # modifying to have weighted loss
@@ -217,4 +202,3 @@ def RoFormerForMaskedLM_forward(
     )
 
 RoFormerForMaskedLM.forward = RoFormerForMaskedLM_forward
-RoFormerForMaskedLM.vep = ConvNetForMaskedLM.vep

@@ -11,7 +11,7 @@ import torch
 from transformers import AutoTokenizer, AutoModelForMaskedLM, Trainer, TrainingArguments
 
 import gpn.model
-from gpn.utils import Genome, load_dataset_from_file_or_dir
+from gpn.utils import Genome, load_dataset_from_file_or_dir, token_input_id
 
 
 class MLMforVEPModel(torch.nn.Module):
@@ -65,9 +65,6 @@ def run_vep(
             return_special_tokens_mask=False,
         )["input_ids"]
 
-    def token_input_id(token):
-        return tokenizer(token)["input_ids"][n_prefix]
-
     def get_tokenized_seq(vs):
         # we convert from 1-based coordinate (standard in VCF) to 
         # 0-based, to use with Genome
@@ -96,8 +93,8 @@ def run_vep(
             return (
                 tokenize(["".join(x) for x in seq]),
                 [pos + n_prefix for _ in range(n)],
-                [token_input_id(x) for x in ref],
-                [token_input_id(x) for x in alt],
+                [token_input_id(x, tokenizer, n_prefix) for x in ref],
+                [token_input_id(x, tokenizer, n_prefix) for x in alt],
             )
 
         vs["input_ids_fwd"], vs["pos_fwd"], vs["ref_fwd"], vs["alt_fwd"] = prepare_output(
@@ -108,7 +105,6 @@ def run_vep(
         )
         return vs
 
-    # TODO: batched mapping might improve performance
     variants = variants.map(get_tokenized_seq, remove_columns=original_cols, batched=True)
     # Ugly hack to be able to display a progress bar
     # Warning: this will override len() for all instances of datasets.IterableDataset
@@ -165,8 +161,6 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    # TODO: there should be more flexibility here, including loading
-    # from a local file, and having different split names
     variants = load_dataset_from_file_or_dir(
         args.variants_path, streaming=True, split=args.split, is_file=args.is_file,
         format=args.format,

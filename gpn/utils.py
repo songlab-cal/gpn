@@ -129,3 +129,7 @@ def load_dataset_from_file_or_dir(
         return load_dataset(format, data_files=path, split="train", **kwargs)
     else:
         return load_dataset(path, split=split, **kwargs)
+
+
+def token_input_id(token, tokenizer, n_prefix=0):
+    return tokenizer(token)["input_ids"][n_prefix]
