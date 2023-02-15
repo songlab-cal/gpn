@@ -11,7 +11,7 @@ import torch
 from transformers import AutoTokenizer, AutoModelForMaskedLM, Trainer, TrainingArguments
 
 import gpn.model
-from gpn.utils import Genome
+from gpn.utils import Genome, load_dataset_from_file_or_dir
 
 
 class MLMforVEPModel(torch.nn.Module):
@@ -153,11 +153,26 @@ if __name__ == "__main__":
     parser.add_argument(
         "--n-prefix", type=int, default=0, help="Number of prefix tokens (e.g. CLS)."
     )
+    parser.add_argument(
+        "--split", type=str, default="test", help="Dataset split",
+    )
+    parser.add_argument(
+        "--is-file", action="store_true", help="VARIANTS_PATH is a file, not directory",
+    )
+    parser.add_argument(
+        "--format", type=str, default="parquet",
+        help="If is-file, specify format (parquet, csv, json)",
+    )
     args = parser.parse_args()
 
     # TODO: there should be more flexibility here, including loading
     # from a local file, and having different split names
-    variants = load_dataset(args.variants_path, streaming=True, split="test")
+    variants = load_dataset_from_file_or_dir(
+        args.variants_path, streaming=True, split=args.split, is_file=args.is_file,
+        format=args.format,
+    )
+    print(list(variants.take(1)))
+    raise Exception("debug")
     genome = Genome(args.genome_path)
     tokenizer = AutoTokenizer.from_pretrained(
         args.tokenizer_path if args.tokenizer_path else args.model_path

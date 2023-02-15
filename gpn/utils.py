@@ -2,6 +2,7 @@ import gzip
 from Bio import SeqIO, bgzf
 from Bio.Seq import Seq
 import bioframe as bf
+from datasets import load_dataset
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -119,3 +120,12 @@ class Genome:
 
 def add_space_every_k(seq, k):
     return " ".join([seq[x:x+k] for x in range(0, len(seq), k)])
+
+
+def load_dataset_from_file_or_dir(
+    path, split="test", format="parquet", is_file=False, **kwargs,
+):
+    if is_file:
+        return load_dataset(format, data_files=path, split="train", **kwargs)
+    else:
+        return load_dataset(path, split=split, **kwargs)
