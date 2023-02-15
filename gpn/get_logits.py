@@ -14,10 +14,6 @@ import gpn.model
 from gpn.utils import Genome, load_dataset_from_file_or_dir, token_input_id
 
 
-def center(X):
-    return X - torch.unsqueeze(torch.mean(X, dim=1), 1)
-
-
 class MLMforLogitsModel(torch.nn.Module):
     def __init__(self, model_path, id_a, id_c, id_g, id_t):
         super().__init__()
@@ -45,14 +41,8 @@ class MLMforLogitsModel(torch.nn.Module):
         id_c = self.id_c
         id_g = self.id_g
         id_t = self.id_t
-        logits_fwd = center(
-            self.get_logits(input_ids_fwd, pos_fwd)[:, [id_a, id_c, id_g, id_t]]
-        )
-        logits_rev = center(
-            self.get_logits(input_ids_rev, pos_rev)[:, [id_t, id_g, id_c, id_a]]
-        )
-        # TODO: not sure about averaging logits... makes some sense to average
-        # probabilities, but logits, not sure...
+        logits_fwd = self.get_logits(input_ids_fwd, pos_fwd)[:, [id_a, id_c, id_g, id_t]]
+        logits_rev = self.get_logits(input_ids_rev, pos_rev)[:, [id_t, id_g, id_c, id_a]]
         return (logits_fwd+logits_rev)/2
 
 
@@ -86,8 +76,8 @@ def get_logits(
         seq_fwd, seq_rev = zip(*(
             genome.get_seq_fwd_rev(chrom[i], start[i], end[i]) for i in range(n)
         ))
-        seq_fwd = np.array([list(seq.upper()) for seq in seq_fwd])
-        seq_rev = np.array([list(seq.upper()) for seq in seq_rev])
+        seq_fwd = np.array([list(seq.upper()) for seq in seq_fwd], dtype="object")
+        seq_rev = np.array([list(seq.upper()) for seq in seq_rev], dtype="object")
         assert seq_fwd.shape[1] == window_size
         assert seq_rev.shape[1] == window_size
         pos_fwd = window_size // 2
@@ -125,7 +115,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "positions_path", type=str,
-        help="Positions path. Needs the following columns: chrom,pos",
+        help="Positions path. Needs the following columns: chrom,pos. pos should be 1-based",
     )
     parser.add_argument(
         "genome_path", type=str, help="Genome path (fasta, potentially compressed)",

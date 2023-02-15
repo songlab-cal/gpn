@@ -76,8 +76,8 @@ def run_vep(
         seq_fwd, seq_rev = zip(*(
             genome.get_seq_fwd_rev(chrom[i], start[i], end[i]) for i in range(n)
         ))
-        seq_fwd = np.array([list(seq.upper()) for seq in seq_fwd])
-        seq_rev = np.array([list(seq.upper()) for seq in seq_rev])
+        seq_fwd = np.array([list(seq.upper()) for seq in seq_fwd], dtype="object")
+        seq_rev = np.array([list(seq.upper()) for seq in seq_rev], dtype="object")
         assert seq_fwd.shape[1] == window_size
         assert seq_rev.shape[1] == window_size
         ref_fwd = np.array(vs["ref"])
@@ -126,7 +126,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "variants_path", type=str,
-        help="Variants path. Needs the following columns: chrom,pos,ref,alt",
+        help="Variants path. Needs the following columns: chrom,pos,ref,alt. pos should be 1-based",
     )
     parser.add_argument(
         "genome_path", type=str, help="Genome path (fasta, potentially compressed)",

@@ -36,7 +36,7 @@ def load_table(path):
         df = pd.read_csv(
             path, sep="\t", header=None, comment="#", usecols=[0,1,2,3,4],
         ).rename(cols={0: 'chrom', 1: 'pos', 2: 'id', 3: 'ref', 4: 'alt'})
-        df.pos -= 1
+        #df.pos -= 1
     elif 'gtf' in path or 'gff' in path:
         df = pd.read_csv(
             path,
@@ -55,6 +55,7 @@ def load_table(path):
                 "attribute",
             ],
         )
+        df.start -= 1
     df.chrom = df.chrom.astype(str)
     return df
 
@@ -125,6 +126,8 @@ def add_space_every_k(seq, k):
 def load_dataset_from_file_or_dir(
     path, split="test", format="parquet", is_file=False, **kwargs,
 ):
+    # TODO: should add handling of vcf, could use load_table and create dataset
+    # from pandas df
     if is_file:
         return load_dataset(format, data_files=path, split="train", **kwargs)
     else:
