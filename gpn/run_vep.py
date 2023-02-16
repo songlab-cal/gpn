@@ -165,8 +165,6 @@ if __name__ == "__main__":
         args.variants_path, streaming=True, split=args.split, is_file=args.is_file,
         format=args.format,
     )
-    print(list(variants.take(1)))
-    raise Exception("debug")
     genome = Genome(args.genome_path)
     tokenizer = AutoTokenizer.from_pretrained(
         args.tokenizer_path if args.tokenizer_path else args.model_path
