@@ -85,7 +85,7 @@ def get_promoters(annotation, upstream_size):
 
     transcripts = annotation[annotation.feature.isin(["mRNA", "transcript"])]
     promoters = transcripts.apply(get_promoter, axis=1)
-    return bf.merge(promoters)
+    return bf.merge(promoters).drop(columns="n_intervals")
 
 
 def get_random_intervals(intervals, size, n, seed=42):

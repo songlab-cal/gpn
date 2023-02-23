@@ -12,6 +12,7 @@ install_requires = [
     "wandb",
     "einops",
     "pandarallel",
+    "bioframe",
 ]
 
 

@@ -34,7 +34,7 @@ def load_table(path):
         df = pd.read_csv(path, sep='\t')
     elif 'vcf' in path:
         df = pd.read_csv(
-            path, sep="\t", header=None, comment="#", usecols=[0,1,2,3,4],
+            path, sep="\t", header=None, comment="#", usecols=[0,1,2,3,4], dtype={0: str},
         ).rename(cols={0: 'chrom', 1: 'pos', 2: 'id', 3: 'ref', 4: 'alt'})
         #df.pos -= 1
     elif 'gtf' in path or 'gff' in path:
@@ -43,6 +43,7 @@ def load_table(path):
             sep="\t",
             header=None,
             comment="#",
+            dtype={"chrom": str},
             names=[
                 "chrom",
                 "source",
@@ -74,6 +75,13 @@ class Genome:
 
     def get_seq(self, chrom, start, end, strand="+"):
         seq = self._genome[chrom][start:end]
+        if strand == "-":
+            seq = str(Seq(seq).reverse_complement())
+        return seq
+
+    def get_nuc(self, chrom, pos, strand="+"):
+        # pos is assumed to be 1-based as in VCF
+        seq = self._genome[chrom][pos-1:pos]
         if strand == "-":
             seq = str(Seq(seq).reverse_complement())
         return seq
