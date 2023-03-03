@@ -34,9 +34,8 @@ def load_table(path):
         df = pd.read_csv(path, sep='\t')
     elif 'vcf' in path:
         df = pd.read_csv(
-            path, sep="\t", header=None, comment="#", usecols=[0,1,2,3,4], dtype={0: str},
-        ).rename(cols={0: 'chrom', 1: 'pos', 2: 'id', 3: 'ref', 4: 'alt'})
-        #df.pos -= 1
+            path, sep="\t", header=None, comment="#", usecols=[0,1,3,4], dtype={0: str},
+        ).rename(columns={0: 'chrom', 1: 'pos', 3: 'ref', 4: 'alt'})
     elif 'gtf' in path or 'gff' in path:
         df = pd.read_csv(
             path,

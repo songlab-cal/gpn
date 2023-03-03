@@ -38,12 +38,8 @@ class ModelCenterEmbedding(torch.nn.Module):
 
 def get_embeddings(
     windows, genome, tokenizer, model, per_device_batch_size=8,
+    dataloader_num_workers=0,
 ):
-    n_windows = len(list(
-        windows.map(lambda examples: {"chrom": examples["chrom"]}, batched=True)
-    ))
-    original_cols = list(windows.take(1))[0].keys()
-
     def tokenize(seqs):
         return tokenizer(
             seqs,
@@ -60,19 +56,16 @@ def get_embeddings(
         seq_fwd, seq_rev = zip(*(
             genome.get_seq_fwd_rev(chrom[i], start[i], end[i]) for i in range(n)
         ))
-        vs["input_ids_fwd"] = tokenize(seq_fwd)
-        vs["input_ids_rev"] = tokenize(seq_rev)
-        return vs
+        res = {}
+        res["input_ids_fwd"] = tokenize(seq_fwd)
+        res["input_ids_rev"] = tokenize(seq_rev)
+        return res
 
-    windows = windows.map(get_tokenized_seq, remove_columns=original_cols, batched=True)
-    # Ugly hack to be able to display a progress bar
-    # Warning: this will override len() for all instances of datasets.IterableDataset
-    # Didn't find a way to just override for this instance
-    windows.__class__.__len__ = lambda self: n_windows
+    windows.set_transform(get_tokenized_seq)
     training_args = TrainingArguments(
         output_dir=tempfile.TemporaryDirectory().name,
         per_device_eval_batch_size=per_device_batch_size,
-        dataloader_num_workers=0,
+        dataloader_num_workers=dataloader_num_workers,
         remove_unused_columns=False,
     )
     trainer = Trainer(model=model, args=training_args)
@@ -112,6 +105,9 @@ if __name__ == "__main__":
         "--split", type=str, default="test", help="Dataset split",
     )
     parser.add_argument(
+        "--dataloader-num-workers", type=int, default=0, help="Dataloader num workers"
+    )
+    parser.add_argument(
         "--is-file", action="store_true", help="windows_PATH is a file, not directory",
     )
     parser.add_argument(
@@ -121,7 +117,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     windows = load_dataset_from_file_or_dir(
-        args.windows_path, streaming=True, split=args.split, is_file=args.is_file,
+        args.windows_path, split=args.split, is_file=args.is_file,
         format=args.format,
     )
     genome = Genome(args.genome_path)
@@ -132,12 +128,10 @@ if __name__ == "__main__":
     pred = get_embeddings(
         windows, genome, tokenizer, model,
         per_device_batch_size=args.per_device_batch_size,
+        dataloader_num_workers=args.dataloader_num_workers,
     )
     directory = os.path.dirname(args.output_path)
-    if not os.path.exists(directory):
+    if directory != "" and not os.path.exists(directory):
         os.makedirs(directory)
-    # TODO: could add chrom,pos,ref,alt besides the score, as in CADD output
-    # or make it an option
-    # could also compress the output with bgzip, as tsv, so it can be indexed with tabix
     columns = [f"embedding_{i}" for i in range(pred.shape[1])]
     pd.DataFrame(pred, columns=columns).to_parquet(args.output_path, index=False)
