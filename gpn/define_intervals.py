@@ -108,6 +108,28 @@ def get_random_intervals(intervals, size, n, seed=42):
     return bf.merge(rand_intervals).drop(columns="n_intervals")
 
 
+def get_balanced_intervals(defined_intervals, annotation, window_size):
+    # there's the issue of pseudogenes though... should be aware
+    exons = add_flank(get_annotation_features(annotation, "exon"), window_size//2)
+    print("exons: ", intervals_size(exons)/intervals_size(defined_intervals))
+    promoters = add_flank(get_promoters(annotation, 1000), window_size//2)
+    print("promoters: ", intervals_size(promoters)/intervals_size(defined_intervals))
+    intervals = union_intervals(exons, promoters)
+    intervals = intersect_intervals(add_jitter(intervals, 100), defined_intervals)
+        # in case they collide with undefined intervals
+    intervals = filter_length(intervals, window_size) 
+    print("intervals: ", intervals_size(intervals)/intervals_size(defined_intervals))
+        # maybe add a 0.5 factor
+    n_random_intervals = intervals_size(intervals) // window_size 
+    random_intervals = get_random_intervals(defined_intervals, window_size, n_random_intervals)
+    print("random_intervals: ", intervals_size(random_intervals)/intervals_size(defined_intervals))
+    intervals = union_intervals(intervals, random_intervals)
+    print("intervals: ", intervals_size(intervals)/intervals_size(defined_intervals))
+    print((intervals.end-intervals.start).min())
+    assert (intervals.end-intervals.start).min() >= window_size
+    return intervals
+
+
 def main(args):
     if args.input_intervals_path is None:
         print("All intervals")
