@@ -58,6 +58,26 @@ class OneHotEmbedding(nn.Module):
         return F.one_hot(x, num_classes=self.hidden_size).float()
 
 
+class GPNEmbedding(nn.Module):
+    def __init__(
+        self,
+        vocab_size=None,
+        n_aux_features=None,
+        hidden_size=None,
+    ):
+        super().__init__()
+        assert vocab_size + n_aux_features <= hidden_size
+        self.vocab_size = vocab_size
+        self.n_aux_features = n_aux_features
+        self.hidden_size = hidden_size
+
+    def forward(self, input_ids, aux_features=None):
+        res = F.one_hot(input_ids, num_classes=self.hidden_size).float()
+        if aux_features is not None:
+            res[:, :, self.vocab_size:self.vocab_size+self.n_aux_features] = aux_features
+        return res
+
+
 def get_dilation_schedule(config):
     return [
         min(config.dilation_max, 2**((i%config.dilation_cycle)//config.dilation_double_every))
