@@ -34,7 +34,7 @@ from typing import Any, Callable, Dict, List, NewType, Optional, Tuple, Union
 import datasets
 from datasets import load_dataset, DatasetDict, concatenate_datasets
 
-import evaluate
+#import evaluate
 import transformers
 from transformers import (
     CONFIG_MAPPING,
@@ -61,73 +61,6 @@ from scipy.stats import geom
 from torch.utils.data import DataLoader, IterableDataset, get_worker_info
 
 
-#class GenomeSamplerDataset(IterableDataset):
-#    def __init__(
-#        self,
-#        dataset=None,
-#        tokenizer_path=None,
-#        window_size=None,
-#        random_seed=None,
-#        min_contig_size=None,
-#        soft_masked_weight=None,
-#    ):
-#        super().__init__()
-#        self.tokenizer_path = tokenizer_path
-#        self.window_size = window_size
-#        self.random_seed = random_seed
-#        self.soft_masked_weight = soft_masked_weight
-#
-#        print("Loading parquet.")
-#        self.contigs = dataset
-#        self.contigs["contig_len"] = self.contigs.seq.str.len()
-#        print(self.contigs.shape)
-#        if min_contig_size is not None:
-#            self.contigs = self.contigs[self.contigs.contig_len >= self.min_contig_size]
-#            print(self.contigs.shape)
-#        if not "contig_weight" in self.contigs.columns:
-#            print("Setting contig weights according to lengths.")
-#            self.contigs["contig_weight"] = (1 + self.contigs.contig_len - self.window_size).clip(lower=1)
-#        else:
-#            print("Using predefined contig weights.")
-#        self.contigs["contig_prob"] = self.contigs.contig_weight / self.contigs.contig_weight.sum()
-#        print("Done.")
-#
-#    def __iter__(self):
-#        print("Loading tokenizer.")
-#        tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_path)
-#        print("Done.")
-#
-#        seed = self.random_seed
-#        worker_info = get_worker_info()
-#        if worker_info is not None:
-#            seed = seed * (worker_info.id + 1)
-#        rs = np.random.RandomState(seed=seed)
-#
-#        while True:
-#            contig_index = rs.choice(len(self.contigs), p=self.contigs.contig_prob.values)
-#            contig = self.contigs.iloc[contig_index]
-#            if contig.contig_len > self.window_size:
-#                start = rs.randint(contig.contig_len - self.window_size)
-#            else:
-#                start = 0
-#            end = start + self.window_size
-#            seq = contig.seq[start:end]
-#            strand = rs.choice(["+", "-"])
-#            if strand == "-":
-#                seq = str(Seq(seq).reverse_complement())
-#
-#            x = tokenizer(
-#                seq,
-#                return_token_type_ids=False,
-#                return_attention_mask=False,
-#                return_tensors="pt",
-#            )
-#            x["input_ids"] = x["input_ids"].flatten()
-#            x["loss_weight"] = np.ones_like(x["input_ids"], dtype=float)
-#            x["loss_weight"][np.char.islower(list(seq))] = self.soft_masked_weight
-#            yield x
-
-
 class DataCollatorForLanguageModelingSimplified(DataCollatorForLanguageModeling):
     # Simplified to skip padding since we'll assume all sequences have the same length
     def torch_call(self, examples: List[Union[List[int], Any, Dict[str, Any]]]) -> Dict[str, Any]:
@@ -148,71 +81,6 @@ class DataCollatorForLanguageModelingSimplified(DataCollatorForLanguageModeling)
                 labels[labels == self.tokenizer.pad_token_id] = -100
             batch["labels"] = labels
         return batch
-
-
-#rv = geom(0.1)
-#probs = np.array([rv.pmf(i) for i in range(1, 6)])
-#probs = probs / sum(probs)
-#probs = torch.tensor(probs).float()
-#values = torch.range(1, 5).float()
-#span_mean = torch.dot(probs, values)
-#print("span_mean: ", span_mean)
-#
-#N_NON_SPECIAL_TOKENS = 4
-#
-#
-#
-#class DataCollatorForLanguageModelingSpan(DataCollatorForLanguageModeling):
-#    def torch_mask_tokens(self, inputs: Any, special_tokens_mask: Optional[Any] = None) -> Tuple[Any, Any]:
-#        """
-#        Prepare masked tokens inputs/labels for masked language modeling: 80% MASK, 10% random, 10% original.
-#        """
-#        import torch
-#
-#        labels = inputs.clone()
-#        # We sample a few tokens in each sequence for MLM training (with probability `self.mlm_probability`)
-#        probability_matrix = torch.full(labels.shape, self.mlm_probability / span_mean)  # approximate, doesn't count collisions not borders
-#        if special_tokens_mask is None:
-#            special_tokens_mask = [
-#                self.tokenizer.get_special_tokens_mask(val, already_has_special_tokens=True) for val in labels.tolist()
-#            ]
-#            special_tokens_mask = torch.tensor(special_tokens_mask, dtype=torch.bool)
-#        else:
-#            special_tokens_mask = special_tokens_mask.bool()
-#
-#        probability_matrix.masked_fill_(special_tokens_mask, value=0.0)
-#        masked_indices = torch.bernoulli(probability_matrix).bool()
-#
-#        mask_idx = torch.nonzero(masked_indices)
-#        span = 1 + torch.multinomial(probs, len(mask_idx), replacement=True)
-#        for (i, j), s in zip(mask_idx, span):
-#            masked_indices[i, j:min(j+s, masked_indices.shape[1])] = True
-#
-#        labels[~masked_indices] = -100  # We only compute loss on masked tokens
-#
-#        # 80% of the time, we replace masked input tokens with tokenizer.mask_token ([MASK])
-#        indices_replaced = torch.bernoulli(torch.full(labels.shape, 0.8)).bool() & masked_indices
-#        inputs[indices_replaced] = self.tokenizer.convert_tokens_to_ids(self.tokenizer.mask_token)
-#
-#        # 10% of the time, we replace masked input tokens with random word
-#        indices_random = torch.bernoulli(torch.full(labels.shape, 0.5)).bool() & masked_indices & ~indices_replaced
-#        # modification introduced by gbenegas:
-#        # only replace with non-special tokens
-#        random_words = torch.randint(len(self.tokenizer)-N_NON_SPECIAL_TOKENS, len(self.tokenizer), labels.shape, dtype=torch.long)
-#        inputs[indices_random] = random_words[indices_random]
-#
-#        # The rest of the time (10% of the time) we keep the masked input tokens unchanged
-#        return inputs, labels
-#
-#    def torch_call(self, examples: List[Union[List[int], Any, Dict[str, Any]]]) -> Dict[str, Any]:
-#        batch = {key: torch.stack([torch.tensor(example[key]) for example in examples], dim=0) for key in examples[0].keys()}
-#
-#        # If special token mask has been preprocessed, pop it from the dict.
-#        special_tokens_mask = batch.pop("special_tokens_mask", None)
-#        batch["input_ids"], batch["labels"] = self.torch_mask_tokens(
-#            batch["input_ids"], special_tokens_mask=special_tokens_mask,
-#        )
-#        return batch
 
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
@@ -362,6 +230,8 @@ class DataTrainingArguments:
     )
     soft_masked_loss_weight_train: Optional[float] = field(default=1.0)
     soft_masked_loss_weight_evaluation: Optional[float] = field(default=1.0)
+    soft_masked_loss_weight_test: Optional[float] = field(default=1.0)
+    do_test: bool = field(default=False)
 
     def __post_init__(self):
         if self.dataset_name is None and self.train_file is None and self.validation_file is None:
@@ -496,18 +366,6 @@ def main():
         logger.info("Training new model from scratch")
         model = AutoModelForMaskedLM.from_config(config)
 
-    # let's define train & validation?
-    #print(raw_datasets)
-    #holdout_chrom = "4"
-    #print(f"Will hold out chr{holdout_chrom}.")
-    #full_dataset = concatenate_datasets([raw_datasets["train"], raw_datasets["validation"]])
-    #raw_datasets["train"] = full_dataset.filter(lambda w: w["chrom"]!=holdout_chrom)
-    #raw_datasets["validation"] = full_dataset.filter(lambda w: w["chrom"]==holdout_chrom)
-    #print(raw_datasets)
-
-    # Preprocessing the datasets.
-    # First we tokenize all the texts.
-
     def tokenize_function(examples, soft_masked_weight):
         res = tokenizer(
             examples["seq"],
@@ -528,46 +386,27 @@ def main():
         "validation": data_args.soft_masked_loss_weight_evaluation,
     }
 
-    from copy import copy
+    remove_columns =  ["assembly", "chrom", "start", "end", "strand", "seq"]
 
-    #with training_args.main_process_first(desc="dataset map tokenization"):
-    tokenized_datasets = DatasetDict()
-    #for split, w in soft_masked_weight.items():
-    #    print("here: ", split, w)
-    #    tokenized_datasets[split] = raw_datasets[split].map(
-    #        lambda examples: tokenize_function(examples, w),  # is it possible this w get's captured in the lambda and doesn't get updated? maybe do it by hand instead of for loop?
-    #        batched=True,
-    #        # num_proc=data_args.preprocessing_num_workers,  # doesn't work with IterableDataset/streaming=True
-    #        remove_columns=["assembly", "chrom", "start", "end", "strand", "seq"],
-    #    )
-    tokenized_datasets["train"] = raw_datasets["train"].map(
-        lambda examples: tokenize_function(examples, data_args.soft_masked_loss_weight_train),
-        batched=True,
-        remove_columns=["assembly", "chrom", "start", "end", "strand", "seq"],
-    )
-    tokenized_datasets["validation"] = raw_datasets["validation"].map(
-        lambda examples: tokenize_function(examples, data_args.soft_masked_loss_weight_evaluation),
-        batched=True,
-        remove_columns=["assembly", "chrom", "start", "end", "strand", "seq"],
-    )
-
-    #print(list(raw_datasets["train"].take(1)))
-    #print(list(tokenized_datasets["train"].take(1)))
-    #print(list(raw_datasets["validation"].take(1)))
-    #print(list(tokenized_datasets["validation"].take(1)))
-    #raise Exception("debug")
-    
     if training_args.do_train:
-        train_dataset = tokenized_datasets["train"]
+        train_dataset = raw_datasets["train"].map(
+            lambda examples: tokenize_function(examples, data_args.soft_masked_loss_weight_train),
+            batched=True, remove_columns=remove_columns,
+        )
 
     if training_args.do_eval:
-        eval_dataset = tokenized_datasets["validation"]
+        eval_dataset = raw_datasets["validation"].map(
+            lambda examples: tokenize_function(examples, data_args.soft_masked_loss_weight_evaluation),
+            batched=True, remove_columns=remove_columns,
+        )
 
-    # Data collator
-    # This one will take care of randomly masking the tokens.
+    if data_args.do_test:
+        test_dataset = raw_datasets["test"].map(
+            lambda examples: tokenize_function(examples, data_args.soft_masked_loss_weight_test),
+            batched=True, remove_columns=remove_columns,
+        )
 
     data_collator = DataCollatorForLanguageModelingSimplified(
-    #data_collator = DataCollatorForLanguageModelingSpan(
         tokenizer=tokenizer,
         mlm_probability=data_args.mlm_probability,
     )
@@ -593,11 +432,6 @@ def main():
         trainer.save_model()  # Saves the tokenizer too for easy upload
         metrics = train_result.metrics
 
-        #max_train_samples = (
-        #    data_args.max_train_samples if data_args.max_train_samples is not None else len(train_dataset)
-        #)
-        #metrics["train_samples"] = min(max_train_samples, len(train_dataset))
-
         trainer.log_metrics("train", metrics)
         trainer.save_metrics("train", metrics)
         trainer.save_state()
@@ -618,6 +452,22 @@ def main():
 
         trainer.log_metrics("eval", metrics)
         trainer.save_metrics("eval", metrics)
+
+    # Testing
+    if data_args.do_test:
+        logger.info("*** Test ***")
+
+        metrics = trainer.predict(test_dataset=test_dataset).metrics
+        print(metrics)
+
+        try:
+            perplexity = math.exp(metrics["test_loss"])
+        except OverflowError:
+            perplexity = float("inf")
+        metrics["perplexity"] = perplexity
+
+        trainer.log_metrics("test", metrics)
+        trainer.save_metrics("test", metrics)
 
     kwargs = {"finetuned_from": model_args.model_name_or_path, "tasks": "fill-mask"}
     if data_args.dataset_name is not None:
