@@ -108,11 +108,11 @@ def get_random_intervals(intervals, size, n, seed=42):
     return bf.merge(rand_intervals).drop(columns="n_intervals")
 
 
-def get_balanced_intervals(defined_intervals, annotation, window_size):
+def get_balanced_intervals(defined_intervals, annotation, window_size, promoter_upstream=1000):
     # there's the issue of pseudogenes though... should be aware
     exons = add_flank(get_annotation_features(annotation, "exon"), window_size//2)
     print("exons: ", intervals_size(exons)/intervals_size(defined_intervals))
-    promoters = add_flank(get_promoters(annotation, 1000), window_size//2)
+    promoters = add_flank(get_promoters(annotation, promoter_upstream), window_size//2)
     print("promoters: ", intervals_size(promoters)/intervals_size(defined_intervals))
     intervals = union_intervals(exons, promoters)
     intervals = intersect_intervals(add_jitter(intervals, 100), defined_intervals)

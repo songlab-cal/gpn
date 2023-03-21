@@ -39,8 +39,8 @@ samples_per_file = config.get("samples_per_file", 2_000_000)
 
 rule download_genome:
     output:
-        "genome/{assembly}.fa.gz",
-        "annotation/{assembly}.gff.gz",
+        "output/genome/{assembly}.fa.gz",
+        "output/annotation/{assembly}.gff.gz",
     params:
         tmp_dir=directory("tmp/{assembly}"),
         genome_path=lambda wildcards: assemblies.loc[wildcards.assembly, "genome_path"],
@@ -56,9 +56,9 @@ rule download_genome:
 
 rule make_defined_intervals:
     input:
-        "genome/{assembly}.fa.gz",
+        "output/genome/{assembly}.fa.gz",
     output:
-        "intervals/{window_size}/{assembly}/defined.parquet",
+        "output/intervals/{window_size}/{assembly}/defined.parquet",
     threads: 2
     shell:
         """
@@ -69,25 +69,26 @@ rule make_defined_intervals:
 
 rule make_balanced_intervals:
     input:
-        "intervals/{window_size}/{assembly}/defined.parquet",
-        "annotation/{assembly}.gff.gz",
+        "output/intervals/{window_size}/{assembly}/defined.parquet",
+        "output/annotation/{assembly}.gff.gz",
     output:
-        "intervals/{window_size}/{assembly}/balanced.parquet",
+        "output/intervals/{window_size}/{assembly}/balanced.parquet",
     run:
         defined_intervals = load_table(input[0])
         annotation = load_table(input[1])
         intervals = get_balanced_intervals(
             defined_intervals, annotation, int(wildcards.window_size),
+            config.get("promoter_upstream", 1000),
         )
         intervals.to_parquet(output[0], index=False)
 
 
 rule make_dataset_assembly:
     input:
-        "intervals/{window_size}/{assembly}/{anything}.parquet",
-        "genome/{assembly}.fa.gz",
+        "output/intervals/{window_size}/{assembly}/{anything}.parquet",
+        "output/genome/{assembly}.fa.gz",
     output:
-        expand("dataset/{{window_size}}/{{step_size}}/{{add_rc}}/{{assembly}}/{{anything}}/{split}.parquet", split=splits),
+        expand("output/dataset/{{window_size}}/{{step_size}}/{{add_rc}}/{{assembly}}/{{anything}}/{split}.parquet", split=splits),
     threads: 2
     run:
         intervals = pd.read_parquet(input[0])
@@ -127,9 +128,9 @@ rule make_dataset_assembly:
 # before uploading, remove data/split/.snakemake_timestamp files
 rule merge_datasets:
     input:
-        expand("dataset/{{window_size}}/{{step_size}}/{{add_rc}}/{assembly}/{{anything}}/{{split}}.parquet", assembly=assemblies.index),
+        expand("output/dataset/{{window_size}}/{{step_size}}/{{add_rc}}/{assembly}/{{anything}}/{{split}}.parquet", assembly=assemblies.index),
     output:
-        directory("merged_dataset/{window_size}/{step_size}/{add_rc}/{anything}/data/{split}"),
+        directory("output/merged_dataset/{window_size}/{step_size}/{add_rc}/{anything}/data/{split}"),
     threads: workflow.cores
     run:
         intervals = pd.concat(
