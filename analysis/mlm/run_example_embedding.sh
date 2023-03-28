@@ -1,2 +1,0 @@
-python run_example_embedding.py results_512_convnet_only_athaliana_lower_lr_v2/checkpoint-80000 + results/embedding/example_embedding_1M_pos.1M.npy;
-python run_example_embedding.py results_512_convnet_only_athaliana_lower_lr_v2/checkpoint-80000 - results/embedding/example_embedding_1M_neg.1M.npy;
