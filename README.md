@@ -6,7 +6,8 @@ pip install git+https://github.com/songlab-cal/gpn.git
 ```
 
 ## Usage
-* [Example application to *Arabidopsis thaliana*](analysis/arabidopsis)
+* Quick example to play with the model: `basic_example.ipynb` [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/songlab-cal/gpn/blob/main/basic_example.ipynb)):
+* [Application to *Arabidopsis thaliana*, including training, inference and analysis](analysis/arabidopsis)
 * [General workflow to create a training dataset given a list of NCBI accessions](workflow/make_dataset_from_ncbi/Snakefile)
 
 ## Citation

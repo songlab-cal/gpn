@@ -1,7 +1,7 @@
 # GPN application to *Arabidopsis thaliana*
 
 ## Model usage
-Loading the model (more details in `basic_example.ipynb` [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/songlab-cal/gpn/blob/main/basic_example.ipynb)):
+Loading the model:
 ```python
 import gpn.model
 from transformers import AutoModelForMaskedLM
