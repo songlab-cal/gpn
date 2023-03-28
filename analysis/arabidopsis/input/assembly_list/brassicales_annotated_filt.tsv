@@ -1,0 +1,9 @@
+Assembly Accession	Assembly Name	Organism Name	Organism Infraspecific Names Breed	Organism Infraspecific Names Strain	Organism Infraspecific Names Cultivar	Organism Infraspecific Names Ecotype	Organism Infraspecific Names Isolate	Organism Infraspecific Names Sex	Annotation Name	Assembly Stats Total Sequence Length	Assembly Level	Assembly Submission Date	WGS project accession	genus	Priority
+GCF_000001735.4	TAIR10.1	Arabidopsis thaliana				Columbia			Annotation submitted by TAIR and Araport	119146348	Chromosome	2018-03-15		Arabidopsis	0_High
+GCF_000309985.2	CAAS_Brap_v3.01	Brassica rapa			Chiifu-401-42				NCBI Annotation Release 103.20201202	352829610	Chromosome	2020-01-23	AENI03	Brassica	0_High
+GCF_000633955.1	Cs	Camelina sativa			DH55				NCBI Annotation Release 101	641356059	Chromosome	2014-04-24	JFZQ01	Camelina	1_Low
+GCF_000375325.1	Caprub1_0	Capsella rubella			Monte Gargano				NCBI Annotation Release 100	133063876	Scaffold	2013-04-23	ANNY01	Capsella	1_Low
+GCF_000150535.2	Papaya1.0	Carica papaya			SunUp				NCBI Annotation Release 100	369781828	Scaffold	2008-05-06	ABIM01	Carica	1_Low
+GCF_000478725.1	Eutsalg1_0	Eutrema salsugineum							NCBI Annotation Release 100	243110105	Scaffold	2013-11-05	ANOA01	Eutrema	1_Low
+GCF_000801105.1	Rs1.0	Raphanus sativus			WK10039				NCBI Annotation Release 100	426202243	Scaffold	2015-09-29	JRUI02	Raphanus	1_Low
+GCF_000463585.1	ASM46358v1	Tarenaya hassleriana							NCBI Annotation Release 101	249929577	Scaffold	2013-09-05	AOUI01	Tarenaya	1_Low

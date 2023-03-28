@@ -1,0 +1,12 @@
+channels:
+- bioconda
+- conda-forge
+- anaconda
+dependencies:
+#- python==3.8.0
+- meme
+- bioframe
+- pip
+- pip:
+  - modisco-lite
+#  - git+https://github.com/songlab-cal/gpn.git@dev
