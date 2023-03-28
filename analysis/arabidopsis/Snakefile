@@ -75,7 +75,6 @@ rule all:
         #expand("output/simulated_variants/vep/{model}.parquet", model=models),
         #expand("output/aragwas/LD_{radius}_{threshold}.npz", radius=all_radius, threshold=all_threshold),
         #expand("output/aragwas/LD_chrom_{threshold}.npz", threshold=all_threshold),
-        #"output/cons/all.hdf5",
         #"output/region/modisco/report",
         #"output/promoter/modisco/report",
         #expand("output/variants/all/{model}.parquet", model=["phyloP", "phastCons"]),
@@ -90,13 +89,6 @@ rule all:
         #expand("output/intervals_filt/{split}.parquet", split=splits),
         #expand("output/dataset/mlm/gpn/all/512/64/{split}/dataset.parquet", split=splits),
         #"output/variants/all/dataset/gpn/512/dataset.parquet",
-
-#        "output/funtfbs/dataset/gpn/512/dataset.parquet",
-#        expand("output/promoter/{model}.parquet", model=["phyloP", "phastCons"]),
-#        expand("output/maf/{chrom}.maf", chrom=chroms),
-#        expand("output/maf_fasta/{chrom}.fa", chrom=chroms),
-#        "output/msa.hdf5",
-#        expand("output/dataset/gpn_msa/all/all/512/512/{split}/dataset.parquet", split=splits),
 
 
 rule filter_assemblies:
@@ -1031,123 +1023,3 @@ rule calculate_LD:
         ld = ld.compute()
         ld = sp_sparse.coo_matrix((ld.value.values, (ld.i.values, ld.j.values))).tocsr()
         sp_sparse.save_npz(output[0], ld)
-
-
-rule download_maf:
-    output:
-        "output/maf/all.maf.gz",
-    shell:
-        "wget {MAF_URL} -O {output}"
-
-
-rule split_maf:
-    input:
-        "output/maf/all.maf.gz",
-    output:
-        expand("output/maf/{chrom}.maf", chrom=CHROMS),
-    run:
-        chrom_msas = defaultdict(list)
-        i = -1
-        for msa in AlignIO.parse(gzip.open(input[0], "rt"), "maf"):
-            i += 1
-            chrom = next(
-                record.id.split('.')[-1] for record in msa
-                if "Arabidopsis_thaliana" in record.id
-            )
-            chrom = chrom.replace("Chr", "") 
-            chrom_msas[chrom].append(msa)
-            if i % 10000 == 0: print(i, chrom)
-        for chrom, path in zip(chroms, output):
-            AlignIO.write(chrom_msas[chrom], path, "maf")
-
-
-rule extract_chrom:
-    input:
-        "output/genome.fa.gz",
-    output:
-        expand("output/{chrom}.fa", chrom=CHROMS),
-    run:
-        genome = load_fasta(input[0])
-        for chrom, path in zip(chroms, output):
-            rec = genome[chrom]
-            print(rec)
-            rec.id = "Chr" + rec.id
-            print(rec)
-            SeqIO.write([rec], path, "fasta")
-
-
-rule maf2fasta:
-    input:
-        "output/{chrom}.fa",
-        "output/maf/{chrom}.maf",
-    output:
-        "output/maf_fasta/{chrom}.fa",
-    shell:
-        "maf2fasta {input} fasta iupac2n > {output}"
-
-
-rule make_cons_chrom:
-    input:
-        "output/maf_fasta/{chrom}.fa",
-        "input/species/all.txt",
-        "input/species/{species}.txt",
-    output:
-        "output/cons/{species}/{chrom}.npy",  # should make it temp
-    run:
-        MSA = load_fasta(input[0])
-        # the ref should be in first position
-        all_species = pd.read_csv(input[1], header=None).values.ravel()
-        MSA = MSA[all_species]
-        species = pd.read_csv(input[2], header=None).values.ravel()
-        MSA = np.vstack(MSA.apply(
-            lambda seq: np.frombuffer(seq.upper().encode("ascii"), dtype="S1")
-        ))
-        print(MSA.shape)
-        # let's only keep non-gaps in reference
-        MSA = MSA[:, MSA[0]!=b'-']
-        print(MSA.shape)
-        MSA = MSA[[all_species.tolist().index(s) for s in species]]
-        print(MSA.shape)
-        vocab = np.frombuffer("ACGT-".encode('ascii'), dtype="S1")
-        # decision: consider all "N" and similar as "-"
-        # might not be the best, some aligners have a distinction
-        # between N, or unaligned, and gap
-        MSA[~np.isin(MSA, vocab)] = b"-"
-        input_ids = np.empty_like(MSA, dtype=np.uint8)
-        for i, c in enumerate(vocab):
-            print(c)
-            input_ids[MSA==c] = i
-        input_ids = torch.tensor(input_ids, dtype=torch.long)
-        cons = torch.nn.functional.one_hot(
-            input_ids, num_classes=len(vocab)
-        ).float().mean(axis=0).numpy()
-        print(cons.shape)
-        np.save(output[0], cons)
-
-
-rule merge_cons:
-    input:
-        expand("output/cons/v1/{chrom}.npy", chrom=CHROMS),
-    output:
-        "output/cons/all.hdf5",
-    run:
-        f = h5py.File(output[0], "w")
-        for chrom, path in zip(CHROMS, input):
-            print(chrom)
-            f.create_dataset(chrom, data=np.load(path), compression="gzip")
-        f.close()        
-
-
-#rule make_dataset_mlm_gpn_msa:
-#    input:
-#        "output/intervals/{region}/{split}.filt.tsv.gz",
-#        "output/msa.hdf5",
-#        "input/species/{species}.txt",
-#    output:
-#        "output/dataset/gpn_msa/{species}/{region}/{window_size}/{step_size}/{split}/dataset.parquet",
-#    threads: workflow.cores
-#    shell:
-#        """
-#        python -m gpn_msa.make_dataset_mlm {input[0]} {input[1]} {wildcards.window_size} \
-#        {wildcards.step_size} {output} --species {input[2]}
-#        """
