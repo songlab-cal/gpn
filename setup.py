@@ -18,7 +18,7 @@ install_requires = [
 
 setup(
     name='gpn',
-    version='0.1',
+    version='0.2',
     description='gpn',
     url='http://github.com/songlab-cal/gpn',
     author='Gonzalo Benegas',
