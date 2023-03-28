@@ -1,0 +1,26 @@
+name: gpn-arabidopsis
+channels:
+- pytorch
+- nvidia
+- bioconda
+- anaconda
+dependencies:
+- pytorch
+- pytorch-cuda
+- snakemake
+- pymemesuite
+- logomaker
+- sgkit
+- cyvcf2
+- h5py
+- more-itertools
+- scipy
+- scikit-learn
+- statsmodels
+- umap-learn
+- scanpy
+- python-igraph
+- leidenalg
+- pip
+- pip:
+  - git+https://github.com/songlab-cal/gpn.git

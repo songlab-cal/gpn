@@ -1,0 +1,23 @@
+Assembly Accession	Assembly Name	Organism Name	Organism Infraspecific Names Breed	Organism Infraspecific Names Strain	Organism Infraspecific Names Cultivar	Organism Infraspecific Names Ecotype	Organism Infraspecific Names Isolate	Organism Infraspecific Names Sex	Annotation Name	Assembly Stats Total Sequence Length	Assembly Level	Assembly Submission Date	WGS project accession
+GCA_000001735.2	TAIR10.1	Arabidopsis thaliana				Columbia			Annotation submitted by The Arabidopsis Information Resource (TAIR)	119146348	Chromosome	2018-03-15	
+GCA_000004255.1	v.1.0	Arabidopsis lyrata subsp. lyrata							Annotation submitted by US DOE Joint Genome Institute (JGI-PGF)	206667935	Scaffold	2010-06-02	ADBK01
+GCA_000150535.1	Papaya1.0	Carica papaya			SunUp					369781828	Scaffold	2008-05-06	ABIM01
+GCA_000309985.3	CAAS_Brap_v3.01	Brassica rapa			Chiifu-401-42					352829610	Chromosome	2020-01-23	AENI03
+GCA_000375325.1	Caprub1_0	Capsella rubella			Monte Gargano				Annotation submitted by DOE Joint Genome Institute	133063876	Scaffold	2013-04-23	ANNY01
+GCA_000463585.1	ASM46358v1	Tarenaya hassleriana								249929577	Scaffold	2013-09-05	AOUI01
+GCA_000478725.1	Eutsalg1_0	Eutrema salsugineum							Annotation submitted by Joint Genome Institute	243110105	Scaffold	2013-11-05	ANOA01
+GCA_000633955.1	Cs	Camelina sativa			DH55					641356059	Chromosome	2014-04-24	JFZQ01
+GCA_000695525.1	BOL	Brassica oleracea var. oleracea			TO1000					488593889	Chromosome	2014-05-27	JJMF01
+GCA_000801105.2	Rs1.0	Raphanus sativus			WK10039					426202243	Scaffold	2015-09-29	JRUI02
+GCA_020379485.1	Da-Ae	Brassica napus			Da-Ae				Annotation submitted by None	1001499700	Chromosome	2021-10-08	JAGKQM01
+GCF_000001735.4	TAIR10.1	Arabidopsis thaliana				Columbia			Annotation submitted by TAIR and Araport	119146348	Chromosome	2018-03-15	
+GCF_000004255.2	v.1.0	Arabidopsis lyrata subsp. lyrata							NCBI Annotation Release 101	206667935	Scaffold	2016-11-26	ADBK01
+GCF_000150535.2	Papaya1.0	Carica papaya			SunUp				NCBI Annotation Release 100	369781828	Scaffold	2008-05-06	ABIM01
+GCF_000309985.2	CAAS_Brap_v3.01	Brassica rapa			Chiifu-401-42				NCBI Annotation Release 103.20201202	352829610	Chromosome	2020-01-23	AENI03
+GCF_000375325.1	Caprub1_0	Capsella rubella			Monte Gargano				NCBI Annotation Release 100	133063876	Scaffold	2013-04-23	ANNY01
+GCF_000463585.1	ASM46358v1	Tarenaya hassleriana							NCBI Annotation Release 101	249929577	Scaffold	2013-09-05	AOUI01
+GCF_000478725.1	Eutsalg1_0	Eutrema salsugineum							NCBI Annotation Release 100	243110105	Scaffold	2013-11-05	ANOA01
+GCF_000633955.1	Cs	Camelina sativa			DH55				NCBI Annotation Release 101	641356059	Chromosome	2014-04-24	JFZQ01
+GCF_000695525.1	BOL	Brassica oleracea var. oleracea			TO1000				NCBI Annotation Release 100	488593889	Chromosome	2014-05-27	JJMF01
+GCF_000801105.1	Rs1.0	Raphanus sativus			WK10039				NCBI Annotation Release 100	426202243	Scaffold	2015-09-29	JRUI02
+GCF_020379485.1	Da-Ae	Brassica napus			Da-Ae				NCBI Annotation Release 102	1001499700	Chromosome	2021-10-08	JAGKQM01

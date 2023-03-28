@@ -11,6 +11,8 @@ install_requires = [
     "biopython",
     "wandb",
     "einops",
+    "pandarallel",
+    "bioframe",
 ]
 
 
@@ -22,7 +24,7 @@ setup(
     author='Gonzalo Benegas',
     author_email='gbenegas@berkeley.edu',
     license='MIT',
-    packages=['gpn', 'gpn.mlm', 'gpn.chromatin'],
+    packages=['gpn', 'gpn.chromatin'],
     zip_safe=False,
     install_requires=install_requires,
 )

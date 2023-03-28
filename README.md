@@ -1,20 +1,13 @@
 # GPN (Genomic Pre-trained Network)
+
 ## Installation
 ```bash
 pip install git+https://github.com/songlab-cal/gpn.git
 ```
-## Usage
-Loading the model (more details in `basic_example.ipynb` [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/songlab-cal/gpn/blob/main/basic_example.ipynb)):
-```python
-import gpn.mlm
-from transformers import AutoModelForMaskedLM
 
-model = AutoModelForMaskedLM.from_pretrained("gonzalobenegas/gpn-arabidopsis")
-```
-Example scripts for different tasks:
-- Preparing data: `data/mlm/Snakefile`
-- Training: `analysis/mlm/train_512_convnet_only_athaliana.sh`
-- Variant effect prediction: `analysis/mlm/run_vep.py`
+## Usage
+* [Example application to *Arabidopsis thaliana*](analysis/arabidopsis)
+* [General workflow to create a training dataset given a list of NCBI accessions](workflow/make_dataset_from_ncbi/Snakefile)
 
 ## Citation
 Gonzalo Benegas, Sanjit Singh Batra and Yun S. Song "DNA language models are powerful zero-shot predictors of non-coding variant effects" bioRxiv (2022)  

@@ -1,0 +1,54 @@
+hub GPNArabidopsis
+shortLabel GPN-Arabidopsis
+longLabel GPN-Arabidopsis
+useOneFile on
+email gbenegas@berkeley.edu
+
+genome hub_2660163_GCF_000001735.4
+
+track GPN
+container multiWig
+noInherit on
+type bigWig 0 2
+shortLabel GPN logo
+longLabel GPN logo
+aggregate stacked
+autoScale on
+logo on
+visibility hide
+
+        track GPNLogoA
+        shortLabel GPNLogoA
+        longLabel GPNLogoA
+        parent GPN
+        type bigWig 0 2
+        priority 1
+        bigDataUrl A.bw
+        color 0,128,0
+
+        track GPNLogoC
+        shortLabel GPNLogoC
+        longLabel GPNLogoC
+        parent GPN
+        type bigWig 0 2
+        priority 2
+        bigDataUrl C.bw
+        color 0,0,255
+
+        track GPNLogoG
+        shortLabel GPNLogoG
+        longLabel GPNLogoG
+        parent GPN
+        type bigWig 0 2
+        priority 3
+        bigDataUrl G.bw
+        color 255,166,0
+
+        track GPNLogoT
+        shortLabel GPNLogoT
+        longLabel GPNLogoT
+        parent GPN
+        type bigWig 0 2
+        priority 4
+        bigDataUrl T.bw
+        color  255,0,0
