@@ -24,7 +24,7 @@ setup(
     author='Gonzalo Benegas',
     author_email='gbenegas@berkeley.edu',
     license='MIT',
-    packages=['gpn', 'gpn.chromatin'],
+    packages=['gpn'],
     zip_safe=False,
     install_requires=install_requires,
 )
