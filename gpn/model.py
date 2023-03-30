@@ -195,9 +195,9 @@ class GPNRoFormerModel(GPNRoFormerPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def forward(self, input_ids=None, aux_features=None):
+    def forward(self, input_ids=None, aux_features=None, **kwargs):
         x = self.embedding(input_ids, aux_features=aux_features)
-        x = self.encoder(x)
+        x = self.encoder(x, **kwargs)
         return x
 
 

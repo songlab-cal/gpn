@@ -66,10 +66,14 @@ def filter_unmasked(intervals, genome, include_flank=None):
     return intersect_intervals(intervals, unmasked)
 
 
-def filter_annotation_features(intervals, annotation, feature, include_flank=None):
+def filter_annotation_features(
+    intervals, annotation, feature, include_flank=None, jitter=None,
+):
     annotation_features = get_annotation_features(annotation, feature)
     if include_flank is not None:
         annotation_features = add_flank(annotation_features, include_flank)
+    if jitter is not None:
+        annotation_features = add_jitter(annotation_features, jitter)
     return intersect_intervals(intervals, annotation_features)
 
 
@@ -146,7 +150,9 @@ def main(args):
     if args.filter_annotation_features is not None:
         annotation = load_table(args.annotation_path)
         intervals = filter_annotation_features(
-            intervals, annotation, args.filter_annotation_features, args.annotation_features_include_flank
+            intervals, annotation, args.filter_annotation_features,
+            args.annotation_features_include_flank,
+            args.annotation_features_add_jitter,
         )
         print(intervals.shape)
     if args.filter_defined:
@@ -208,5 +214,10 @@ if __name__ == "__main__":
         type=int,
     )
     parser.add_argument("--annotation-path", help="annotation path", type=str)
+    parser.add_argument(
+        "--annotation-features-add-jitter",
+        help="Add jitter to annotation features",
+        type=int,
+    )
     args = parser.parse_args()
     main(args)
