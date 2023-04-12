@@ -9,6 +9,12 @@ from tqdm import tqdm
 tqdm.pandas()
 
 
+# Assembly metadata downloaded from NCBI Genome
+# (https://www.ncbi.nlm.nih.gov/data-hub/genome).
+# You can choose a set of taxa and apply filters such as annotation level,
+# assembly level.
+# Checkout the script gpn/filter_assemblies.py for more details, such as 
+# how to subsample, or how to keep only one assembly per genus.
 assemblies = pd.read_csv(config["assemblies_path"], sep="\t", index_col=0)
 assemblies["Assembly Name"] = assemblies["Assembly Name"].str.replace(" ", "_")
 assemblies["genome_path"] = (

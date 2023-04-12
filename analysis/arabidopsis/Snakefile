@@ -62,8 +62,8 @@ ruleorder: get_kmer_spectrum > get_embeddings
 
 rule all:
     input:
+        expand(f"output/merged_dataset/{config['window_size']}/{config['step_size']}/{config['add_rc']}/balanced/data/{{split}}", split=splits),
         #"output/embedding/embeddings/kmers.parquet",
-        #expand("output/merged_dataset/{config[window_size]}/{config[step_size]}/{config[add_rc]}/balanced/data/{split}", split=splits),
         #"output/assemblies.tex",
         #expand("output/whole_genome/modisco/{model}/report", model=models),
         #expand("output/whole_genome/subset/promoter/modisco/{model}/report", model=models),
@@ -71,7 +71,7 @@ rule all:
         #"output/embedding/subset_no_repeats/windows.parquet",
         #expand("output/embedding/subset_no_repeats/umap/{model}.parquet", model=models),
         #expand("output/embedding/subset_no_repeats/leiden_{resolution}_/{model}.parquet", model=models, resolution=[0.3]),
-        expand("output/embedding/umap/{model}.parquet", model=models + ["kmers_5", "kmers_3", "kmers_6", "kmers_4"]),
+        #expand("output/embedding/umap/{model}.parquet", model=models + ["kmers_5", "kmers_3", "kmers_6", "kmers_4"]),
         #expand("output/funtfbs/logits/{model}.parquet", model=models),
         #expand("output/whole_genome/logits/{model}.parquet", model=models),
         #expand("output/simulated_variants/vep/{model}.parquet", model=models),
@@ -105,13 +105,13 @@ rule filter_assemblies:
         """
 
 
-#module make_dataset_from_ncbi:
-#    snakefile:
-#        "https://github.com/songlab-cal/gpn/workflow/make_dataset_from_ncbi/Snakefile"
-#    config: config
-#
-#
-#use rule * from make_dataset_from_ncbi as make_dataset_from_ncbi_*
+module make_dataset_from_ncbi:
+    snakefile:
+        "https://raw.githubusercontent.com/songlab-cal/gpn/main/workflow/make_dataset_from_ncbi/Snakefile"
+    config: config
+
+
+use rule * from make_dataset_from_ncbi as make_dataset_from_ncbi_*
 
 
 rule make_assemblies_latex_table:
