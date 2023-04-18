@@ -13,9 +13,12 @@ DEFINED_SYMBOLS = np.frombuffer("ACGTacgt".encode('ascii'), dtype="S1")
 UNMASKED_SYMBOLS = np.frombuffer("ACGT".encode('ascii'), dtype="S1") 
 
 
-def load_fasta(path):
+def load_fasta(path, subset_chroms=None):
     with gzip.open(path, "rt") if path.endswith(".gz") else open(path) as handle:
-        genome = pd.Series({rec.id: str(rec.seq) for rec in SeqIO.parse(handle, "fasta")})
+        genome = pd.Series({
+            rec.id: str(rec.seq) for rec in SeqIO.parse(handle, "fasta")
+            if subset_chroms is None or rec.id in subset_chroms
+        })
     return genome
 
 
@@ -69,8 +72,8 @@ def load_repeatmasker(path):
 
 
 class Genome:
-    def __init__(self, path):
-        self._genome = load_fasta(path)
+    def __init__(self, path, subset_chroms=None):
+        self._genome = load_fasta(path, subset_chroms=subset_chroms)
 
     def get_seq(self, chrom, start, end, strand="+"):
         seq = self._genome[chrom][start:end]
@@ -80,7 +83,7 @@ class Genome:
 
     def get_nuc(self, chrom, pos, strand="+"):
         # pos is assumed to be 1-based as in VCF
-        seq = self._genome[chrom][pos-1:pos]
+        seq = self._genome[chrom][pos-1]
         if strand == "-":
             seq = str(Seq(seq).reverse_complement())
         return seq
