@@ -195,8 +195,8 @@ class GPNRoFormerModel(GPNRoFormerPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def forward(self, input_ids=None, aux_features=None, **kwargs):
-        x = self.embedding(input_ids, aux_features=aux_features)
+    def forward(self, input_ids=None, input_probs=None, aux_features=None, **kwargs):
+        x = self.embedding(input_ids=input_ids, input_probs=input_probs, aux_features=aux_features)
         x = self.encoder(x, **kwargs)
         return x
 
@@ -214,24 +214,36 @@ class GPNRoFormerForMaskedLM(GPNRoFormerPreTrainedModel):
     def forward(
         self,
         labels=None,
+        output_probs=None,
         loss_weight=None,
         **kwargs
     ):
         hidden_state = self.model(**kwargs).last_hidden_state
         logits = self.cls(hidden_state)
         loss = None
+
         if labels is not None and loss_weight is None:
             loss_fct = CrossEntropyLoss()
             loss = loss_fct(
                 logits.view(-1, self.config.vocab_size), labels.view(-1)
             )
-        if labels is not None and loss_weight is not None:
+        elif labels is not None and loss_weight is not None:
             loss_fct = CrossEntropyLoss(reduction="none")
             labels = labels.view(-1)
-            loss = loss_fct(logits.view(-1, self.config.vocab_size), labels)
+            loss = loss_fct(logits.view(-1, self.config.vocab_size), labels)  # what if we first exclude the ones with -100??
             loss_weight = loss_weight.view(-1)
             loss_weight[labels==-100] = 0.0
             loss = (loss * loss_weight / loss_weight.sum()).sum()
+        elif output_probs is not None:
+            loss_fct = CrossEntropyLoss(reduction="none")
+            output_probs = output_probs.view(-1, self.config.vocab_size)
+            exclude = (output_probs == 0.0).all(dim=-1)
+            output_probs = output_probs[~exclude]
+            logits = logits.view(-1, self.config.vocab_size)[~exclude]
+            loss_weight = loss_weight.view(-1)[~exclude]
+            loss = loss_fct(logits, output_probs)
+            loss = (loss * loss_weight / loss_weight.sum()).sum()
+ 
         return MaskedLMOutput(
             loss=loss,
             logits=logits,

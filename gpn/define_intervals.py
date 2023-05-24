@@ -77,14 +77,14 @@ def filter_annotation_features(
     return intersect_intervals(intervals, annotation_features)
 
 
-def get_promoters(annotation, upstream_size):
+def get_promoters(annotation, upstream_size, downstream_size=0):
     # not exactly getting promoters, just gettting regions upstream of TSS
     
     def get_promoter(transcript):
         if transcript.strand == "+":
-            start, end = transcript.start-upstream_size, transcript.start
+            start, end = transcript.start-upstream_size, transcript.start+downstream_size
         else:
-            start, end = transcript.end, transcript.end+upstream_size
+            start, end = transcript.end-downstream_size, transcript.end+upstream_size
         return pd.Series(dict(chrom=transcript.chrom, start=start, end=end))
 
     transcripts = annotation[annotation.feature.isin(["mRNA", "transcript"])]
