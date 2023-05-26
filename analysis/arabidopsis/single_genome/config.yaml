@@ -1,0 +1,18 @@
+# MLM dataset creation from ncbi
+assemblies_path: "../input/assembly_list/arabidopsis.tsv"
+proportion_train: 1.0
+proportion_validation: 0.0
+proportion_test: 0.0
+window_size: 512
+step_size: 256
+add_rc: True
+promoter_upstream: 1000
+target_assembly: "GCF_000001735.4"
+subsample_to_target: True
+whitelist_validation_chroms:
+- "NC_003075.7"  # Arabidopsis thaliana chr4
+whitelist_test_chroms:
+- "NC_003076.8"  # Arabidopsis thaliana chr5
+# It's good to have at least num_cpus shards to increase parallel loading speed
+# of iterable datasets from HF hub
+samples_per_file: 50_000 

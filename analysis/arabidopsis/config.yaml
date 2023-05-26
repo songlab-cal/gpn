@@ -22,4 +22,4 @@ whitelist_test_chroms:
 - "NC_003076.8"  # Arabidopsis thaliana chr5
 # It's good to have at least num_cpus shards to increase parallel loading speed
 # of iterable datasets from HF hub
-sample_per_file: 500_000 
+samples_per_file: 500_000 
