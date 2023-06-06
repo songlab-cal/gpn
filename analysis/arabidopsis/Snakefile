@@ -2,7 +2,6 @@ from Bio import AlignIO, SeqIO
 from Bio.Seq import Seq
 import bioframe as bf
 from collections import defaultdict
-from cyvcf2 import VCF
 from gpn.define_intervals import (
     filter_defined, filter_length, load_table, add_flank, get_annotation_features,
     add_jitter, get_promoters, get_random_intervals, union_intervals,
@@ -24,14 +23,6 @@ from sklearn.pipeline import Pipeline
 import torch
 from tqdm import tqdm
 tqdm.pandas()
-from umap import UMAP
-
-import sgkit as sg
-from sgkit.io.vcf import vcf_to_zarr
-from dask.diagnostics import ProgressBar
-pbar = ProgressBar()
-pbar.register()
-
 
 from gpn.make_dataset_mlm import make_windows, get_seq
 from gpn.utils import load_fasta, save_fasta, load_table, load_repeatmasker, Genome
@@ -39,7 +30,7 @@ from gpn.utils import load_fasta, save_fasta, load_table, load_repeatmasker, Gen
 
 configfile: "config.yaml"
 
-
+WINDOW_SIZE = config["window_size"]
 PRIORITY_ASSEMBLIES = [
     "GCF_000001735.4",  # Arabidopsis thaliana
     "GCF_000309985.2",  # Brassica rapa
@@ -50,6 +41,7 @@ CHROMS = ["1", "2", "3", "4", "5"]
 NUCLEOTIDES = list("ACGT")
 models = [
     "gonzalobenegas/gpn-brassicales",
+    #"/scratch/users/gbenegas/checkpoints/GPN_Arabidopsis_multispecies/ConvNet_ss_12k/checkpoint-12000",
 ]
 all_radius = [
     100_000,
@@ -62,7 +54,9 @@ ruleorder: get_kmer_spectrum > get_embeddings
 
 rule all:
     input:
-        expand(f"output/merged_dataset/{config['window_size']}/{config['step_size']}/{config['add_rc']}/balanced/data/{{split}}", split=splits),
+        #expand("output/variants/all/vep/{model}.parquet", model=models),
+        expand("output/embedding/classification/{model}.parquet", model=models + ["kmers_3", "kmers_6"]),
+        #expand(f"output/merged_dataset/{config['window_size']}/{config['step_size']}/{config['add_rc']}/balanced/data/{{split}}", split=splits),
         #"output/embedding/embeddings/kmers.parquet",
         #"output/assemblies.tex",
         #expand("output/whole_genome/modisco/{model}/report", model=models),
@@ -379,6 +373,8 @@ rule run_umap:
     output:
         "{anything}/umap/{model}.parquet",
     run:
+        from umap import UMAP
+
         embeddings = pd.read_parquet(input[0])
         proj = Pipeline([
             ("scaler", StandardScaler()),
@@ -386,6 +382,33 @@ rule run_umap:
         ]).fit_transform(embeddings)
         proj = pd.DataFrame(proj, columns=["UMAP1", "UMAP2"])
         proj.to_parquet(output[0], index=False)
+
+
+rule run_classification:
+    input:
+        "{anything}/windows.parquet",
+        "{anything}/embeddings/{model}.parquet",
+    output:
+        "{anything}/classification/{model}.parquet",
+    threads: workflow.cores
+    run:
+        from sklearn.linear_model import LogisticRegression
+        from sklearn.model_selection import cross_val_predict, LeaveOneGroupOut
+        from sklearn.pipeline import Pipeline
+        from sklearn.preprocessing import StandardScaler
+
+        windows = pd.read_parquet(input[0])
+        features = pd.read_parquet(input[1])
+
+        clf = Pipeline([
+            ("scaler", StandardScaler()),
+            ("linear", LogisticRegression(random_state=42, verbose=True, max_iter=1000, class_weight="balanced")),
+        ])
+        preds = cross_val_predict(
+            clf, features, windows.Region, groups=windows.chrom,
+            cv=LeaveOneGroupOut(), verbose=True, n_jobs=-1,
+        )
+        pd.DataFrame({"pred_Region": preds}).to_parquet(output[0], index=False)
 
 
 rule run_leiden:
@@ -708,6 +731,8 @@ rule process_ensembl_vep:
     output:
         "output/ensembl_vep.parquet",
     run:
+        from cyvcf2 import VCF
+
         i = 0
         rows = []
         for variant in VCF(input[0]):
@@ -1015,6 +1040,12 @@ rule calculate_LD:
     output: "output/aragwas/LD_{radius,[0-9]+}_{threshold}.npz",
     threads: workflow.cores
     run:
+        import sgkit as sg
+        from sgkit.io.vcf import vcf_to_zarr
+        from dask.diagnostics import ProgressBar
+        pbar = ProgressBar()
+        pbar.register()
+
         ds = sg.load_dataset(input[0])
         ds["call_dosage"] = ds.call_genotype.sum(dim="ploidy")
         radius = int(wildcards.radius)
