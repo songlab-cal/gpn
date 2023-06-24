@@ -2,7 +2,6 @@
 # which I think may be excessive
 FASTA_URL: "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/735/GCF_000001735.4_TAIR10.1/GCF_000001735.4_TAIR10.1_genomic.fna.gz"
 GTF_URL: "https://ftp.ensemblgenomes.org/pub/plants/release-55/gff3/arabidopsis_thaliana/Arabidopsis_thaliana.TAIR10.55.gff3.gz"
-MAF_URL: "http://plantregmap.gao-lab.org/download_ftp.php?filepath=08-download/Arabidopsis_thaliana/multiple_alignments/Ath.maf.gz"
 
 # MLM dataset creation from ncbi
 raw_assemblies_path: "input/assembly_list/brassicales_annotated.tsv"

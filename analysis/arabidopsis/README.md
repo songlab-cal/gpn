@@ -11,7 +11,6 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-brassicales")
 
 ## Additional resources
 * [GPN logo track at UCSC Genome Browser](https://genome.ucsc.edu/s/gbenegas/gpn-arabidopsis)
-* [Promoter motifs obtained with GPN + TF-MoDISco](promoter_motifs_gpn_modisco.pdf)
 * [Training dataset on Hugging Face Hub](https://huggingface.co/datasets/songlab/genomes-brassicales-balanced-v1)
 * [Intermediate files necessary for running notebooks, such as embeddings and variant scores](https://huggingface.co/datasets/gonzalobenegas/processed-data-arabidopsis/tree/main)
 

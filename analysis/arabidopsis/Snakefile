@@ -55,12 +55,13 @@ ruleorder: get_kmer_spectrum > get_embeddings
 rule all:
     input:
         #expand("output/variants/all/vep/{model}.parquet", model=models),
-        expand("output/embedding/classification/{model}.parquet", model=models + ["kmers_3", "kmers_6"]),
+        #expand("output/embedding/classification/{model}.parquet", model=models + ["kmers_3", "kmers_6"]),
         #expand(f"output/merged_dataset/{config['window_size']}/{config['step_size']}/{config['add_rc']}/balanced/data/{{split}}", split=splits),
         #"output/embedding/embeddings/kmers.parquet",
         #"output/assemblies.tex",
         #expand("output/whole_genome/modisco/{model}/report", model=models),
         #expand("output/whole_genome/subset/promoter/modisco/{model}/report", model=models),
+        expand("output/whole_genome/subset/promoter2/modisco/{model}/report", model=models),
         #expand("output/whole_genome/bed_probs/{model}/{nuc}.bw", model=models, nuc=NUCLEOTIDES),
         #"output/embedding/subset_no_repeats/windows.parquet",
         #expand("output/embedding/subset_no_repeats/umap/{model}.parquet", model=models),
@@ -478,6 +479,47 @@ rule make_positions_promoter:
         positions.to_parquet(output[0], index=False)
 
 
+rule make_positions_promoter2:
+    input:
+        "output/genome.fa.gz",
+        "output/annotation.gtf.gz",
+        "input/repeats.bed.gz",
+    output:
+        "output/whole_genome/subset/promoter2/positions.parquet",
+    run:
+        genome = Genome(input[0])
+        genome.filter_chroms(CHROMS)
+        annotation = load_table(input[1])
+        annotation = annotation[annotation.chrom.isin(CHROMS)]
+
+        intervals = get_promoters(annotation, 1000, 1000)
+        print(intervals)
+
+        exons = bf.merge(annotation.query("feature == 'CDS'")).drop(columns="n_intervals")
+        intervals = bf.subtract(intervals, exons)
+        print(intervals)
+
+        repeats = bf.merge(load_repeatmasker(input[2]))
+        repeats.chrom = repeats.chrom.str.replace("Chr", "")
+        repeats = repeats[repeats.chrom.isin(CHROMS)]
+        intervals = bf.subtract(intervals, repeats)
+        print(intervals)
+
+        intervals = intersect_intervals(
+            intervals, bf.expand(genome.get_defined_intervals(), pad=-WINDOW_SIZE//2)
+        )
+        print(intervals)
+
+        intervals = filter_length(intervals, 30)
+        print(intervals)
+
+        positions = pd.concat(
+            intervals.progress_apply(find_positions, axis=1).values, ignore_index=True
+        )
+        print(positions)
+        positions.to_parquet(output[0], index=False)
+
+
 rule make_positions_funtfbs:
     input:
         "output/funtfbs/TFBS_from_FunTFBS_genome-wide_Ath.gff",
@@ -644,6 +686,7 @@ rule plot_modisco:
     input:
         "{anything}/modisco/{model}/results.h5",
         "output/plantfdb/Ath_TF_binding_motifs.meme",
+        #"output/motif_db/jaspar.meme",
     output:
         directory("{anything}/modisco/{model}/report"),
     conda:
