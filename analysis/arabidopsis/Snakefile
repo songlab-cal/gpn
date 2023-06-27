@@ -55,13 +55,13 @@ ruleorder: get_kmer_spectrum > get_embeddings
 rule all:
     input:
         #expand("output/variants/all/vep/{model}.parquet", model=models),
-        #expand("output/embedding/classification/{model}.parquet", model=models + ["kmers_3", "kmers_6"]),
+        expand("output/embedding/classification/{model}.parquet", model=models + ["kmers_3", "kmers_6"]),
         #expand(f"output/merged_dataset/{config['window_size']}/{config['step_size']}/{config['add_rc']}/balanced/data/{{split}}", split=splits),
         #"output/embedding/embeddings/kmers.parquet",
         #"output/assemblies.tex",
         #expand("output/whole_genome/modisco/{model}/report", model=models),
         #expand("output/whole_genome/subset/promoter/modisco/{model}/report", model=models),
-        expand("output/whole_genome/subset/promoter2/modisco/{model}/report", model=models),
+        #expand("output/whole_genome/subset/promoter2/modisco/{model}/report", model=models),
         #expand("output/whole_genome/bed_probs/{model}/{nuc}.bw", model=models, nuc=NUCLEOTIDES),
         #"output/embedding/subset_no_repeats/windows.parquet",
         #expand("output/embedding/subset_no_repeats/umap/{model}.parquet", model=models),
@@ -393,7 +393,7 @@ rule run_classification:
         "{anything}/classification/{model}.parquet",
     threads: workflow.cores
     run:
-        from sklearn.linear_model import LogisticRegression
+        from sklearn.linear_model import LogisticRegression, LogisticRegressionCV
         from sklearn.model_selection import cross_val_predict, LeaveOneGroupOut
         from sklearn.pipeline import Pipeline
         from sklearn.preprocessing import StandardScaler
@@ -403,11 +403,12 @@ rule run_classification:
 
         clf = Pipeline([
             ("scaler", StandardScaler()),
-            ("linear", LogisticRegression(random_state=42, verbose=True, max_iter=1000, class_weight="balanced")),
+            #("linear", LogisticRegression(random_state=42, verbose=True, max_iter=1000, class_weight="balanced")),
+            ("linear", LogisticRegressionCV(random_state=42, verbose=True, max_iter=1000, class_weight="balanced", n_jobs=-1)),
         ])
         preds = cross_val_predict(
             clf, features, windows.Region, groups=windows.chrom,
-            cv=LeaveOneGroupOut(), verbose=True, n_jobs=-1,
+            cv=LeaveOneGroupOut(), verbose=True,# n_jobs=-1,
         )
         pd.DataFrame({"pred_Region": preds}).to_parquet(output[0], index=False)
 
