@@ -403,12 +403,15 @@ rule run_classification:
 
         clf = Pipeline([
             ("scaler", StandardScaler()),
-            #("linear", LogisticRegression(random_state=42, verbose=True, max_iter=1000, class_weight="balanced")),
-            ("linear", LogisticRegressionCV(random_state=42, verbose=True, max_iter=1000, class_weight="balanced", n_jobs=-1)),
+            ("linear", LogisticRegressionCV(
+                random_state=42, verbose=True, max_iter=1000,
+                class_weight="balanced", n_jobs=-1
+                )
+            ),
         ])
         preds = cross_val_predict(
             clf, features, windows.Region, groups=windows.chrom,
-            cv=LeaveOneGroupOut(), verbose=True,# n_jobs=-1,
+            cv=LeaveOneGroupOut(), verbose=True,
         )
         pd.DataFrame({"pred_Region": preds}).to_parquet(output[0], index=False)
 

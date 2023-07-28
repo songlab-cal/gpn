@@ -75,7 +75,6 @@ class GPNEmbedding(nn.Module):
         if input_ids is not None:
             res = F.one_hot(input_ids, num_classes=self.hidden_size).float()
         elif input_probs is not None:
-            #res = torch.cat([input_probs, torch.zeros(input_probs.shape[0], input_probs.shape[1], self.hidden_size-input_probs.shape[2]).to(input_probs.device)], dim=2)
             res = F.pad(input_probs, (0, self.hidden_size-self.vocab_size))
         if aux_features is not None:
             res[:, :, self.vocab_size:self.vocab_size+self.n_aux_features] = aux_features
