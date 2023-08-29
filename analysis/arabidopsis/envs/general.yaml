@@ -21,6 +21,7 @@ dependencies:
 - scanpy
 - python-igraph
 - leidenalg
+- ncbi-datasets-cli
 - pip
 - pip:
   - git+https://github.com/songlab-cal/gpn.git
