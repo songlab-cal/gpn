@@ -1,15 +1,59 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn import CrossEntropyLoss
-from transformers import AutoConfig, AutoModel, AutoModelForMaskedLM, PretrainedConfig, PreTrainedModel
-from transformers.modeling_outputs import MaskedLMOutput, BaseModelOutput
+from torch.nn import CrossEntropyLoss, MSELoss, BCEWithLogitsLoss
+from transformers import (
+    AutoConfig, AutoModel, AutoModelForMaskedLM, AutoModelForSequenceClassification,
+    PretrainedConfig, PreTrainedModel
+)
+from transformers.activations import ACT2FN
+from transformers.modeling_outputs import (
+    BaseModelOutput, MaskedLMOutput, SequenceClassifierOutput
+)
 from typing import Optional, Tuple, Union
 
 from .modules import (
     TransposeLayer, ConvLayer, OneHotEmbedding, get_dilation_schedule,
     GPNEmbedding,
 )
+
+
+class MLMHead(nn.Module):
+    def __init__(
+        self,
+        config,
+    ):
+        super().__init__()
+        self.decoder = nn.Sequential(
+            nn.Linear(config.hidden_size, config.hidden_size),
+            nn.GELU(),
+            nn.LayerNorm(config.hidden_size),
+            nn.Linear(config.hidden_size, config.vocab_size),
+        )
+
+    def forward(self, hidden_state):
+        return self.decoder(hidden_state)
+
+
+class ClassificationHead(nn.Module):
+    """Head for sentence-level classification tasks."""
+
+    def __init__(self, config):
+        super().__init__()
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.out_proj = nn.Linear(config.hidden_size, config.num_labels)
+
+        self.config = config
+
+    def forward(self, features, **kwargs):
+        x = features.mean(axis=1)  # mean pooling
+        x = self.dropout(x)
+        x = self.dense(x)
+        x = ACT2FN[self.config.hidden_act](x)
+        x = self.dropout(x)
+        x = self.out_proj(x)
+        return x
 
 
 class ConvNetConfig(PretrainedConfig):
@@ -25,6 +69,9 @@ class ConvNetConfig(PretrainedConfig):
         dilation_max=32,
         dilation_cycle=6,
         initializer_range=0.02,
+        # for classification head:
+        hidden_dropout_prob=0.1,
+        hidden_act="gelu", 
         **kwargs
     ):
         super().__init__(**kwargs)
@@ -36,6 +83,8 @@ class ConvNetConfig(PretrainedConfig):
         self.dilation_max = dilation_max
         self.dilation_cycle = dilation_cycle
         self.initializer_range = initializer_range
+        self.hidden_dropout_prob = hidden_dropout_prob
+        self.hidden_act = hidden_act
 
 
 class ConvNetPreTrainedModel(PreTrainedModel):
@@ -89,23 +138,6 @@ class ConvNetModel(ConvNetPreTrainedModel):
         return BaseModelOutput(last_hidden_state=x)
 
 
-class ConvNetOnlyMLMHead(nn.Module):
-    def __init__(
-        self,
-        config,
-    ):
-        super().__init__()
-        self.decoder = nn.Sequential(
-            nn.Linear(config.hidden_size, config.hidden_size),
-            nn.GELU(),
-            nn.LayerNorm(config.hidden_size),
-            nn.Linear(config.hidden_size, config.vocab_size),
-        )
-
-    def forward(self, hidden_state):
-        return self.decoder(hidden_state)
-
-
 class ConvNetForMaskedLM(ConvNetPreTrainedModel):
     def __init__(
         self,
@@ -114,7 +146,7 @@ class ConvNetForMaskedLM(ConvNetPreTrainedModel):
         super().__init__(config)
         self.config = config
         self.model = ConvNetModel(config)
-        self.cls = ConvNetOnlyMLMHead(config)
+        self.cls = MLMHead(config)
         self.post_init()
 
     def forward(self, input_ids=None, labels=None, loss_weight=None, **kwargs):
@@ -134,10 +166,63 @@ class ConvNetForMaskedLM(ConvNetPreTrainedModel):
         )
 
 
+class ConvNetForSequenceClassification(ConvNetPreTrainedModel):
+    def __init__(self, config):
+        super().__init__(config)
+        self.num_labels = config.num_labels
+        self.model = ConvNetModel(config)
+        self.classifier = ClassificationHead(config)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    def forward(
+        self,
+        input_ids: Optional[torch.LongTensor] = None,
+        labels: Optional[torch.LongTensor] = None,
+    ) -> Union[SequenceClassifierOutput, Tuple[torch.Tensor]]:
+        r"""
+        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        """
+        hidden_state = self.model(input_ids=input_ids).last_hidden_state
+        logits = self.classifier(hidden_state)
+
+        loss = None
+        if labels is not None:
+            if self.config.problem_type is None:
+                if self.num_labels == 1:
+                    self.config.problem_type = "regression"
+                elif self.num_labels > 1 and (labels.dtype == torch.long or labels.dtype == torch.int):
+                    self.config.problem_type = "single_label_classification"
+                else:
+                    self.config.problem_type = "multi_label_classification"
+            
+            if self.config.problem_type == "regression":
+                loss_fct = MSELoss()
+                if self.num_labels == 1:
+                    loss = loss_fct(logits.squeeze(), labels.squeeze())
+                else:
+                    loss = loss_fct(logits, labels)
+            elif self.config.problem_type == "single_label_classification":
+                loss_fct = CrossEntropyLoss()
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+            elif self.config.problem_type == "multi_label_classification":
+                loss_fct = BCEWithLogitsLoss()
+                loss = loss_fct(logits, labels)
+
+        return SequenceClassifierOutput(
+            loss=loss,
+            logits=logits,
+        )
+
 
 AutoConfig.register("ConvNet", ConvNetConfig)
 AutoModel.register(ConvNetConfig, ConvNetModel)
 AutoModelForMaskedLM.register(ConvNetConfig, ConvNetForMaskedLM)
+AutoModelForSequenceClassification.register(ConvNetConfig, ConvNetForSequenceClassification)
 
 
 from transformers import RoFormerConfig, RoFormerModel, RoFormerForMaskedLM
