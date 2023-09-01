@@ -25,7 +25,7 @@ from tqdm import tqdm
 tqdm.pandas()
 
 from gpn.make_dataset_mlm import make_windows, get_seq
-from gpn.utils import load_fasta, save_fasta, load_table, load_repeatmasker, Genome
+from gpn.data import load_fasta, save_fasta, load_table, load_repeatmasker, Genome
 
 
 configfile: "config.yaml"

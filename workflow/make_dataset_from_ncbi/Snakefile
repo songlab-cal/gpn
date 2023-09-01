@@ -1,6 +1,6 @@
 from gpn.define_intervals import load_table, get_balanced_intervals
 from gpn.make_dataset_mlm import make_windows, get_seq
-from gpn.utils import Genome
+from gpn.data import Genome
 import gzip
 import math
 import numpy as np

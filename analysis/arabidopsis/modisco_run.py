@@ -1,5 +1,5 @@
 import bioframe as bf
-#from gpn.utils import Genome
+#from gpn.data import Genome
 import modiscolite
 import numpy as np
 import pandas as pd

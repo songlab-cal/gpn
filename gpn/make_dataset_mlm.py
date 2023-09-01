@@ -1,44 +1,8 @@
 import argparse
 import numpy as np
 import pandas as pd
-#from pandarallel import pandarallel
-#pandarallel.initialize(progress_bar=True)
-from tqdm import tqdm
-tqdm.pandas()
 
-from .utils import Genome, load_table
-
-
-def make_windows(intervals, window_size, step_size, add_rc=False):
-    return pd.concat(
-        intervals.progress_apply(
-            lambda interval: get_interval_windows(interval, window_size, step_size, add_rc), axis=1,
-        ).values,
-        ignore_index=True,
-    )
-
-
-def get_interval_windows(interval, window_size, step_size, add_rc):
-    windows = pd.DataFrame(
-        dict(start=np.arange(interval.start, interval.end-window_size+1, step_size))
-    )
-    windows["end"] = windows.start + window_size
-    windows["chrom"] = interval.chrom
-    windows = windows[["chrom", "start", "end"]]  # just re-ordering
-    windows["strand"] = "+"
-    if add_rc:
-        windows_neg = windows.copy()  # TODO: this should be optional
-        windows_neg.strand = "-"
-        return pd.concat([windows, windows_neg], ignore_index=True)
-    return windows
-
-
-def get_seq(intervals, genome):
-    intervals["seq"] = intervals.progress_apply(
-        lambda i: genome.get_seq(i.chrom, i.start, i.end, i.strand),
-        axis=1,
-    )
-    return intervals
+from .data import Genome, load_table, make_windows, get_interval_windows, get_seq
 
 
 if __name__ == "__main__":

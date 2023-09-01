@@ -13,12 +13,13 @@ install_requires = [
     "einops",
     "pandarallel",
     "bioframe",
+    "zstandard",
 ]
 
 
 setup(
     name='gpn',
-    version='0.2',
+    version='0.3',
     description='gpn',
     url='http://github.com/songlab-cal/gpn',
     author='Gonzalo Benegas',

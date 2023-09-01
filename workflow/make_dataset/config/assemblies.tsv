@@ -1,0 +1,4 @@
+Assembly Accession	Assembly Name	Organism Name	Organism Infraspecific Names Breed	Organism Infraspecific Names Strain	Organism Infraspecific Names Cultivar	Organism Infraspecific Names Ecotype	Organism Infraspecific Names Isolate	Organism Infraspecific Names Sex	Annotation Name	Assembly Stats Total Sequence Length	Assembly Level	Assembly Submission Date	WGS project accession	genus	Priority
+GCF_000001735.4	TAIR10.1	Arabidopsis thaliana				Columbia			Annotation submitted by TAIR and Araport	119146348	Chromosome	2018-03-15		Arabidopsis	0_High
+GCF_000150535.2	Papaya1.0	Carica papaya			SunUp				NCBI Annotation Release 100	369781828	Scaffold	2008-05-06	ABIM01	Carica	1_Low
+GCF_000801105.1	Rs1.0	Raphanus sativus			WK10039				NCBI Annotation Release 100	426202243	Scaffold	2015-09-29	JRUI02	Raphanus	1_Low

@@ -11,7 +11,7 @@ import torch
 from transformers import AutoTokenizer, AutoModel, Trainer, TrainingArguments
 
 import gpn.model
-from gpn.utils import Genome, load_dataset_from_file_or_dir
+from gpn.data import Genome, load_dataset_from_file_or_dir
 
 
 class ModelCenterEmbedding(torch.nn.Module):

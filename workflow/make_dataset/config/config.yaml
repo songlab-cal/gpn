@@ -1,0 +1,31 @@
+# assumes the first column contains the assembly name
+assemblies_path: "config/assemblies.tsv"
+
+# Intervals from fasta file used for training:
+# - "all": all positions
+# - "defined": positions with defined nucleotides (not N)
+# - "annotation_{feature}": only <feature> positions from annotation, e.g. CDS, exon
+# - "balanced_v1": recipe used in original paper
+target_intervals: "all"
+
+window_size: 512
+step_size: 256
+add_rc: True
+
+# chroms will be randomly assigned to splits
+split_proportion:
+  train: 0.99
+  validation: 0.005
+  test: 0.005
+
+# this chroms are forced to be in validation set
+whitelist_validation_chroms:
+- "NC_003075.7"  # Arabidopsis thaliana chr4
+# this chroms are forced to be in test set
+whitelist_test_chroms:
+- "NC_003076.8"  # Arabidopsis thaliana chr5
+
+# We want to split data into shards of e.g. ~100MB each
+# It's good to have at least num_cpus shards to increase parallel loading speed
+# of iterable datasets from HF hub
+samples_per_file: 500_000 

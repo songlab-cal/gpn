@@ -1,0 +1,21 @@
+import pandas as pd
+
+
+configfile: "config/config.yaml"
+print(config)
+
+assemblies = pd.read_csv(config["assemblies_path"], sep="\t", index_col=0)
+splits = ["train", "validation", "test"]
+
+# comment out if you have your own fasta files
+# and make sure you have genomes (and annotations, if applicable) in the right place
+# results/genome/{assembly}.fa.gz (and results/annotation/{assembly}.gff.gz)
+include: "rules/download.smk"
+
+include: "rules/intervals.smk"
+include: "rules/dataset.smk"
+
+
+rule all:
+    input:
+        expand("results/dataset/data/{split}", split=splits),
