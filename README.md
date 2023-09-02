@@ -13,13 +13,13 @@ pip install git+https://github.com/songlab-cal/gpn.git
 
 ## Training on your own data
 1. [Snakemake workflow to create a dataset](workflow/make_dataset)
-   Can automatically download data from NCBI given a list of accessions, or use your own fasta files.
+    - Can automatically download data from NCBI given a list of accessions, or use your own fasta files.
 2. Training
-- Will automatically detect all available GPUs.
-- Track metrics on [Weights & Biases](https://wandb.ai/)
-- Implemented models: `ConvNet`, `GPNRoFormer` (Transformer)
-- Specify config overrides: e.g. `--config_overrides n_layers=30`
-- Example:
+    - Will automatically detect all available GPUs.
+    - Track metrics on [Weights & Biases](https://wandb.ai/)
+    - Implemented models: `ConvNet`, `GPNRoFormer` (Transformer)
+    - Specify config overrides: e.g. `--config_overrides n_layers=30`
+    - Example:
 ```bash
 WANDB_PROJECT=your_project python -m gpn.run_mlm --do_train --do_eval \
     --fp16 --report_to wandb --prediction_loss_only True --remove_unused_columns False \
@@ -34,15 +34,15 @@ WANDB_PROJECT=your_project python -m gpn.run_mlm --do_train --do_eval \
     --per_device_train_batch_size 512 --per_device_eval_batch_size 512 --gradient_accumulation_steps 1
 ```
 3. Extract embeddings
-- Input file requires `chrom`, `start`, `end`
-- Example:
+    - Input file requires `chrom`, `start`, `end`
+    - Example:
 ```bash
 python -m gpn.get_embeddings windows.parquet genome.fa.gz 100 your_output_dir \
     results.parquet --per-device-batch-size 4000 --is-file --dataloader-num-workers 16
 ```
 4. Variant effect prediction
-- Input file requires `chrom`, `pos`, `ref`, `alt`
-- Example:
+    - Input file requires `chrom`, `pos`, `ref`, `alt`
+    - Example:
 ```bash
 python -m gpn.run_vep variants.parquet genome.fa.gz 512 your_output_dir results.parquet \
     --per-device-batch-size 4000 --is-file --dataloader-num-workers 16
@@ -50,7 +50,7 @@ python -m gpn.run_vep variants.parquet genome.fa.gz 512 your_output_dir results.
 
 ## Citation
 ```
-@article {benegas2023dna,
+@article{benegas2023dna,
 	author = {Gonzalo Benegas and Sanjit Singh Batra and Yun S. Song},
 	title = {DNA language models are powerful predictors of genome-wide variant effects},
 	elocation-id = {2022.08.22.504706},
