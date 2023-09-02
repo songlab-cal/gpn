@@ -1,4 +1,4 @@
-# Workflow to create a training dataset for any set of taxa
+# [deprecated, please use `workflow/make_dataset`] Workflow to create a training dataset for any set of taxa
 For example usage, check out `analysis/arabidopsis/Snakefile` and `analysis/arabidopsis/config.yaml`.
 
 As a quick preview, here's how you could integrate this as a Snakemake sub-workflow:

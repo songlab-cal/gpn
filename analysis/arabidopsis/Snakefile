@@ -2,7 +2,7 @@ from Bio import AlignIO, SeqIO
 from Bio.Seq import Seq
 import bioframe as bf
 from collections import defaultdict
-from gpn.define_intervals import (
+from gpn.data import (
     filter_defined, filter_length, load_table, add_flank, get_annotation_features,
     add_jitter, get_promoters, get_random_intervals, union_intervals,
     intersect_intervals, intervals_size
@@ -24,7 +24,7 @@ import torch
 from tqdm import tqdm
 tqdm.pandas()
 
-from gpn.make_dataset_mlm import make_windows, get_seq
+from gpn.data import make_windows, get_seq
 from gpn.data import load_fasta, save_fasta, load_table, load_repeatmasker, Genome
 
 

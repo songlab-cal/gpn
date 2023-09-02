@@ -1,5 +1,5 @@
-from gpn.define_intervals import load_table, get_balanced_intervals
-from gpn.make_dataset_mlm import make_windows, get_seq
+from gpn.data import load_table, get_balanced_intervals
+from gpn.data import make_windows, get_seq
 from gpn.data import Genome
 import gzip
 import math
@@ -66,11 +66,10 @@ rule make_defined_intervals:
     output:
         "output/intervals/{window_size}/{assembly}/defined.parquet",
     threads: 2
-    shell:
-        """
-        python -m gpn.define_intervals {output} --fasta-path {input} --filter-defined \
-        --min-interval-len {wildcards.window_size}
-        """
+    run:
+        I = Genome(input[0]).get_defined_intervals()
+        I = filter_length(I, wildcards["window_size"])
+        I.to_parquet(output[0], index=False)
 
 
 rule make_balanced_intervals:
