@@ -21,6 +21,7 @@ https://huggingface.co/models?filter=fill-mask
 """
 # You can also adapt this script on your own masked language modeling task. Pointers for this are left as comments.
 
+from collections.abc import Iterable
 import logging
 import math
 import numpy as np
@@ -152,11 +153,9 @@ class DataTrainingArguments:
     output_preds_dir: Optional[str] = field(
         default=None,
     )
-    num_labels: Optional[int] = field(
+    problem_type: Optional[str] = field(
         default=None,
     )
-
-
 
 
 def main():
@@ -222,6 +221,13 @@ def main():
     )
     print(raw_datasets)
 
+    labels = raw_datasets['train'][0]["labels"]
+    if isinstance(labels, Iterable):
+        num_labels = len(labels)
+    else:
+        num_labels = 1
+    print(f"{num_labels=}")
+
     # Load pretrained model and tokenizer
     #
     # Distributed training:
@@ -231,7 +237,8 @@ def main():
         "cache_dir": model_args.cache_dir,
         "revision": model_args.model_revision,
         "use_auth_token": True if model_args.use_auth_token else None,
-        "num_labels": data_args.num_labels,
+        "num_labels": num_labels,
+        "problem_type": data_args.problem_type,
     }
     if model_args.config_name:
         config = AutoConfig.from_pretrained(model_args.config_name, **config_kwargs)
