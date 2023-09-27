@@ -68,6 +68,7 @@ class ConvNetConfig(PretrainedConfig):
         dilation_double_every=1,
         dilation_max=32,
         dilation_cycle=6,
+        dilation_base=2,
         initializer_range=0.02,
         # for classification head:
         hidden_dropout_prob=0.1,
@@ -82,6 +83,7 @@ class ConvNetConfig(PretrainedConfig):
         self.dilation_double_every = dilation_double_every
         self.dilation_max = dilation_max
         self.dilation_cycle = dilation_cycle
+        self.dilation_base = dilation_base
         self.initializer_range = initializer_range
         self.hidden_dropout_prob = hidden_dropout_prob
         self.hidden_act = hidden_act

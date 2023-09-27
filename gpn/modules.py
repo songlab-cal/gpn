@@ -83,6 +83,6 @@ class GPNEmbedding(nn.Module):
 
 def get_dilation_schedule(config):
     return [
-        min(config.dilation_max, 2**((i%config.dilation_cycle)//config.dilation_double_every))
+        min(config.dilation_max, config.dilation_base**((i%config.dilation_cycle)//config.dilation_double_every))
         for i in range(config.n_layers)
     ]
