@@ -13,7 +13,7 @@
 ## Choosing species/assemblies (ignore if using your own set of fasta files):
 - Manually download assembly metadata from [NCBI Genome](https://www.ncbi.nlm.nih.gov/data-hub/genome)
 - You can choose a set of taxa (e.g. mammals, plants) and apply filters such as annotation level, assembly level.
-- Checkout the script `gpn/filter_assemblies.py` for more details, such as how to
+- Checkout the script `gpn/ss/filter_assemblies.py` for more details, such as how to
 subsample, or how to keep only one assembly per genus.
 
 ## Configuration:

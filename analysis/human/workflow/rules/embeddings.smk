@@ -1,15 +1,15 @@
 rule download_rmsk:
     output:
-        "output/rmsk.txt.gz",
+        "results/rmsk.txt.gz",
     shell:
         "wget -O {output} https://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/rmsk.txt.gz"
 
 
 rule process_rmsk:
     input:
-        "output/rmsk.txt.gz",
+        "results/rmsk.txt.gz",
     output:
-        "output/rmsk.parquet",
+        "results/rmsk.parquet",
     run:
         df = pd.read_csv(
             input[0], sep="\t", header=None, names=[
@@ -26,9 +26,9 @@ rule process_rmsk:
      
 rule merge_rmsk:
     input:
-        "output/rmsk.parquet",
+        "results/rmsk.parquet",
     output:
-        "output/rmsk_merged.parquet",
+        "results/rmsk_merged.parquet",
     run:
         df = pd.read_parquet(input[0], columns=["chrom", "start", "end"])
         print(df)
@@ -39,11 +39,11 @@ rule merge_rmsk:
 
 rule expand_annotation:
     input:
-        "output/annotation.gtf.gz",
-        "output/rmsk_merged.parquet",
-        "output/genome.fa.gz",
+        "results/annotation.gtf.gz",
+        "results/rmsk_merged.parquet",
+        "results/genome.fa.gz",
     output:
-        "output/annotation.expanded.parquet",
+        "results/annotation.expanded.parquet",
     run:
         import more_itertools
 
@@ -80,10 +80,10 @@ rule expand_annotation:
 
 rule define_embedding_windows:
     input:
-        "output/annotation.expanded.parquet",
-        "output/genome.fa.gz",
+        "results/annotation.expanded.parquet",
+        "results/genome.fa.gz",
     output:
-        "output/embedding/windows.parquet",
+        "results/embedding/windows.parquet",
     run:
         gtf = pd.read_parquet(input[0])
         genome = Genome(input[1], subset_chroms=CHROMS)
@@ -136,7 +136,7 @@ rule get_embedding:
     threads: workflow.cores
     shell:
         """
-        python -m gpn_msa.inference embedding {input[0]} {input[1]} \
+        python -m gpn.msa.inference embedding {input[0]} {input[1]} \
         {wildcards.window_size} {input[2]} {output} --is_file \
         --center_window_size {config[center_window_size]} \
         --per_device_batch_size {config[per_device_batch_size]} \

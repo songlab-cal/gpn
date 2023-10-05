@@ -1,4 +1,4 @@
-WANDB_PROJECT=GPN_Arabidopsis_multispecies python -m gpn.run_mlm --do_test \
+WANDB_PROJECT=GPN_Arabidopsis_multispecies python -m gpn.ss.run_mlm --do_test \
     --fp16 --prediction_loss_only True --remove_unused_columns False \
     --dataset_name output/merged_dataset/512/256/True/balanced --tokenizer_name gonzalobenegas/tokenizer-dna-mlm \
     --soft_masked_loss_weight_test 0.0 \

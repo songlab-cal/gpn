@@ -21,7 +21,7 @@ pip install git+https://github.com/songlab-cal/gpn.git
     - Specify config overrides: e.g. `--config_overrides n_layers=30`
     - Example:
 ```bash
-WANDB_PROJECT=your_project python -m gpn.run_mlm --do_train --do_eval \
+WANDB_PROJECT=your_project python -m gpn.ss.run_mlm --do_train --do_eval \
     --fp16 --report_to wandb --prediction_loss_only True --remove_unused_columns False \
     --dataset_name results/dataset --tokenizer_name gonzalobenegas/tokenizer-dna-mlm \
     --soft_masked_loss_weight_train 0.1 --soft_masked_loss_weight_evaluation 0.0 \
@@ -37,14 +37,14 @@ WANDB_PROJECT=your_project python -m gpn.run_mlm --do_train --do_eval \
     - Input file requires `chrom`, `start`, `end`
     - Example:
 ```bash
-python -m gpn.get_embeddings windows.parquet genome.fa.gz 100 your_output_dir \
+python -m gpn.ss.get_embeddings windows.parquet genome.fa.gz 100 your_output_dir \
     results.parquet --per-device-batch-size 4000 --is-file --dataloader-num-workers 16
 ```
 4. Variant effect prediction
     - Input file requires `chrom`, `pos`, `ref`, `alt`
     - Example:
 ```bash
-python -m gpn.run_vep variants.parquet genome.fa.gz 512 your_output_dir results.parquet \
+python -m gpn.ss.run_vep variants.parquet genome.fa.gz 512 your_output_dir results.parquet \
     --per-device-batch-size 4000 --is-file --dataloader-num-workers 16
 ```
 

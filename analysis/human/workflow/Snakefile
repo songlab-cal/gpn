@@ -9,7 +9,7 @@ from gpn.data import (
     intersect_intervals, intervals_size, get_balanced_intervals
 )
 from gpn.data import make_windows, get_seq
-from gpn_msa.data import GenomeMSA
+from gpn.data import GenomeMSA
 import gzip
 from joblib import Parallel, delayed
 import numpy as np

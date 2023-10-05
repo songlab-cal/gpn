@@ -95,7 +95,7 @@ rule filter_assemblies:
         config["assemblies_path"],
     shell:
         """
-        python -m gpn.filter_assemblies {input} {output} --keep_one_per_genus \
+        python -m gpn.ss.filter_assemblies {input} {output} --keep_one_per_genus \
         --priority_assemblies {PRIORITY_ASSEMBLIES}
         """
 
@@ -248,7 +248,7 @@ rule get_embeddings:
     threads: workflow.cores
     shell:
         """
-        python -m gpn.get_embeddings {input} {EMBEDDING_WINDOW_SIZE} \
+        python -m gpn.ss.get_embeddings {input} {EMBEDDING_WINDOW_SIZE} \
         {wildcards.model} {output} --per-device-batch-size 4000 --is-file \
         --dataloader-num-workers {threads}
         """
@@ -597,7 +597,7 @@ rule get_logits:
     threads: workflow.cores // 2
     shell:
         """
-        python -m gpn.get_logits {input} {WINDOW_SIZE} {wildcards.model} {output} \
+        python -m gpn.ss.get_logits {input} {WINDOW_SIZE} {wildcards.model} {output} \
         --per-device-batch-size 4000 --is-file \
         --dataloader-num-workers {threads}
         """
@@ -910,7 +910,7 @@ rule run_vep:
     threads: workflow.cores
     shell:
         """
-        python -m gpn.run_vep {input} {WINDOW_SIZE} {wildcards.model} {output} \
+        python -m gpn.ss.run_vep {input} {WINDOW_SIZE} {wildcards.model} {output} \
         --per-device-batch-size 4000 --is-file \
         --dataloader-num-workers {threads}
         """

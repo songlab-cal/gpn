@@ -1,5 +1,5 @@
 from gpn.data import load_fasta, load_table, Genome
-from gpn_msa.data import BigWig
+from gpn.data import BigWig
 import numpy as np
 
 
@@ -101,32 +101,35 @@ rule download_maf_multiz470way:
         "wget -O - https://hgdownload.soe.ucsc.edu/goldenPath/hg38/multiz470way/maf/chr{wildcards.chrom}.maf.gz | gunzip -c > {output}"
 
 
-#rule download_reference_chr:
-#    output:
-#        temp("genome_chr.fa"),
-#    shell:
-#        "wget -O - https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz | gunzip -c > {output}"
+rule download_reference_chr:
+    output:
+        temp("results/genome_chr.fa"),
+    shell:
+        "wget -O - https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz | gunzip -c > {output}"
 
 
-#rule extract_chrom:
-#    input:
-#        "genome_chr.fa",
-#    output:
-#        "chrom/{chrom}.fa",
-#    shell:
-#        "faOneRecord {input} chr{wildcards.chrom} > {output}"
+rule extract_chrom:
+    input:
+        "results/genome_chr.fa",
+    output:
+        "results/chrom/{chrom}.fa",
+    shell:
+        "faOneRecord {input} chr{wildcards.chrom} > {output}"
 
 
 # I also have a python script for this, which uses less memory
-#rule maf2fasta:
-#    input:
-#        "output/chrom/{chrom}.fa",
-#        "output/maf/{alignment}/{chrom}.maf",
-#    output:
-#        "output/maf_fasta/{alignment}/{chrom}.fa",
-#    threads: workflow.cores // 2
-#    shell:
-#        "maf2fasta {input} fasta > {output}"
+# scripts/maf_to_fasta.py
+# but it's still under development, currently assumes there's no gaps in target
+# sequence
+rule maf2fasta:
+    input:
+        "results/chrom/{chrom}.fa",
+        "results/maf/{alignment}/{chrom}.maf",
+    output:
+        "results/maf_fasta/{alignment}/{chrom}.fa",
+    threads: workflow.cores // 2
+    shell:
+        "maf2fasta {input} fasta > {output}"
 
 
 rule make_dataset:
@@ -306,7 +309,7 @@ rule train_gpn_msa:
     priority: 100
     shell:
         """
-        WANDB_PROJECT={params.project_name} python -m gpn_msa.train --do_train \
+        WANDB_PROJECT={params.project_name} python -m gpn.msa.train --do_train \
         --do_eval --fp16 --report_to wandb --prediction_loss_only True \
         --dataset_name results/dataset/{wildcards.dataset} \
         --msa_path {input[0]} \
