@@ -1,0 +1,8 @@
+hg38
+mm10
+canFam3
+loxAfr3
+dasNov3
+galGal4
+xenTro7
+danRer10

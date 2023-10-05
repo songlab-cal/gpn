@@ -1,0 +1,16 @@
+channels:
+- bioconda
+- conda-forge
+- huggingface
+- anaconda
+dependencies:
+- tensorflow-gpu
+- tensorflow-hub
+- datasets
+- transformers
+- pyfaidx
+- pandas
+- numpy
+#- pip
+#pip:
+- kipoiseq==0.5.2

@@ -1,0 +1,11 @@
+channels:
+- bioconda
+- conda-forge
+- anaconda
+dependencies:
+- meme
+- bioframe
+- pyarrow
+- pip
+- pip:
+  - modisco-lite

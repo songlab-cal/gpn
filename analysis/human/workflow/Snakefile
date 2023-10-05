@@ -1,0 +1,148 @@
+from Bio import SeqIO
+from Bio.Seq import Seq
+import bioframe as bf
+from datasets import load_dataset
+from gpn.data import load_fasta, load_table, Genome
+from gpn.data import (
+    filter_defined, filter_length, load_table, add_flank, get_annotation_features,
+    add_jitter, get_promoters, get_random_intervals, union_intervals,
+    intersect_intervals, intervals_size, get_balanced_intervals
+)
+from gpn.data import make_windows, get_seq
+from gpn_msa.data import GenomeMSA
+import gzip
+from joblib import Parallel, delayed
+import numpy as np
+import os
+import pandas as pd
+from pathlib import Path
+import scipy.sparse as sp_sparse
+from scipy.special import softmax
+from scipy.stats import combine_pvalues, entropy
+from tqdm import tqdm
+tqdm.pandas()
+
+
+configfile: "config/config.yaml"
+
+
+# TODO: move into config/common.smk
+NUCLEOTIDES = list("ACGT")
+WINDOW_SIZE = 128
+FASTA_URL = "http://ftp.ensembl.org/pub/release-107/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna_sm.primary_assembly.fa.gz"
+GTF_URL = "http://ftp.ensembl.org/pub/release-107/gtf/homo_sapiens/Homo_sapiens.GRCh38.107.chr.gtf.gz"
+SPLIT_CHROMS = {
+    "train": [str(i) for i in range(1, 21)] + ["X", "Y"],
+    "validation": ["21"],
+    "test": ["22"],
+}
+SPLITS = SPLIT_CHROMS.keys()
+CHROMS = np.concatenate(list(SPLIT_CHROMS.values()))
+
+
+datasets = [
+    "songlab/human_variants",
+]
+
+model_template = "{dataset}/{model_size}/{loss_weight}/{seed}/{max_steps}/{use_aux_features}/{weight_conserved}/{flip_nonconserved}"
+
+# default is first
+hparams = {
+    "dataset": [
+        "multiz100way/89/128/64/True/defined.phastCons.percentile-75_0.05_0.001",
+
+        # changing percentage
+        "multiz100way/89/128/64/True/defined.phastCons.percentile-75_0.50_0.001",
+
+        # using more species
+        "multiz100way/99/128/64/True/defined.phastCons.percentile-75_0.05_0.001",
+    ],
+    "use_aux_features": [
+        True,
+        False,
+    ],
+    "loss_weight": [
+        0.1,
+        #1.0,
+    ],
+    "weight_conserved": [
+        True,
+        False,
+    ],
+    "flip_nonconserved": [
+        True,
+        False,
+    ],
+}
+
+default_d = {k: v[0] for k, v in hparams.items()}
+hparam_models = [expand(model_template, **default_d, allow_missing=True)[0]]
+
+# one ablation at a time
+for k, v in hparams.items():
+    for vv in v[1:]:
+        new_d = default_d.copy()
+        new_d[k] = vv
+        hparam_models.append(expand(model_template, **new_d, allow_missing=True)[0])
+
+models = sum(
+    [
+        expand(
+            m,
+            seed=[
+                42,
+                43,
+                44,
+            ],
+            max_steps=[
+                #15_000,
+                30_000,
+                #45_000,
+                #60_000,
+                #75_000,
+            ],
+            model_size=[
+                #"tiny",
+                #"small",
+                "medium",
+                #"large",
+            ],
+        ) for m in hparam_models
+    ],
+    []
+)
+best_model = models[0]
+
+include: "rules/common.smk"
+include: "rules/training.smk"
+include: "rules/vep.smk"
+include: "rules/embeddings.smk"
+include: "rules/logits.smk"
+
+include: "rules/nucleotide_transformer.smk"
+include: "rules/conservation.smk"
+include: "rules/esm1b.smk"
+include: "rules/cadd.smk"
+include: "rules/spliceai.smk"
+include: "rules/cpt1.smk"
+
+#models += nucleotide_transformer_models
+#models.append(nucleotide_transformer_models[-1])
+#models.append("ESM-1b")
+#models.append("msa_multiz100way/89")
+#models.append("phyloP")
+#models.append("phastCons")
+#models = ["ESM-1b"]
+#pd.DataFrame(models).to_csv("models.txt", index=False, header=False)
+
+rule all:
+    input:
+        #expand("results/preds/{dataset}/{model}.parquet", model=models, dataset=datasets),
+        #expand("results/dataset/{dataset}/train.parquet", dataset=hparams["dataset"]),
+        #expand("results/checkpoints/{model}", model=models),
+        #f"results/positions/6/logits/{best_model}.parquet",
+        #f"results/positions/promoter/modisco/{best_model}/report",
+        #f"results/embedding/umap/{best_model}.parquet",
+        #f"results/embedding/classification/{best_model}.parquet",
+        #expand("results/preds/results/variants_enformer/{model}.parquet", model=[best_model, "phyloP"]),
+        f"results/positions/6/bed_probs/{best_model}/bigwig.done",

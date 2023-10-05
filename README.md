@@ -49,7 +49,7 @@ python -m gpn.run_vep variants.parquet genome.fa.gz 512 your_output_dir results.
 ```
 
 ## Citation
-```
+```bibtex
 @article{benegas2023dna,
 	author = {Gonzalo Benegas and Sanjit Singh Batra and Yun S. Song},
 	title = {DNA language models are powerful predictors of genome-wide variant effects},
@@ -59,6 +59,6 @@ python -m gpn.run_vep variants.parquet genome.fa.gz 512 your_output_dir results.
 	publisher = {Cold Spring Harbor Laboratory},
 	URL = {https://www.biorxiv.org/content/early/2023/08/04/2022.08.22.504706},
 	eprint = {https://www.biorxiv.org/content/early/2023/08/04/2022.08.22.504706.full.pdf},
-	journal = {bioRxiv}
+	journal = {PNAS, in press}
 }
 ```

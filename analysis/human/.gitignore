@@ -1,5 +1,9 @@
+models.txt
+bedGraphToBigWig
+.snakemake
 .julia
-analysis/arabidopsis/bedGraphToBigWig
+wandb
+results
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
