@@ -9,41 +9,52 @@ import numpy as np
 import pandas as pd
 import pyBigWig
 from tqdm import tqdm
+
 tqdm.pandas()
 import zarr
 
 
-DEFINED_SYMBOLS = np.frombuffer("ACGTacgt".encode('ascii'), dtype="S1")
-UNMASKED_SYMBOLS = np.frombuffer("ACGT".encode('ascii'), dtype="S1") 
+DEFINED_SYMBOLS = np.frombuffer("ACGTacgt".encode("ascii"), dtype="S1")
+UNMASKED_SYMBOLS = np.frombuffer("ACGT".encode("ascii"), dtype="S1")
 
 
 def load_fasta(path, subset_chroms=None):
     with gzip.open(path, "rt") if path.endswith(".gz") else open(path) as handle:
-        genome = pd.Series({
-            rec.id: str(rec.seq) for rec in SeqIO.parse(handle, "fasta")
-            if subset_chroms is None or rec.id in subset_chroms
-        })
+        genome = pd.Series(
+            {
+                rec.id: str(rec.seq)
+                for rec in SeqIO.parse(handle, "fasta")
+                if subset_chroms is None or rec.id in subset_chroms
+            }
+        )
     return genome
 
 
 def save_fasta(path, genome):
-    with bgzf.BgzfWriter(path, "wb") if path.endswith(".gz") else open(path, "w") as handle:
+    with bgzf.BgzfWriter(path, "wb") if path.endswith(".gz") else open(
+        path, "w"
+    ) as handle:
         SeqIO.write(genome.values(), handle, "fasta")
 
 
 # Some standard formats
 def load_table(path):
-    if path.endswith('.parquet'):
+    if path.endswith(".parquet"):
         df = pd.read_parquet(path)
-    elif 'csv' in path:
+    elif "csv" in path:
         df = pd.read_csv(path)
-    elif 'tsv' in path:
-        df = pd.read_csv(path, sep='\t')
-    elif 'vcf' in path:
+    elif "tsv" in path:
+        df = pd.read_csv(path, sep="\t")
+    elif "vcf" in path:
         df = pd.read_csv(
-            path, sep="\t", header=None, comment="#", usecols=[0,1,3,4], dtype={0: str},
-        ).rename(columns={0: 'chrom', 1: 'pos', 3: 'ref', 4: 'alt'})
-    elif 'gtf' in path or 'gff' in path:
+            path,
+            sep="\t",
+            header=None,
+            comment="#",
+            usecols=[0, 1, 3, 4],
+            dtype={0: str},
+        ).rename(columns={0: "chrom", 1: "pos", 3: "ref", 4: "alt"})
+    elif "gtf" in path or "gff" in path:
         df = pd.read_csv(
             path,
             sep="\t",
@@ -87,7 +98,7 @@ class Genome:
 
     def get_nuc(self, chrom, pos, strand="+"):
         # pos is assumed to be 1-based as in VCF
-        seq = self._genome[chrom][pos-1]
+        seq = self._genome[chrom][pos - 1]
         if strand == "-":
             seq = str(Seq(seq).reverse_complement())
         return seq
@@ -101,17 +112,28 @@ class Genome:
         return seq_fwd, seq_rev
 
     def get_all_intervals(self):
-        return pd.DataFrame([
-            {"chrom": chrom, "start": 0, "end": len(seq)}
-            for chrom, seq in self._genome.items()
-        ])
+        return pd.DataFrame(
+            [
+                {"chrom": chrom, "start": 0, "end": len(seq)}
+                for chrom, seq in self._genome.items()
+            ]
+        )
 
     def get_intervals_matching_symbols(self, symbols):
         def get_intervals_matching_symbols_chrom(chrom):
-            complete_interval = pd.DataFrame({"chrom": [chrom.name], "start": [0], "end": [len(chrom.seq)]})
-            intervals = pd.DataFrame(dict(
-                start=np.where(~np.isin(np.frombuffer(chrom.seq.encode("ascii"), dtype="S1"), symbols))[0]
-            ))
+            complete_interval = pd.DataFrame(
+                {"chrom": [chrom.name], "start": [0], "end": [len(chrom.seq)]}
+            )
+            intervals = pd.DataFrame(
+                dict(
+                    start=np.where(
+                        ~np.isin(
+                            np.frombuffer(chrom.seq.encode("ascii"), dtype="S1"),
+                            symbols,
+                        )
+                    )[0]
+                )
+            )
             if len(intervals) > 0:
                 intervals["chrom"] = chrom.name
                 intervals["end"] = intervals.start + 1
@@ -120,9 +142,13 @@ class Genome:
             return complete_interval
 
         return pd.concat(
-            self._genome.rename("seq").to_frame().progress_apply(
-                get_intervals_matching_symbols_chrom, axis=1,
-            ).values,
+            self._genome.rename("seq")
+            .to_frame()
+            .progress_apply(
+                get_intervals_matching_symbols_chrom,
+                axis=1,
+            )
+            .values,
             ignore_index=True,
         )
 
@@ -134,11 +160,15 @@ class Genome:
 
 
 def add_space_every_k(seq, k):
-    return " ".join([seq[x:x+k] for x in range(0, len(seq), k)])
+    return " ".join([seq[x : x + k] for x in range(0, len(seq), k)])
 
 
 def load_dataset_from_file_or_dir(
-    path, split="test", format="parquet", is_file=False, **kwargs,
+    path,
+    split="test",
+    format="parquet",
+    is_file=False,
+    **kwargs,
 ):
     # TODO: should add handling of vcf, could use load_table and create dataset
     # from pandas df
@@ -157,7 +187,9 @@ def token_input_id(token, tokenizer, n_prefix=0):
 
 def get_annotation_features(annotation, feature):
     annotation_features = annotation[annotation.feature == feature]
-    return bf.merge(bf.sanitize_bedframe(annotation_features[["chrom", "start", "end"]]))
+    return bf.merge(
+        bf.sanitize_bedframe(annotation_features[["chrom", "start", "end"]])
+    )
 
 
 def intersect_intervals(a, b):
@@ -171,7 +203,7 @@ def union_intervals(a, b):
 
 
 def intervals_size(intervals):
-    return (intervals.end-intervals.start).sum()
+    return (intervals.end - intervals.start).sum()
 
 
 def add_flank(intervals, flank):
@@ -191,7 +223,7 @@ def add_jitter(intervals, magnitude, seed=42):
 
 
 def filter_length(intervals, min_interval_len):
-    return intervals[intervals.end-intervals.start>=min_interval_len]
+    return intervals[intervals.end - intervals.start >= min_interval_len]
 
 
 def filter_defined(intervals, genome, include_flank=None):
@@ -209,7 +241,11 @@ def filter_unmasked(intervals, genome, include_flank=None):
 
 
 def filter_annotation_features(
-    intervals, annotation, feature, include_flank=None, jitter=None,
+    intervals,
+    annotation,
+    feature,
+    include_flank=None,
+    jitter=None,
 ):
     annotation_features = get_annotation_features(annotation, feature)
     if include_flank is not None:
@@ -221,12 +257,18 @@ def filter_annotation_features(
 
 def get_promoters(annotation, upstream_size, downstream_size=0):
     # not exactly getting promoters, just gettting regions upstream of TSS
-    
+
     def get_promoter(transcript):
         if transcript.strand == "+":
-            start, end = transcript.start-upstream_size, transcript.start+downstream_size
+            start, end = (
+                transcript.start - upstream_size,
+                transcript.start + downstream_size,
+            )
         else:
-            start, end = transcript.end-downstream_size, transcript.end+upstream_size
+            start, end = (
+                transcript.end - downstream_size,
+                transcript.end + upstream_size,
+            )
         return pd.Series(dict(chrom=transcript.chrom, start=start, end=end))
 
     transcripts = annotation[annotation.feature.isin(["mRNA", "transcript"])]
@@ -236,7 +278,7 @@ def get_promoters(annotation, upstream_size, downstream_size=0):
 
 def get_random_intervals(intervals, size, n, seed=42):
     rng = np.random.default_rng(seed)
-    interval_size = (intervals.end-intervals.start).values
+    interval_size = (intervals.end - intervals.start).values
     # the number of random intervals that can be generated per interval
     # e.g. if target size is 512, an interval of size 512 can produce 1 interval,
     # and interval of size 513 can produce 2 intervals
@@ -254,32 +296,44 @@ def get_random_intervals(intervals, size, n, seed=42):
     return bf.merge(rand_intervals).drop(columns="n_intervals")
 
 
-def get_balanced_intervals(defined_intervals, annotation, window_size, promoter_upstream=1000):
+def get_balanced_intervals(
+    defined_intervals, annotation, window_size, promoter_upstream=1000
+):
     # there's the issue of pseudogenes though... should be aware
-    exons = add_flank(get_annotation_features(annotation, "exon"), window_size//2)
-    print("exons: ", intervals_size(exons)/intervals_size(defined_intervals))
-    promoters = add_flank(get_promoters(annotation, promoter_upstream), window_size//2)
-    print("promoters: ", intervals_size(promoters)/intervals_size(defined_intervals))
+    exons = add_flank(get_annotation_features(annotation, "exon"), window_size // 2)
+    print("exons: ", intervals_size(exons) / intervals_size(defined_intervals))
+    promoters = add_flank(
+        get_promoters(annotation, promoter_upstream), window_size // 2
+    )
+    print("promoters: ", intervals_size(promoters) / intervals_size(defined_intervals))
     intervals = union_intervals(exons, promoters)
     intervals = intersect_intervals(add_jitter(intervals, 100), defined_intervals)
-        # in case they collide with undefined intervals
-    intervals = filter_length(intervals, window_size) 
-    print("intervals: ", intervals_size(intervals)/intervals_size(defined_intervals))
-        # maybe add a 0.5 factor
-    n_random_intervals = intervals_size(intervals) // window_size 
-    random_intervals = get_random_intervals(defined_intervals, window_size, n_random_intervals)
-    print("random_intervals: ", intervals_size(random_intervals)/intervals_size(defined_intervals))
+    # in case they collide with undefined intervals
+    intervals = filter_length(intervals, window_size)
+    print("intervals: ", intervals_size(intervals) / intervals_size(defined_intervals))
+    # maybe add a 0.5 factor
+    n_random_intervals = intervals_size(intervals) // window_size
+    random_intervals = get_random_intervals(
+        defined_intervals, window_size, n_random_intervals
+    )
+    print(
+        "random_intervals: ",
+        intervals_size(random_intervals) / intervals_size(defined_intervals),
+    )
     intervals = union_intervals(intervals, random_intervals)
-    print("intervals: ", intervals_size(intervals)/intervals_size(defined_intervals))
-    print((intervals.end-intervals.start).min())
-    assert (intervals.end-intervals.start).min() >= window_size
+    print("intervals: ", intervals_size(intervals) / intervals_size(defined_intervals))
+    print((intervals.end - intervals.start).min())
+    assert (intervals.end - intervals.start).min() >= window_size
     return intervals
 
 
 def make_windows(intervals, window_size, step_size, add_rc=False):
     return pd.concat(
         intervals.progress_apply(
-            lambda interval: get_interval_windows(interval, window_size, step_size, add_rc), axis=1,
+            lambda interval: get_interval_windows(
+                interval, window_size, step_size, add_rc
+            ),
+            axis=1,
         ).values,
         ignore_index=True,
     )
@@ -287,7 +341,7 @@ def make_windows(intervals, window_size, step_size, add_rc=False):
 
 def get_interval_windows(interval, window_size, step_size, add_rc):
     windows = pd.DataFrame(
-        dict(start=np.arange(interval.start, interval.end-window_size+1, step_size))
+        dict(start=np.arange(interval.start, interval.end - window_size + 1, step_size))
     )
     windows["end"] = windows.start + window_size
     windows["chrom"] = interval.chrom

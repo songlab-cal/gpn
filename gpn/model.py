@@ -3,17 +3,25 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss, MSELoss, BCEWithLogitsLoss
 from transformers import (
-    AutoConfig, AutoModel, AutoModelForMaskedLM, AutoModelForSequenceClassification,
-    PretrainedConfig, PreTrainedModel
+    AutoConfig,
+    AutoModel,
+    AutoModelForMaskedLM,
+    AutoModelForSequenceClassification,
+    PretrainedConfig,
+    PreTrainedModel,
 )
 from transformers.activations import ACT2FN
 from transformers.modeling_outputs import (
-    BaseModelOutput, MaskedLMOutput, SequenceClassifierOutput
+    BaseModelOutput,
+    MaskedLMOutput,
+    SequenceClassifierOutput,
 )
 from typing import Optional, Tuple, Union
 
 from .modules import (
-    TransposeLayer, ConvLayer, get_dilation_schedule,
+    TransposeLayer,
+    ConvLayer,
+    get_dilation_schedule,
 )
 from transformers import RoFormerConfig, RoFormerModel, RoFormerForMaskedLM
 from transformers.models.roformer.modeling_roformer import (
@@ -46,7 +54,9 @@ class GPNEmbedding(nn.Module):
         if aux_features is not None:
             if self.aux_features_vocab_size is not None:
                 aux_features = (
-                    F.one_hot(aux_features.long(), num_classes=self.aux_features_vocab_size)
+                    F.one_hot(
+                        aux_features.long(), num_classes=self.aux_features_vocab_size
+                    )
                     .reshape(input_ids.shape[0], input_ids.shape[1], -1)
                     .float()
                 )
@@ -138,8 +148,8 @@ class ConvNetConfig(PretrainedConfig):
         aux_features_vocab_size=5,
         # for classification head:
         hidden_dropout_prob=0.1,
-        hidden_act="gelu", 
-        **kwargs
+        hidden_act="gelu",
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self.vocab_size = vocab_size
@@ -160,7 +170,7 @@ class ConvNetConfig(PretrainedConfig):
 class ConvNetPreTrainedModel(PreTrainedModel):
     config_class = ConvNetConfig
     base_model_prefix = "model"
-    #supports_gradient_checkpointing = True
+    # supports_gradient_checkpointing = True
     _keys_to_ignore_on_load_missing = [r"position_ids"]
 
     def _init_weights(self, module):
@@ -197,14 +207,16 @@ class ConvNetModel(ConvNetPreTrainedModel):
         )
 
         self.dilation_schedule = get_dilation_schedule(config)
-        self.encoder = nn.Sequential(*[
-            ConvLayer(
-                hidden_size=config.hidden_size,
-                kernel_size=config.kernel_size,
-                dilation=self.dilation_schedule[i],
-            )
-            for i in range(config.n_layers)
-        ])
+        self.encoder = nn.Sequential(
+            *[
+                ConvLayer(
+                    hidden_size=config.hidden_size,
+                    kernel_size=config.kernel_size,
+                    dilation=self.dilation_schedule[i],
+                )
+                for i in range(config.n_layers)
+            ]
+        )
         self.post_init()
 
     def forward(self, input_ids=None, input_probs=None, aux_features=None, **kwargs):
@@ -229,7 +241,9 @@ class ConvNetForMaskedLM(ConvNetPreTrainedModel):
     def forward(self, labels=None, output_probs=None, loss_weight=None, **kwargs):
         hidden_state = self.model(**kwargs).last_hidden_state
         logits = self.cls(hidden_state)
-        loss = compute_loss(logits, labels, output_probs, loss_weight, self.config.vocab_size)
+        loss = compute_loss(
+            logits, labels, output_probs, loss_weight, self.config.vocab_size
+        )
         return MaskedLMOutput(
             loss=loss,
             logits=logits,
@@ -265,11 +279,13 @@ class ConvNetForSequenceClassification(ConvNetPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == torch.long or labels.dtype == torch.int):
+                elif self.num_labels > 1 and (
+                    labels.dtype == torch.long or labels.dtype == torch.int
+                ):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
-            
+
             if self.config.problem_type == "regression":
                 loss_fct = MSELoss()
                 if self.num_labels == 1:
@@ -292,7 +308,9 @@ class ConvNetForSequenceClassification(ConvNetPreTrainedModel):
 AutoConfig.register("ConvNet", ConvNetConfig)
 AutoModel.register(ConvNetConfig, ConvNetModel)
 AutoModelForMaskedLM.register(ConvNetConfig, ConvNetForMaskedLM)
-AutoModelForSequenceClassification.register(ConvNetConfig, ConvNetForSequenceClassification)
+AutoModelForSequenceClassification.register(
+    ConvNetConfig, ConvNetForSequenceClassification
+)
 
 
 class GPNRoFormerConfig(RoFormerConfig):
@@ -370,7 +388,9 @@ class GPNRoFormerForMaskedLM(GPNRoFormerPreTrainedModel):
     def forward(self, labels=None, output_probs=None, loss_weight=None, **kwargs):
         hidden_state = self.model(**kwargs).last_hidden_state
         logits = self.cls(hidden_state)
-        loss = compute_loss(logits, labels, output_probs, loss_weight, self.config.vocab_size)
+        loss = compute_loss(
+            logits, labels, output_probs, loss_weight, self.config.vocab_size
+        )
         return MaskedLMOutput(
             loss=loss,
             logits=logits,

@@ -1,6 +1,14 @@
 import numpy as np
 import pandas as pd
-from tokenizers import decoders, models, normalizers, pre_tokenizers, processors, trainers, Tokenizer
+from tokenizers import (
+    decoders,
+    models,
+    normalizers,
+    pre_tokenizers,
+    processors,
+    trainers,
+    Tokenizer,
+)
 from transformers import PreTrainedTokenizerFast
 
 

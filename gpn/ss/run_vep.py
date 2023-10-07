@@ -18,9 +18,10 @@ class MLMforVEPModel(torch.nn.Module):
     def __init__(self, model_path):
         super().__init__()
         self.model = AutoModelForMaskedLM.from_pretrained(
-            model_path, trust_remote_code=True,
+            model_path,
+            trust_remote_code=True,
         )
-        
+
     def get_llr(self, input_ids, pos, ref, alt):
         logits = self.model.forward(input_ids=input_ids).logits
         logits = logits[torch.arange(len(pos)), pos]
@@ -42,13 +43,19 @@ class MLMforVEPModel(torch.nn.Module):
     ):
         llr_fwd = self.get_llr(input_ids_fwd, pos_fwd, ref_fwd, alt_fwd)
         llr_rev = self.get_llr(input_ids_rev, pos_rev, ref_rev, alt_rev)
-        llr = (llr_fwd+llr_rev)/2
+        llr = (llr_fwd + llr_rev) / 2
         return llr
 
 
 def run_vep(
-    variants, genome, window_size, tokenizer, model,
-    n_prefix=0, per_device_batch_size=8, dataloader_num_workers=0,
+    variants,
+    genome,
+    window_size,
+    tokenizer,
+    model,
+    n_prefix=0,
+    per_device_batch_size=8,
+    dataloader_num_workers=0,
 ):
     def tokenize(seqs):
         return tokenizer(
@@ -61,16 +68,16 @@ def run_vep(
         )["input_ids"]
 
     def get_tokenized_seq(vs):
-        # we convert from 1-based coordinate (standard in VCF) to 
+        # we convert from 1-based coordinate (standard in VCF) to
         # 0-based, to use with Genome
         chrom = np.array(vs["chrom"])
         n = len(chrom)
         pos = np.array(vs["pos"]) - 1
-        start = pos - window_size//2
-        end = pos + window_size//2
-        seq_fwd, seq_rev = zip(*(
-            genome.get_seq_fwd_rev(chrom[i], start[i], end[i]) for i in range(n)
-        ))
+        start = pos - window_size // 2
+        end = pos + window_size // 2
+        seq_fwd, seq_rev = zip(
+            *(genome.get_seq_fwd_rev(chrom[i], start[i], end[i]) for i in range(n))
+        )
         seq_fwd = np.array([list(seq.upper()) for seq in seq_fwd], dtype="object")
         seq_rev = np.array([list(seq.upper()) for seq in seq_rev], dtype="object")
         assert seq_fwd.shape[1] == window_size
@@ -93,12 +100,18 @@ def run_vep(
             )
 
         res = {}
-        res["input_ids_fwd"], res["pos_fwd"], res["ref_fwd"], res["alt_fwd"] = prepare_output(
-            seq_fwd, pos_fwd, ref_fwd, alt_fwd
-        )
-        res["input_ids_rev"], res["pos_rev"], res["ref_rev"], res["alt_rev"] = prepare_output(
-            seq_rev, pos_rev, ref_rev, alt_rev
-        )
+        (
+            res["input_ids_fwd"],
+            res["pos_fwd"],
+            res["ref_fwd"],
+            res["alt_fwd"],
+        ) = prepare_output(seq_fwd, pos_fwd, ref_fwd, alt_fwd)
+        (
+            res["input_ids_rev"],
+            res["pos_rev"],
+            res["ref_rev"],
+            res["alt_rev"],
+        ) = prepare_output(seq_rev, pos_rev, ref_rev, alt_rev)
         return res
 
     variants.set_transform(get_tokenized_seq)
@@ -117,16 +130,17 @@ if __name__ == "__main__":
         description="Run zero-shot variant effect prediction with AutoModelForMaskedLM"
     )
     parser.add_argument(
-        "variants_path", type=str,
+        "variants_path",
+        type=str,
         help="Variants path. Needs the following columns: chrom,pos,ref,alt. pos should be 1-based",
     )
     parser.add_argument(
-        "genome_path", type=str, help="Genome path (fasta, potentially compressed)",
+        "genome_path",
+        type=str,
+        help="Genome path (fasta, potentially compressed)",
     )
     parser.add_argument("window_size", type=int, help="Genomic window size")
-    parser.add_argument(
-        "model_path", help="Model path (local or on HF hub)", type=str
-    )
+    parser.add_argument("model_path", help="Model path (local or on HF hub)", type=str)
     parser.add_argument("output_path", help="Output path (parquet)", type=str)
     parser.add_argument(
         "--per-device-batch-size",
@@ -135,7 +149,8 @@ if __name__ == "__main__":
         default=8,
     )
     parser.add_argument(
-        "--tokenizer-path", type=str,
+        "--tokenizer-path",
+        type=str,
         help="Tokenizer path (optional, else will use model_path)",
     )
     parser.add_argument(
@@ -145,19 +160,28 @@ if __name__ == "__main__":
         "--dataloader-num-workers", type=int, default=0, help="Dataloader num workers"
     )
     parser.add_argument(
-        "--split", type=str, default="test", help="Dataset split",
+        "--split",
+        type=str,
+        default="test",
+        help="Dataset split",
     )
     parser.add_argument(
-        "--is-file", action="store_true", help="VARIANTS_PATH is a file, not directory",
+        "--is-file",
+        action="store_true",
+        help="VARIANTS_PATH is a file, not directory",
     )
     parser.add_argument(
-        "--format", type=str, default="parquet",
+        "--format",
+        type=str,
+        default="parquet",
         help="If is-file, specify format (parquet, csv, json)",
     )
     args = parser.parse_args()
 
     variants = load_dataset_from_file_or_dir(
-        args.variants_path, split=args.split, is_file=args.is_file,
+        args.variants_path,
+        split=args.split,
+        is_file=args.is_file,
         format=args.format,
     )
     genome = Genome(args.genome_path)
@@ -166,8 +190,13 @@ if __name__ == "__main__":
     )
     model = MLMforVEPModel(args.model_path)
     pred = run_vep(
-        variants, genome, args.window_size, tokenizer, model,
-        per_device_batch_size=args.per_device_batch_size, n_prefix=args.n_prefix,
+        variants,
+        genome,
+        args.window_size,
+        tokenizer,
+        model,
+        per_device_batch_size=args.per_device_batch_size,
+        n_prefix=args.n_prefix,
         dataloader_num_workers=args.dataloader_num_workers,
     )
     directory = os.path.dirname(args.output_path)
