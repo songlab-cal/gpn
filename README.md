@@ -3,6 +3,13 @@
 
 Code and resources from [GPN paper](https://doi.org/10.1101/2022.08.22.504706) and [GPN-MSA paper](TODO).
 
+## Table of contents
+- [Installation](#installation)
+- [Minimal usage](#minimal-usage)
+- [GPN](#gpn)
+- [GPN-MSA](#gpn-msa)
+- [Citation](#citation)
+
 ## Installation
 ```bash
 pip install git+https://github.com/songlab-cal/gpn.git
@@ -17,11 +24,6 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-brassicales")
 # or
 model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-msa-sapiens")
 ```
-
-## Table of contents
-- [GPN](#gpn)
-- [GPN-MSA](#gpn-msa)
-- [Citation](#citation)
 
 ## GPN
 Can also be called GPN-SS (single sequence).
