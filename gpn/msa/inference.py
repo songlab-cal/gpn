@@ -91,12 +91,6 @@ if __name__ == "__main__":
         help="VARIANTS_PATH is a file, not directory",
     )
     parser.add_argument(
-        "--format",
-        type=str,
-        default="parquet",
-        help="If is-file, specify format (parquet, csv, json)",
-    )
-    parser.add_argument(
         "--disable_aux_features",
         action="store_true",
     )
@@ -112,7 +106,6 @@ if __name__ == "__main__":
         args.input_path,
         split=args.split,
         is_file=args.is_file,
-        format=args.format,
     )
     genome_msa = GenomeMSA(
         args.msa_path, subset_chroms=dataset.unique("chrom"), in_memory=False

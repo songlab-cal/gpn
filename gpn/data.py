@@ -1,7 +1,7 @@
 from Bio import SeqIO, bgzf
 from Bio.Seq import Seq
 import bioframe as bf
-from datasets import load_dataset
+from datasets import load_dataset, Dataset
 import gzip
 from joblib import Parallel, delayed
 import multiprocessing as mp
@@ -166,14 +166,11 @@ def add_space_every_k(seq, k):
 def load_dataset_from_file_or_dir(
     path,
     split="test",
-    format="parquet",
     is_file=False,
     **kwargs,
 ):
-    # TODO: should add handling of vcf, could use load_table and create dataset
-    # from pandas df
     if is_file:
-        return load_dataset(format, data_files=path, split="train", **kwargs)
+        return Dataset.from_pandas(load_table(path))
     else:
         return load_dataset(path, split=split, **kwargs)
 
@@ -390,6 +387,7 @@ class GenomeMSA(object):
         self.reverse_complementer = ReverseComplementer()
         self.tokenizer = Tokenizer()
 
+        print("Loading MSA...")
         self.f = zarr.open(path, mode="r")
         chroms = self.f.keys()
         if subset_chroms is not None:
@@ -402,6 +400,7 @@ class GenomeMSA(object):
             # (attempts to load all data into memory)
             # beware: dict has issues with parallelism in Pytorch
             self.data = {chrom: self.f[chrom] for chrom in chroms}
+        print("Loading MSA... Done")
 
     def get_msa(self, chrom, start, end, strand="+", tokenize=False):
         msa = self.data[chrom][start:end]

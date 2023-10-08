@@ -155,19 +155,12 @@ if __name__ == "__main__":
         action="store_true",
         help="positions_PATH is a file, not directory",
     )
-    parser.add_argument(
-        "--format",
-        type=str,
-        default="parquet",
-        help="If is-file, specify format (parquet, csv, json)",
-    )
     args = parser.parse_args()
 
     positions = load_dataset_from_file_or_dir(
         args.positions_path,
         split=args.split,
         is_file=args.is_file,
-        format=args.format,
     )
     genome = Genome(args.genome_path)
     tokenizer = AutoTokenizer.from_pretrained(
