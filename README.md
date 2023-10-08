@@ -1,17 +1,38 @@
 # GPN (Genomic Pre-trained Network)
 [![hgt_genome_392c4_a47ce0](https://user-images.githubusercontent.com/5766420/228109137-85d48559-d1ae-4c9a-94b5-c79fc06ad45d.png)](  https://genome.ucsc.edu/s/gbenegas/gpn-arabidopsis)
 
+Code and resources from [GPN paper](https://doi.org/10.1101/2022.08.22.504706) and [GPN-MSA paper](TODO).
 
 ## Installation
 ```bash
 pip install git+https://github.com/songlab-cal/gpn.git
 ```
 
-## Application to *Arabidopsis thaliana*
-* Quick example to play with the model: `basic_example.ipynb` [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/songlab-cal/gpn/blob/main/basic_example.ipynb)
-* [Training, inference and analysis](analysis/arabidopsis)
+## Minimal usage
+```python
+import gpn.model
+from transformers import AutoModelForMaskedLM
 
-## Training on your own data
+model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-brassicales")
+# or
+model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-msa-sapiens")
+```
+
+## Table of contents
+- [GPN](#gpn)
+- [GPN-MSA](#gpn-msa)
+- [Citation](#citation)
+
+## GPN
+Can also be called GPN-SS (single sequence).
+
+### Examples
+* Play with the model: `examples/ss/basic_example.ipynb` [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/songlab-cal/gpn/blob/main/examples/ss/basic_example.ipynb)
+
+### Code and resources from specific papers
+* [*Arabidopsis thaliana*](analysis/arabidopsis)
+
+### Training on your own data
 1. [Snakemake workflow to create a dataset](workflow/make_dataset)
     - Can automatically download data from NCBI given a list of accessions, or use your own fasta files.
 2. Training
@@ -48,7 +69,19 @@ python -m gpn.ss.run_vep variants.parquet genome.fa.gz 512 your_output_dir resul
     --per-device-batch-size 4000 --is-file --dataloader-num-workers 16
 ```
 
+## GPN-MSA
+
+### Examples
+* Play with the model: `examples/msa/basic_example.ipynb`
+
+### Code and resources from specific papers
+* [Human](analysis/human)
+
+### Training on your own data
+Under construction.
+
 ## Citation
+GPN:
 ```bibtex
 @article{benegas2023dna,
 	author = {Gonzalo Benegas and Sanjit Singh Batra and Yun S. Song},
@@ -62,3 +95,5 @@ python -m gpn.ss.run_vep variants.parquet genome.fa.gz 512 your_output_dir resul
 	journal = {PNAS, in press}
 }
 ```
+
+GPN-MSA: TODO
