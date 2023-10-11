@@ -76,11 +76,12 @@ python -m gpn.ss.run_vep variants.parquet genome.fa.gz 512 your_output_dir resul
 ### Examples
 * Play with the model: `examples/msa/basic_example.ipynb`
 * Variant effect prediction: `examples/msa/vep.ipynb`
+* Training (human): `examples/msa/training.ipynb`
 
 ### Code and resources from specific papers
 * [Human](analysis/human)
 
-### Training on your own data
+### Training on other species (e.g. plants)
 Under construction.
 
 ## Citation

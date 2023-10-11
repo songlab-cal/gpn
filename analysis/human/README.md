@@ -8,5 +8,5 @@
 * [Logo track at UCSC Genome Browser](https://genome.ucsc.edu/s/gbenegas/gpn-msa-sapiens)
 
 ## Reproducing the analysis
-* Dependencies: `envs/general.yaml`
+* Dependencies: `workflow/envs/general.yaml`
 * Running Snakemake: `snakemake --cores all`
