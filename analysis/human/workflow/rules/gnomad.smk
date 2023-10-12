@@ -1,3 +1,6 @@
+from tqdm import tqdm
+
+
 chroms_gnomad = [str(i) for i in range(1, 23)]
 # minimum allele number (autosomes)
 MIN_AN = 2 * 70_000
@@ -119,4 +122,15 @@ rule filter_gnomad_enformer:
             df.consequence.str.contains("downstream_gene") |
             df.consequence.str.contains("intergenic")
         ]
+        df.to_parquet(output[0], index=False)
+
+
+rule merge_chroms_all_gnomad:
+    input:
+        expand("results/gnomad/{chrom}/all/variants.parquet", chrom=[str(i) for i in range(1, 23)] + ['X', 'Y']),
+    output:
+        "results/gnomad/all/test.parquet",
+    run:
+        df = pd.concat([pd.read_parquet(path) for path in tqdm(input)], ignore_index=True)
+        print(df)
         df.to_parquet(output[0], index=False)

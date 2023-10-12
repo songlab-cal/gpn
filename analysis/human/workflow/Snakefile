@@ -63,7 +63,6 @@ hparams = {
     ],
     "loss_weight": [
         0.1,
-        #1.0,
     ],
     "weight_conserved": [
         True,
@@ -95,17 +94,10 @@ models = sum(
                 44,
             ],
             max_steps=[
-                #15_000,
                 30_000,
-                #45_000,
-                #60_000,
-                #75_000,
             ],
             model_size=[
-                #"tiny",
-                #"small",
                 "medium",
-                #"large",
             ],
         ) for m in hparam_models
     ],
@@ -124,7 +116,6 @@ include: "rules/conservation.smk"
 include: "rules/esm1b.smk"
 include: "rules/cadd.smk"
 include: "rules/spliceai.smk"
-include: "rules/cpt1.smk"
 
 #models += nucleotide_transformer_models
 #models.append(nucleotide_transformer_models[-1])
@@ -137,7 +128,7 @@ include: "rules/cpt1.smk"
 
 rule all:
     input:
-        #expand("results/preds/{dataset}/{model}.parquet", model=models, dataset=datasets),
+        expand("results/preds/{dataset}/{model}.parquet", model=models, dataset=datasets),
         #expand("results/dataset/{dataset}/train.parquet", dataset=hparams["dataset"]),
         #expand("results/checkpoints/{model}", model=models),
         #f"results/positions/6/logits/{best_model}.parquet",
@@ -145,4 +136,4 @@ rule all:
         #f"results/embedding/umap/{best_model}.parquet",
         #f"results/embedding/classification/{best_model}.parquet",
         #expand("results/preds/results/variants_enformer/{model}.parquet", model=[best_model, "phyloP"]),
-        f"results/positions/6/bed_probs/{best_model}/bigwig.done",
+        #f"results/positions/6/bed_probs/{best_model}/bigwig.done",
