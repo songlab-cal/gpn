@@ -1,7 +1,7 @@
 # GPN (Genomic Pre-trained Network)
 [![hgt_genome_392c4_a47ce0](https://user-images.githubusercontent.com/5766420/228109137-85d48559-d1ae-4c9a-94b5-c79fc06ad45d.png)](  https://genome.ucsc.edu/s/gbenegas/gpn-arabidopsis)
 
-Code and resources from [GPN paper](https://doi.org/10.1101/2022.08.22.504706) and [GPN-MSA paper](TODO).
+Code and resources from [GPN paper](https://doi.org/10.1101/2022.08.22.504706) and [GPN-MSA paper](https://doi.org/10.1101/2023.10.10.561776).
 
 ## Table of contents
 - [Installation](#installation)
@@ -100,4 +100,13 @@ GPN:
 }
 ```
 
-GPN-MSA: TODO
+GPN-MSA:
+```bibtex
+@article{benegas2023gpnmsa,
+	author = {Gonzalo Benegas and Carlos Albors and Alan J. Aw and Chengzhong Ye and Yun S. Song},
+	title = {GPN-MSA: an alignment-based DNA language model for genome-wide variant effect prediction},
+	year = {2023},
+	doi = {10.1101/2023.10.10.561776},
+	journal = {bioRxiv}
+}
+```
