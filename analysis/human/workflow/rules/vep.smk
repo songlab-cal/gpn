@@ -86,7 +86,7 @@ rule run_vep_gpn:
     output:
         "results/preds/{dataset}/{alignment}/{species}/{window_size}/{model}.parquet",
     wildcard_constraints:
-        dataset="|".join(datasets + ["results/variants_enformer"]),
+        dataset="|".join(datasets + ["results/variants_enformer", "results/gnomad/all/defined/128"]),
         alignment="[A-Za-z0-9_]+",
         species="[A-Za-z0-9_-]+",
         window_size="\d+",

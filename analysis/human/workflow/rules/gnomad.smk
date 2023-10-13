@@ -134,3 +134,29 @@ rule merge_chroms_all_gnomad:
         df = pd.concat([pd.read_parquet(path) for path in tqdm(input)], ignore_index=True)
         print(df)
         df.to_parquet(output[0], index=False)
+
+
+rule gnomad_filter_undefined:
+    input:
+        "results/gnomad/all/test.parquet",
+        "results/intervals/{w}/defined.parquet",
+    output:
+        "results/gnomad/all/defined/{w}/test.parquet",
+    run:
+        V = pd.read_parquet(input[0])
+        print(V)
+        D = pd.read_parquet(input[1])
+
+        w = int(wildcards.w) 
+        V["start"] = V.pos - 1 - w // 2
+        V["end"] = V.pos - 1 + w // 2
+
+        V = bf.overlap(V, D, how="inner", return_overlap=True).drop(
+            columns=["start", "end", "chrom_", "start_", "end_"]
+        ).rename(columns=dict(overlap_start="start", overlap_end="end"))
+        V = V[V.end-V.start==w]
+        V.drop(columns=["start", "end"], inplace=True)
+        V = sort_chrom_pos(V)
+        print(V)
+
+        V.to_parquet(output[0], index=False)
