@@ -93,7 +93,6 @@ GPN:
 	elocation-id = {2022.08.22.504706},
 	year = {2023},
 	doi = {10.1101/2022.08.22.504706},
-	publisher = {Cold Spring Harbor Laboratory},
 	URL = {https://www.biorxiv.org/content/early/2023/08/04/2022.08.22.504706},
 	eprint = {https://www.biorxiv.org/content/early/2023/08/04/2022.08.22.504706.full.pdf},
 	journal = {PNAS, in press}
