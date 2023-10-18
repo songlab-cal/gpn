@@ -160,3 +160,17 @@ rule gnomad_filter_undefined:
         print(V)
 
         V.to_parquet(output[0], index=False)
+
+
+rule gnomad_all_add_preds:
+    input:
+        "results/gnomad/all/defined/{w}/test.parquet",
+        "results/preds/results/gnomad/all/defined/{w}/{model}.parquet",
+    output:
+        "results/add_preds/results/gnomad/all/defined/{w,[0-9]+}/{model}.parquet",
+    run:
+        V = pd.read_parquet(input[0])
+        print(V)
+        V["GPN-MSA"] = pd.read_parquet(input[1])["score"].values
+        print(V)
+        V.to_parquet(output[0], index=False)
