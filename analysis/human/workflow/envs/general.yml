@@ -4,4 +4,4 @@ dependencies:
 - multiz
 - ucsc-faonerecord
 - ucsc-mafspeciessubset
-- tabix
+- htslib

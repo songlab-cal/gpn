@@ -139,3 +139,4 @@ rule all:
         #f"results/positions/6/bed_probs/{best_model}/bigwig.done",
         #f"results/preds/results/gnomad/all/defined/128/{best_model}.parquet",
         #f"results/add_preds/results/gnomad/all/defined/128/{best_model}.parquet",
+        #f"results/add_preds/results/gnomad/all/defined/128/{best_model}.tsv.bgz.tbi",

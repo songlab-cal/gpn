@@ -29,3 +29,33 @@ def sort_chrom_pos(V):
 def check_ref(V, genome):
     V = V[V.apply(lambda v: v.ref == genome.get_nuc(v.chrom, v.pos).upper(), axis=1)]
     return V
+
+
+rule parquet_to_tsv:
+    input:
+        "{anything}.parquet",
+    output:
+        temp("{anything}.tsv"),
+    run:
+        df = pd.read_parquet(input[0], columns=["chrom", "pos", "ref", "alt", "GPN-MSA"])
+        df.to_csv(output[0], sep="\t", index=False, header=False, float_format='%.2f')
+
+
+rule bgzip:
+    input:
+        "{anything}.tsv",
+    output:
+        "{anything}.tsv.bgz",
+    threads:
+        workflow.cores
+    shell:
+        "bgzip -c {input} --threads {threads} > {output}"
+
+
+rule tabix:
+    input:
+        "{anything}.tsv.bgz",
+    output:
+        "{anything}.tsv.bgz.tbi",
+    shell:
+        "tabix -s 1 -b 2 -e 2 {input}"
