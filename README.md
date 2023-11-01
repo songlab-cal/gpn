@@ -1,7 +1,7 @@
 # GPN (Genomic Pre-trained Network)
 [![hgt_genome_392c4_a47ce0](https://user-images.githubusercontent.com/5766420/228109137-85d48559-d1ae-4c9a-94b5-c79fc06ad45d.png)](  https://genome.ucsc.edu/s/gbenegas/gpn-arabidopsis)
 
-Code and resources from [GPN paper](https://doi.org/10.1101/2022.08.22.504706) and [GPN-MSA paper](https://doi.org/10.1101/2023.10.10.561776).
+Code and resources from [GPN paper](https://doi.org/10.1073/pnas.2311219120) and [GPN-MSA paper](https://doi.org/10.1101/2023.10.10.561776).
 
 ## Table of contents
 - [Installation](#installation)
@@ -88,14 +88,16 @@ Under construction.
 GPN:
 ```bibtex
 @article{benegas2023dna,
-	author = {Gonzalo Benegas and Sanjit Singh Batra and Yun S. Song},
-	title = {DNA language models are powerful predictors of genome-wide variant effects},
-	elocation-id = {2022.08.22.504706},
-	year = {2023},
-	doi = {10.1101/2022.08.22.504706},
-	URL = {https://www.biorxiv.org/content/early/2023/08/04/2022.08.22.504706},
-	eprint = {https://www.biorxiv.org/content/early/2023/08/04/2022.08.22.504706.full.pdf},
-	journal = {PNAS, in press}
+author = {Gonzalo Benegas  and Sanjit Singh Batra  and Yun S. Song },
+title = {DNA language models are powerful predictors of genome-wide variant effects},
+journal = {Proceedings of the National Academy of Sciences},
+volume = {120},
+number = {44},
+pages = {e2311219120},
+year = {2023},
+doi = {10.1073/pnas.2311219120},
+URL = {https://www.pnas.org/doi/abs/10.1073/pnas.2311219120},
+eprint = {https://www.pnas.org/doi/pdf/10.1073/pnas.2311219120},
 }
 ```
 
