@@ -88,16 +88,16 @@ Under construction.
 GPN:
 ```bibtex
 @article{benegas2023dna,
-author = {Gonzalo Benegas  and Sanjit Singh Batra  and Yun S. Song },
-title = {DNA language models are powerful predictors of genome-wide variant effects},
-journal = {Proceedings of the National Academy of Sciences},
-volume = {120},
-number = {44},
-pages = {e2311219120},
-year = {2023},
-doi = {10.1073/pnas.2311219120},
-URL = {https://www.pnas.org/doi/abs/10.1073/pnas.2311219120},
-eprint = {https://www.pnas.org/doi/pdf/10.1073/pnas.2311219120},
+    author = {Gonzalo Benegas  and Sanjit Singh Batra  and Yun S. Song },
+    title = {DNA language models are powerful predictors of genome-wide variant effects},
+    journal = {Proceedings of the National Academy of Sciences},
+    volume = {120},
+    number = {44},
+    pages = {e2311219120},
+    year = {2023},
+    doi = {10.1073/pnas.2311219120},
+    URL = {https://www.pnas.org/doi/abs/10.1073/pnas.2311219120},
+    eprint = {https://www.pnas.org/doi/pdf/10.1073/pnas.2311219120},
 }
 ```
 
@@ -106,8 +106,12 @@ GPN-MSA:
 @article{benegas2023gpnmsa,
 	author = {Gonzalo Benegas and Carlos Albors and Alan J. Aw and Chengzhong Ye and Yun S. Song},
 	title = {GPN-MSA: an alignment-based DNA language model for genome-wide variant effect prediction},
+	elocation-id = {2023.10.10.561776},
 	year = {2023},
 	doi = {10.1101/2023.10.10.561776},
+	publisher = {Cold Spring Harbor Laboratory},
+	URL = {https://www.biorxiv.org/content/early/2023/10/11/2023.10.10.561776},
+	eprint = {https://www.biorxiv.org/content/early/2023/10/11/2023.10.10.561776.full.pdf},
 	journal = {bioRxiv}
 }
 ```
