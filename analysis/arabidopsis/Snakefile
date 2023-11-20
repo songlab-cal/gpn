@@ -54,8 +54,9 @@ ruleorder: get_kmer_spectrum > get_embeddings
 
 rule all:
     input:
+        expand("output/variants/all/vep_embeddings/{model}.parquet", model=models),
         #expand("output/variants/all/vep/{model}.parquet", model=models),
-        expand("output/embedding/classification/{model}.parquet", model=models + ["kmers_3", "kmers_6"]),
+        #expand("output/embedding/classification/{model}.parquet", model=models + ["kmers_3", "kmers_6"]),
         #expand(f"output/merged_dataset/{config['window_size']}/{config['step_size']}/{config['add_rc']}/balanced/data/{{split}}", split=splits),
         #"output/embedding/embeddings/kmers.parquet",
         #"output/assemblies.tex",
@@ -911,6 +912,21 @@ rule run_vep:
     shell:
         """
         python -m gpn.ss.run_vep {input} {WINDOW_SIZE} {wildcards.model} {output} \
+        --per-device-batch-size 4000 --is-file \
+        --dataloader-num-workers {threads}
+        """
+
+
+rule run_vep_embeddings:
+    input:
+        "{anything}/variants.parquet",
+        "output/genome.fa.gz",
+    output:
+        "{anything}/vep_embeddings/{model}.parquet",
+    threads: workflow.cores
+    shell:
+        """
+        python -m gpn.ss.run_vep_embeddings {input} {WINDOW_SIZE} {wildcards.model} {output} \
         --per-device-batch-size 4000 --is-file \
         --dataloader-num-workers {threads}
         """
