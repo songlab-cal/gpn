@@ -42,6 +42,7 @@ CHROMS = np.concatenate(list(SPLIT_CHROMS.values()))
 
 datasets = [
     "songlab/human_variants",
+    "results/causaldb",
 ]
 
 model_template = "{dataset}/{model_size}/{loss_weight}/{seed}/{max_steps}/{use_aux_features}/{weight_conserved}/{flip_nonconserved}"
@@ -104,6 +105,7 @@ models = sum(
     []
 )
 best_model = models[0]
+models = [best_model]
 
 include: "rules/common.smk"
 include: "rules/training.smk"
@@ -119,11 +121,11 @@ include: "rules/spliceai.smk"
 include: "rules/hyenadna.smk"
 
 #models += nucleotide_transformer_models
-models += hyenadna_models
+#models += hyenadna_models
 #models.append(nucleotide_transformer_models[-1])
 #models.append("ESM-1b")
 #models.append("msa_multiz100way/89")
-#models.append("phyloP")
+models.append("phyloP")
 #models.append("phastCons")
 #models = ["ESM-1b"]
 #pd.DataFrame(models).to_csv("models.txt", index=False, header=False)
