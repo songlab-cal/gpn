@@ -3,7 +3,7 @@ hyenadna_params = {
     'LongSafari/hyenadna-small-32k-seqlen-hf': "--per-device-batch-size 64",
     'LongSafari/hyenadna-medium-160k-seqlen-hf': "--per-device-batch-size 8",
     'LongSafari/hyenadna-medium-450k-seqlen-hf': "--per-device-batch-size 2",
-    'LongSafari/hyenadna-large-1m-seqlen-hf': "--per-device-batch-size 1",
+    #'LongSafari/hyenadna-large-1m-seqlen-hf': "--per-device-batch-size 1",
 }
 hyenadna_models = list(hyenadna_params.keys())
 
