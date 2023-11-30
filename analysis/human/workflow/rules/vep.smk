@@ -100,3 +100,26 @@ rule run_vep_gpn:
         {wildcards.window_size} {input[1]} {output} \
         --per_device_batch_size 2048 --dataloader_num_workers {threads} {params}
         """
+
+
+rule run_vep_embedding_gpn:
+    input:
+        "results/msa/{alignment}/{species}/all.zarr",
+        "results/checkpoints/{alignment}/{species}/{window_size}/{model}",
+    output:
+        "results/preds/vep_embedding/{dataset}/{alignment}/{species}/{window_size}/{model}.parquet",
+    wildcard_constraints:
+        dataset="|".join(datasets + ["results/variants_enformer", "results/gnomad/all/defined/128"]),
+        alignment="[A-Za-z0-9_]+",
+        species="[A-Za-z0-9_-]+",
+        window_size="\d+",
+    params:
+        lambda wildcards: "--disable_aux_features" if wildcards.model.split("/")[-3] == "False" else ""
+    threads:
+        workflow.cores
+    shell:
+        """
+        python -m gpn.msa.inference vep_embedding {wildcards.dataset} {input[0]} \
+        {wildcards.window_size} {input[1]} {output} \
+        --per_device_batch_size 2048 --dataloader_num_workers {threads} {params}
+        """

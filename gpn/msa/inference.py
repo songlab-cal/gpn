@@ -9,6 +9,7 @@ from gpn.data import GenomeMSA
 from gpn.msa.vep import VEPInference
 from gpn.msa.logits import LogitsInference
 from gpn.msa.embedding import EmbeddingInference
+from gpn.msa.vep_embedding import VEPEmbeddingInference
 
 
 disable_caching()
@@ -18,6 +19,7 @@ class_mapping = {
     "vep": VEPInference,
     "logits": LogitsInference,
     "embedding": EmbeddingInference,
+    "vep_embedding": VEPEmbeddingInference,
 }
 
 
@@ -51,7 +53,7 @@ if __name__ == "__main__":
         - logits: masked language model logits
         - embedding: averaged embedding from last layer
         """,
-        choices=["vep", "logits", "embedding"],
+        choices=["vep", "logits", "embedding", "vep_embedding"],
     )
     parser.add_argument(
         "input_path",
