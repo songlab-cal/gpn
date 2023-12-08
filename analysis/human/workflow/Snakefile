@@ -41,10 +41,9 @@ CHROMS = np.concatenate(list(SPLIT_CHROMS.values()))
 
 
 datasets = [
-    #"songlab/human_variants",
-    #"results/causaldb",
+    "songlab/human_variants",
     #"results/gtex/merged",
-    "results/finemapping/processed",
+    #"results/finemapping/processed",
 ]
 
 model_template = "{dataset}/{model_size}/{loss_weight}/{seed}/{max_steps}/{use_aux_features}/{weight_conserved}/{flip_nonconserved}"
@@ -134,7 +133,7 @@ include: "rules/hyenadna.smk"
 
 rule all:
     input:
-        expand("results/preds/{dataset}/{model}.parquet", model=models, dataset=datasets),
+        #expand("results/preds/{dataset}/{model}.parquet", model=models, dataset=datasets),
         expand("results/preds/vep_embedding/{dataset}/{model}.parquet", model=models, dataset=datasets),
         #expand("results/dataset/{dataset}/train.parquet", dataset=hparams["dataset"]),
         #expand("results/checkpoints/{model}", model=models),
