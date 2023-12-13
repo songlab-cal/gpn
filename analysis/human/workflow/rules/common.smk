@@ -1,4 +1,5 @@
 from liftover import get_lifter
+from scipy.spatial.distance import cdist
 
 
 def lift_hg19_to_hg38(V):
@@ -59,3 +60,19 @@ rule tabix:
         "{anything}.tsv.bgz.tbi",
     shell:
         "tabix -s 1 -b 2 -e 2 {input}"
+
+
+def match_columns(df, target, covariates):
+    print("WARNING: enforcing same chrom in a naive, slow manner")
+    pos = df[df[target]]
+    neg = df[~df[target]]
+    D = cdist(pos[covariates], neg[covariates])
+
+    closest = []
+    dists = []
+    for i in tqdm(range(len(pos))):
+        D[i, neg.chrom != pos.iloc[i].chrom] = np.inf  # ensure picking from same chrom
+        j = np.argmin(D[i])
+        closest.append(j)
+        D[:, j] = np.inf  # ensure it cannot be picked up again
+    return pd.concat([pos, neg.iloc[closest]])
