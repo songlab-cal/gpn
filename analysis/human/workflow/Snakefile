@@ -124,7 +124,7 @@ include: "rules/hyenadna.smk"
 
 #models += nucleotide_transformer_models
 #models += hyenadna_models
-#models.append(nucleotide_transformer_models[-1])
+models.append(nucleotide_transformer_models[-1])
 #models.append("ESM-1b")
 #models.append("msa_multiz100way/89")
 #models.append("phyloP")
@@ -136,7 +136,7 @@ include: "rules/hyenadna.smk"
 rule all:
     input:
         expand("results/preds/{dataset}/{model}.parquet", model=models, dataset=datasets),
-        #expand("results/preds/vep_embedding/{dataset}/{model}.parquet", model=models, dataset=datasets),
+        expand("results/preds/vep_embedding/{dataset}/{model}.parquet", model=models, dataset=datasets),
         #expand("results/dataset/{dataset}/train.parquet", dataset=hparams["dataset"]),
         #expand("results/checkpoints/{model}", model=models),
         #f"results/positions/6/logits/{best_model}.parquet",
