@@ -1,8 +1,9 @@
 include: "clinvar.smk"
 include: "cosmic.smk"
-include: "omim.smk"
-include: "gnomad.smk"
 include: "enformer.smk"
+include: "gnomad.smk"
+include: "mpra.smk"
+include: "omim.smk"
 
 
 rule merge_variants:
