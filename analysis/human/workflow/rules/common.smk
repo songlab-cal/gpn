@@ -32,6 +32,17 @@ def check_ref(V, genome):
     return V
 
 
+def check_ref_alt(V, genome):
+    V["ref_nuc"] = V.progress_apply(
+        lambda v: genome.get_nuc(v.chrom, v.pos).upper(), axis=1
+    )
+    mask = V['ref'] != V['ref_nuc']
+    V.loc[mask, ['ref', 'alt']] = V.loc[mask, ['alt', 'ref']].values
+    V = V[V['ref'] == V['ref_nuc']]
+    V.drop(columns=["ref_nuc"], inplace=True)
+    return V
+
+
 rule parquet_to_tsv:
     input:
         "{anything}.parquet",

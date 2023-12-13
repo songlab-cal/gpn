@@ -17,6 +17,7 @@ rule gwas_process:
     input:
         "results/gwas/raw/release1.1/UKBB_94traits_release1.bed.gz",
         "results/gwas/raw/release1.1/UKBB_94traits_release1.cols",
+        "results/genome.fa.gz",
     output:
         "results/gwas/processed.parquet",
     run:
@@ -32,6 +33,10 @@ rule gwas_process:
         V = V[V.pos != -1]
         print(V.shape)
         V = V[(V.ref.str.len()==1) & (V.alt.str.len()==1)]
+        print(V.shape)
+        genome = Genome(input[2])
+        V = check_ref_alt(V, genome)
+        print(V.shape)
         V.to_parquet(output[0], index=False) 
 
 
