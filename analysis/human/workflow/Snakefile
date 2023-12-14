@@ -125,6 +125,7 @@ include: "rules/hyenadna.smk"
 #models += nucleotide_transformer_models
 #models += hyenadna_models
 models.append(nucleotide_transformer_models[-1])
+models.append(hyenadna_models[-1])
 #models.append("ESM-1b")
 #models.append("msa_multiz100way/89")
 #models.append("phyloP")

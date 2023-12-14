@@ -8,7 +8,7 @@ import os
 import pandas as pd
 import tempfile
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, Trainer, TrainingArguments
+from transformers import AutoTokenizer, AutoModel, Trainer, TrainingArguments
 
 import gpn.model
 from gpn.data import Genome, load_dataset_from_file_or_dir, token_input_id
@@ -23,33 +23,20 @@ max_lengths = {
 }
 
 
-class CLMforVEPModel(torch.nn.Module):
+class VEPEmbedding(torch.nn.Module):
     def __init__(self, model_path):
         super().__init__()
-        self.model = AutoModelForCausalLM.from_pretrained(
+        self.model = AutoModel.from_pretrained(
             model_path, trust_remote_code=True,
         )
 
-    def log_likelihood(self, input_ids):
-        B = input_ids.shape[0]
-        labels = input_ids#.clone()
-        logits = self.model(input_ids=input_ids).logits
-        logits = logits.float()
-        # Shift so that tokens < n predict n
-        shift_logits = logits[..., :-1, :].contiguous()
-        shift_labels = labels[..., 1:].contiguous()
+    def get_embedding(self, input_ids):
+        return self.model(input_ids=input_ids).last_hidden_state
 
-        loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
-        shift_logits = shift_logits.view(-1, self.model.vocab_size)
-        shift_labels = shift_labels.view(-1)
-        # Enable model parallelism
-        shift_labels = shift_labels.to(shift_logits.device)
-        loss = loss_fct(shift_logits, shift_labels)
-        res = -loss.reshape(B, -1).mean(dim=-1)
-        return res
-
-    def get_llr(self, input_ids_ref, input_ids_alt):
-        return self.log_likelihood(input_ids_alt) - self.log_likelihood(input_ids_ref)
+    def get_scores(self, input_ids_ref, input_ids_alt):
+        embedding_ref = self.get_embedding(input_ids_ref)
+        embedding_alt = self.get_embedding(input_ids_alt)
+        return (embedding_ref * embedding_alt).sum(dim=1)
 
     def forward(
         self,
@@ -58,10 +45,9 @@ class CLMforVEPModel(torch.nn.Module):
         input_ids_ref_rev=None,
         input_ids_alt_rev=None,
     ):
-        llr_fwd = self.get_llr(input_ids_ref_fwd, input_ids_alt_fwd)
-        llr_rev = self.get_llr(input_ids_ref_rev, input_ids_alt_rev)
-        llr = (llr_fwd+llr_rev)/2
-        return llr
+        fwd = self.get_scores(input_ids_ref_fwd, input_ids_alt_fwd)
+        rev = self.get_scores(input_ids_ref_rev, input_ids_alt_rev)
+        return (fwd + rev) / 2
 
 
 def run_vep(
@@ -81,8 +67,8 @@ def run_vep(
         chrom = np.array(vs["chrom"])
         n = len(chrom)
         pos = np.array(vs["pos"]) - 1
-        start = pos - window_size//2
-        end = pos + window_size//2
+        start = pos - window_size // 2
+        end = pos + window_size // 2
 
         chrom_size = genome.get_all_intervals().set_index("chrom").end
 
@@ -183,11 +169,11 @@ if __name__ == "__main__":
     genome = Genome(args.genome_path, subset_chroms=subset_chroms)
 
     df = variants.to_pandas()
-    df["is_valid"] = True
     #df["is_valid"] = (
     #    (df.source == "ClinVar") |
     #    ((df.label=="Common") & (df.consequence.str.contains("missense")))
     #)
+    df["is_valid"] = True
     # Additional code to select only 1000 from each label
     #valid_indices = df[df.is_valid].groupby('label').apply(lambda x: x.sample(min(len(x), 1000), random_state=1)).index.get_level_values(1)
     #df["is_valid"] = df.index.isin(valid_indices)
@@ -199,7 +185,7 @@ if __name__ == "__main__":
         args.tokenizer_path if args.tokenizer_path else args.model_path,
         trust_remote_code=True,
     )
-    model = CLMforVEPModel(args.model_path)
+    model = VEPEmbedding(args.model_path)
     pred = run_vep(
         variants, genome, tokenizer, model, max_lengths[args.model_path],
         per_device_batch_size=args.per_device_batch_size,
@@ -208,6 +194,7 @@ if __name__ == "__main__":
     directory = os.path.dirname(args.output_path)
     if directory != "" and not os.path.exists(directory):
         os.makedirs(directory)
-    df.loc[df.is_valid, "score"] = pred
-    print(df["score"])
-    df[["score"]].to_parquet(args.output_path, index=False)
+    cols = [f"embedding_{i}" for i in range(pred.shape[1])]
+    df.loc[df.is_valid, cols] = pred
+    print(df[cols])
+    df[cols].to_parquet(args.output_path, index=False)
