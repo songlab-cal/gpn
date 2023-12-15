@@ -19,6 +19,7 @@ rule run_vep_nucleotide_transformer:
         workflow.cores
     params:
         lambda wildcards: nucleotide_transformer_params[wildcards.model],
+    priority: 20
     shell:
         """
         python workflow/scripts/run_vep_nucleotide_transformer.py {wildcards.dataset} {input} \
@@ -38,6 +39,7 @@ rule run_vep_embeddings_nucleotide_transformer:
         workflow.cores
     params:
         lambda wildcards: nucleotide_transformer_params[wildcards.model],
+    priority: 20
     shell:
         """
         python workflow/scripts/run_vep_embeddings_nucleotide_transformer.py {wildcards.dataset} {input} \

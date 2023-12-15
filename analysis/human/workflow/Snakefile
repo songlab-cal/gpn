@@ -41,9 +41,9 @@ CHROMS = np.concatenate(list(SPLIT_CHROMS.values()))
 
 
 datasets = [
-    #"songlab/human_variants",
+    "songlab/human_variants",
     #"results/gtex/merged",
-    "results/gwas/matched",
+    #"results/gwas/matched",
     #"results/mpra/processed",
 ]
 
@@ -52,6 +52,7 @@ model_template = "{dataset}/{model_size}/{loss_weight}/{seed}/{max_steps}/{use_a
 # default is first
 hparams = {
     "dataset": [
+        # default
         "multiz100way/89/128/64/True/defined.phastCons.percentile-75_0.05_0.001",
 
         # changing percentage
@@ -59,6 +60,9 @@ hparams = {
 
         # using more species
         "multiz100way/99/128/64/True/defined.phastCons.percentile-75_0.05_0.001",
+
+        # changing window size
+        "multiz100way/89/256/128/True/defined.phastCons.percentile-75_0.05_0.001",
     ],
     "use_aux_features": [
         True,
@@ -93,8 +97,8 @@ models = sum(
             m,
             seed=[
                 42,
-                43,
-                44,
+                #43,
+                #44,
             ],
             max_steps=[
                 30_000,
@@ -107,7 +111,7 @@ models = sum(
     []
 )
 best_model = models[0]
-models = [best_model]
+#models = [best_model]
 
 include: "rules/common.smk"
 include: "rules/training.smk"
@@ -124,8 +128,8 @@ include: "rules/hyenadna.smk"
 
 #models += nucleotide_transformer_models
 #models += hyenadna_models
-models.append(nucleotide_transformer_models[-1])
-models.append(hyenadna_models[-1])
+#models.append(nucleotide_transformer_models[-1])
+#models.append(hyenadna_models[-1])
 #models.append("ESM-1b")
 #models.append("msa_multiz100way/89")
 #models.append("phyloP")
@@ -137,7 +141,7 @@ models.append(hyenadna_models[-1])
 rule all:
     input:
         expand("results/preds/{dataset}/{model}.parquet", model=models, dataset=datasets),
-        expand("results/preds/vep_embedding/{dataset}/{model}.parquet", model=models, dataset=datasets),
+        #expand("results/preds/vep_embedding/{dataset}/{model}.parquet", model=models, dataset=datasets),
         #expand("results/dataset/{dataset}/train.parquet", dataset=hparams["dataset"]),
         #expand("results/checkpoints/{model}", model=models),
         #f"results/positions/6/logits/{best_model}.parquet",

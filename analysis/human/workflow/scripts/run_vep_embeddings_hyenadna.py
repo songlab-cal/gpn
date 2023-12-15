@@ -173,7 +173,8 @@ if __name__ == "__main__":
     #    (df.source == "ClinVar") |
     #    ((df.label=="Common") & (df.consequence.str.contains("missense")))
     #)
-    df["is_valid"] = True
+    #df["is_valid"] = True
+    df["is_valid"] = df.Element.isin(['LDLR'])# 'PKLR-48h', 'IRF4'])  # for MPRA
     # Additional code to select only 1000 from each label
     #valid_indices = df[df.is_valid].groupby('label').apply(lambda x: x.sample(min(len(x), 1000), random_state=1)).index.get_level_values(1)
     #df["is_valid"] = df.index.isin(valid_indices)
