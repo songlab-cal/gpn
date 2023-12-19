@@ -44,7 +44,7 @@ Can also be called GPN-SS (single sequence).
     - Specify config overrides: e.g. `--config_overrides n_layers=30`
     - Example:
 ```bash
-WANDB_PROJECT=your_project python -m gpn.ss.run_mlm --do_train --do_eval \
+WANDB_PROJECT=your_project torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{print NF}') -m gpn.ss.run_mlm --do_train --do_eval \
     --fp16 --report_to wandb --prediction_loss_only True --remove_unused_columns False \
     --dataset_name results/dataset --tokenizer_name gonzalobenegas/tokenizer-dna-mlm \
     --soft_masked_loss_weight_train 0.1 --soft_masked_loss_weight_evaluation 0.0 \
@@ -54,20 +54,21 @@ WANDB_PROJECT=your_project python -m gpn.ss.run_mlm --do_train --do_eval \
     --eval_steps 10000 --logging_steps 10000 --max_steps 120000 --warmup_steps 1000 \
     --learning_rate 1e-3 --lr_scheduler_type constant_with_warmup \
     --run_name your_run --output_dir your_output_dir --model_type ConvNet \
-    --per_device_train_batch_size 512 --per_device_eval_batch_size 512 --gradient_accumulation_steps 1
+    --per_device_train_batch_size 512 --per_device_eval_batch_size 512 --gradient_accumulation_steps 1 \
+    --torch_compile
 ```
 3. Extract embeddings
     - Input file requires `chrom`, `start`, `end`
     - Example:
 ```bash
-python -m gpn.ss.get_embeddings windows.parquet genome.fa.gz 100 your_output_dir \
+torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{print NF}') -m gpn.ss.get_embeddings windows.parquet genome.fa.gz 100 your_output_dir \
     results.parquet --per-device-batch-size 4000 --is-file --dataloader-num-workers 16
 ```
 4. Variant effect prediction
     - Input file requires `chrom`, `pos`, `ref`, `alt`
     - Example:
 ```bash
-python -m gpn.ss.run_vep variants.parquet genome.fa.gz 512 your_output_dir results.parquet \
+torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{print NF}') -m gpn.ss.run_vep variants.parquet genome.fa.gz 512 your_output_dir results.parquet \
     --per-device-batch-size 4000 --is-file --dataloader-num-workers 16
 ```
 

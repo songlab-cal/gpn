@@ -136,7 +136,7 @@ rule get_embedding:
     threads: workflow.cores
     shell:
         """
-        python -m gpn.msa.inference embedding {input[0]} {input[1]} \
+        torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}') -m gpn.msa.inference embedding {input[0]} {input[1]} \
         {wildcards.window_size} {input[2]} {output} --is_file \
         --center_window_size {config[center_window_size]} \
         --per_device_batch_size {config[per_device_batch_size]} \

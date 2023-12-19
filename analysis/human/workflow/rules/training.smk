@@ -309,8 +309,8 @@ rule train_gpn_msa:
     priority: 100
     shell:
         """
-        WANDB_PROJECT={params.project_name} python -m gpn.msa.train --do_train \
-        --do_eval --fp16 --report_to wandb --prediction_loss_only True \
+        WANDB_PROJECT={params.project_name} torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}') -m gpn.msa.train
+        --do_train --do_eval --fp16 --report_to wandb --prediction_loss_only True \
         --dataset_name results/dataset/{wildcards.dataset} \
         --msa_path {input[0]} \
         --run_name {params.run_name} --output_dir {output} \
@@ -328,4 +328,5 @@ rule train_gpn_msa:
         --weight_conserved {wildcards.weight_conserved} \
         --flip_nonconserved {wildcards.flip_nonconserved} \
         --remove_unused_columns False \
+        --torch_compile
         """

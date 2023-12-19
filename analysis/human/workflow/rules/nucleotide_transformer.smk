@@ -22,7 +22,7 @@ rule run_vep_nucleotide_transformer:
     priority: 20
     shell:
         """
-        python workflow/scripts/run_vep_nucleotide_transformer.py {wildcards.dataset} {input} \
+        torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}') workflow/scripts/run_vep_nucleotide_transformer.py {wildcards.dataset} {input} \
         {wildcards.model} {output} --dataloader-num-workers 16 {params}
         """
 
@@ -42,6 +42,6 @@ rule run_vep_embeddings_nucleotide_transformer:
     priority: 20
     shell:
         """
-        python workflow/scripts/run_vep_embeddings_nucleotide_transformer.py {wildcards.dataset} {input} \
+        torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}') workflow/scripts/run_vep_embeddings_nucleotide_transformer.py {wildcards.dataset} {input} \
         {wildcards.model} {output} --dataloader-num-workers 16 {params}
         """

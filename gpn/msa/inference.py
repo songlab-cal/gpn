@@ -35,6 +35,8 @@ def run_inference(
         per_device_eval_batch_size=per_device_batch_size,
         dataloader_num_workers=dataloader_num_workers,
         remove_unused_columns=False,
+        torch_compile=True,
+        fp16=True,
     )
     trainer = Trainer(model=inference.model, args=training_args)
     pred = trainer.predict(test_dataset=dataset).predictions

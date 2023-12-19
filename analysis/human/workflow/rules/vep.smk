@@ -98,7 +98,7 @@ rule run_vep_gpn:
         workflow.cores
     shell:
         """
-        python -m gpn.msa.inference vep {wildcards.dataset} {input[0]} \
+        torchrun --nproc_per_node 4 -m gpn.msa.inference vep {wildcards.dataset} {input[0]} \
         {wildcards.window_size} {input[1]} {output} \
         --per_device_batch_size 2048 --dataloader_num_workers {threads} {params}
         """
@@ -121,7 +121,7 @@ rule run_vep_embedding_gpn:
         workflow.cores
     shell:
         """
-        python -m gpn.msa.inference vep_embedding {wildcards.dataset} {input[0]} \
+        torchrun --nproc_per_node 4 -m gpn.msa.inference vep_embedding {wildcards.dataset} {input[0]} \
         {wildcards.window_size} {input[1]} {output} \
         --per_device_batch_size 2048 --dataloader_num_workers {threads} {params}
         """

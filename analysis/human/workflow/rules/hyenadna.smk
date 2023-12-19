@@ -22,7 +22,7 @@ rule run_vep_hyenadna:
         lambda wildcards: hyenadna_params[wildcards.model],
     shell:
         """
-        python workflow/scripts/run_vep_hyenadna.py {wildcards.dataset} {input} \
+        torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}') workflow/scripts/run_vep_hyenadna.py {wildcards.dataset} {input} \
         {wildcards.model} {output} --dataloader-num-workers {threads} {params}
         """
 
@@ -41,6 +41,6 @@ rule run_vep_embeddings_hyenadna:
         lambda wildcards: hyenadna_params[wildcards.model],
     shell:
         """
-        python workflow/scripts/run_vep_embeddings_hyenadna.py {wildcards.dataset} {input} \
+        torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}') workflow/scripts/run_vep_embeddings_hyenadna.py {wildcards.dataset} {input} \
         {wildcards.model} {output} --dataloader-num-workers {threads} {params}
         """

@@ -56,28 +56,29 @@ hparams = {
         "multiz100way/89/128/64/True/defined.phastCons.percentile-75_0.05_0.001",
 
         # changing percentage
-        "multiz100way/89/128/64/True/defined.phastCons.percentile-75_0.50_0.001",
+        #"multiz100way/89/128/64/True/defined.phastCons.percentile-75_0.50_0.001",
 
         # using more species
-        "multiz100way/99/128/64/True/defined.phastCons.percentile-75_0.05_0.001",
+        #"multiz100way/99/128/64/True/defined.phastCons.percentile-75_0.05_0.001",
 
         # changing window size
+        "multiz100way/89/64/32/True/defined.phastCons.percentile-75_0.05_0.001",
         "multiz100way/89/256/128/True/defined.phastCons.percentile-75_0.05_0.001",
     ],
     "use_aux_features": [
         True,
-        False,
+        #False,
     ],
     "loss_weight": [
         0.1,
     ],
     "weight_conserved": [
         True,
-        False,
+        #False,
     ],
     "flip_nonconserved": [
         True,
-        False,
+        #False,
     ],
 }
 
