@@ -62,8 +62,9 @@ hparams = {
         #"multiz100way/99/128/64/True/defined.phastCons.percentile-75_0.05_0.001",
 
         # changing window size
-        "multiz100way/89/64/32/True/defined.phastCons.percentile-75_0.05_0.001",
-        "multiz100way/89/256/128/True/defined.phastCons.percentile-75_0.05_0.001",
+        #"multiz100way/89/32/16/True/defined.phastCons.percentile-75_0.05_0.001",
+        #"multiz100way/89/64/32/True/defined.phastCons.percentile-75_0.05_0.001",
+        #"multiz100way/89/256/128/True/defined.phastCons.percentile-75_0.05_0.001",
     ],
     "use_aux_features": [
         True,
@@ -141,11 +142,12 @@ include: "rules/hyenadna.smk"
 
 rule all:
     input:
-        expand("results/preds/{dataset}/{model}.parquet", model=models, dataset=datasets),
+        #expand("results/preds/{dataset}/{model}.parquet", model=models, dataset=datasets),
         #expand("results/preds/vep_embedding/{dataset}/{model}.parquet", model=models, dataset=datasets),
         #expand("results/dataset/{dataset}/train.parquet", dataset=hparams["dataset"]),
         #expand("results/checkpoints/{model}", model=models),
-        #f"results/positions/6/logits/{best_model}.parquet",
+        #expand("results/preds/{dataset}/{model}.{window_size_ablation}.parquet", model=models, dataset=datasets, window_size_ablation=[4, 8, 16, 32, 64]),
+        expand("results/positions/{chrom}/logits/{model}.parquet", chrom=CHROMS, model=[best_model]),
         #f"results/positions/promoter/modisco/{best_model}/report",
         #f"results/embedding/umap/{best_model}.parquet",
         #f"results/embedding/classification/{best_model}.parquet",

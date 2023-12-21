@@ -2,6 +2,10 @@ from liftover import get_lifter
 from scipy.spatial.distance import cdist
 
 
+COORDINATES = ["chrom", "pos", "ref", "alt"]
+NUCLEOTIDES = list("ACGT")
+
+
 def lift_hg19_to_hg38(V):
     converter = get_lifter('hg19', 'hg38')
 
@@ -87,3 +91,9 @@ def match_columns(df, target, covariates):
         closest.append(j)
         D[:, j] = np.inf  # ensure it cannot be picked up again
     return pd.concat([pos, neg.iloc[closest]])
+
+
+def filter_snp(V):
+    V = V[V.ref.isin(NUCLEOTIDES)]
+    V = V[V.alt.isin(NUCLEOTIDES)]
+    return V

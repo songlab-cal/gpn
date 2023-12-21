@@ -87,6 +87,9 @@ rule make_positions_chrom:
         positions.to_parquet(output[0], index=False)
 
 
+# since introducing torchrun, it seems like it loads the "dataset" (coordinates)
+# in each worker, which uses a lot of memory for gigantic chroms. thus, reduced
+# dataloader num workers
 rule get_logits:
     input:
         "{anything}/positions.parquet",
@@ -94,11 +97,13 @@ rule get_logits:
         "results/checkpoints/{alignment}/{species}/{window_size}/{model}",
     output:
         "{anything}/logits/{alignment,[A-Za-z0-9]+}/{species,[A-Za-z0-9]+}/{window_size,\d+}/{model}.parquet",
+    threads:
+        workflow.cores
     shell:
         """
         torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}') -m gpn.msa.inference logits {input[0]} {input[1]} {wildcards.window_size} {input[2]} {output} \
         --per_device_batch_size {config[per_device_batch_size]} --is_file \
-        --dataloader_num_workers {config[dataloader_num_workers]}
+        --dataloader_num_workers 4
         """
 
 

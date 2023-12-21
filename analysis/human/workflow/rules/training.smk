@@ -37,26 +37,36 @@ rule get_conservation_intervals:
         "results/conservation/{conservation}.bw",
     output:
         "results/intervals/{window_size}/defined.{conservation}.{operation}.parquet",
+    threads:
+        workflow.cores
     run:
         import pyBigWig
 
         intervals = pd.read_parquet(input[0])
         print(intervals)
-        bw = pyBigWig.open(input[1])
+        #bw = pyBigWig.open(input[1])
         window_size = int(wildcards["window_size"])
         step_size = window_size // 2
         intervals = make_windows(intervals, window_size, step_size)
         print(intervals)
 
         operation = wildcards["operation"]
+        if operation == "mean":
+            f = lambda v, bw: bw.stats(f"chr{v.chrom}", v.start, v.end, exact=True)[0]
+        elif operation == "percentile-75":
+            f = lambda v, bw: np.quantile(bw.values(f"chr{v.chrom}", v.start, v.end), 0.75)
 
         def run_operation(v):
-            if operation == "mean":
-                return bw.stats(f"chr{v.chrom}", v.start, v.end, exact=True)[0]
-            elif operation == "percentile-75":
-                return np.quantile(bw.values(f"chr{v.chrom}", v.start, v.end), 0.75)
+            bw = pyBigWig.open(input[1])
+            res = f(v, bw)
+            bw.close()
+            return res
 
-        intervals["conservation"] = intervals.progress_apply(
+        from pandarallel import pandarallel
+        pandarallel.initialize(progress_bar=True, nb_workers=threads)
+
+        #intervals["conservation"] = intervals.progress_apply(
+        intervals["conservation"] = intervals.parallel_apply(
             run_operation, axis=1,
         )
         print(intervals)
@@ -309,7 +319,7 @@ rule train_gpn_msa:
     priority: 100
     shell:
         """
-        WANDB_PROJECT={params.project_name} torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}') -m gpn.msa.train
+        WANDB_PROJECT={params.project_name} torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}') -m gpn.msa.train \
         --do_train --do_eval --fp16 --report_to wandb --prediction_loss_only True \
         --dataset_name results/dataset/{wildcards.dataset} \
         --msa_path {input[0]} \

@@ -125,3 +125,31 @@ rule run_vep_embedding_gpn:
         {wildcards.window_size} {input[1]} {output} \
         --per_device_batch_size 2048 --dataloader_num_workers {threads} {params}
         """
+
+
+#ruleorder: run_vep_gpn_window_size_ablation > run_vep_gpn
+#
+#
+#rule run_vep_gpn_window_size_ablation:
+#    input:
+#        "results/msa/{alignment}/{species}/all.zarr",
+#        "results/checkpoints/{alignment}/{species}/{window_size}/{model}",
+#    output:
+#        "results/preds/{dataset}/{alignment}/{species}/{window_size}/{model}.{window_size_ablation}.parquet",
+#    wildcard_constraints:
+#        dataset="|".join(datasets + ["results/variants_enformer", "results/gnomad/all/defined/128"]),
+#        alignment="[A-Za-z0-9_]+",
+#        species="[A-Za-z0-9_-]+",
+#        window_size="\d+",
+#        window_size_ablation="\d+",
+#    params:
+#        lambda wildcards: "--disable_aux_features" if wildcards.model.split("/")[-3] == "False" else ""
+#    threads:
+#        workflow.cores
+#    shell:
+#        """
+#        torchrun --nproc_per_node 4 -m gpn.msa.inference vep {wildcards.dataset} {input[0]} \
+#        {wildcards.window_size_ablation} {input[1]} {output} \
+#        --per_device_batch_size 2048 --dataloader_num_workers {threads} {params}
+#        """
+#
