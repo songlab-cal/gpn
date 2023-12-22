@@ -1,6 +1,7 @@
 include: "clinvar.smk"
 include: "cosmic.smk"
 include: "enformer.smk"
+include: "eqtl.smk"
 include: "gnomad.smk"
 include: "gwas.smk"
 include: "mpra.smk"

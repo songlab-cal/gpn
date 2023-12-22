@@ -77,20 +77,47 @@ rule tabix:
         "tabix -s 1 -b 2 -e 2 {input}"
 
 
-def match_columns(df, target, covariates):
-    print("WARNING: enforcing same chrom in a naive, slow manner")
-    pos = df[df[target]]
-    neg = df[~df[target]]
-    D = cdist(pos[covariates], neg[covariates])
+# old version, used for current gwas variant set
+#def match_columns(df, target, covariates):
+#    print("WARNING: enforcing same chrom in a naive, slow manner")
+#    pos = df[df[target]]
+#    neg = df[~df[target]]
+#    D = cdist(pos[covariates], neg[covariates])
+#
+#    closest = []
+#    dists = []
+#    for i in tqdm(range(len(pos))):
+#        D[i, neg.chrom != pos.iloc[i].chrom] = np.inf  # ensure picking from same chrom
+#        j = np.argmin(D[i])
+#        closest.append(j)
+#        D[:, j] = np.inf  # ensure it cannot be picked up again
+#    return pd.concat([pos, neg.iloc[closest]])
 
-    closest = []
-    dists = []
-    for i in tqdm(range(len(pos))):
-        D[i, neg.chrom != pos.iloc[i].chrom] = np.inf  # ensure picking from same chrom
-        j = np.argmin(D[i])
-        closest.append(j)
-        D[:, j] = np.inf  # ensure it cannot be picked up again
-    return pd.concat([pos, neg.iloc[closest]])
+
+def match_columns(df, target, covariates):
+    all_pos = []
+    all_neg_matched = []
+    for chrom in tqdm(df.chrom.unique()):
+        df_c = df[df.chrom == chrom]
+        pos = df_c[df_c[target]]
+        neg = df_c[~df_c[target]]
+        D = cdist(pos[covariates], neg[covariates])
+
+        closest = []
+        for i in range(len(pos)):
+            j = np.argmin(D[i])
+            closest.append(j)
+            D[:, j] = np.inf  # ensure it cannot be picked up again
+        all_pos.append(pos)
+        all_neg_matched.append(neg.iloc[closest])
+    
+    pos = pd.concat(all_pos, ignore_index=True)
+    pos["match_group"] = np.arange(len(pos))
+    neg_matched = pd.concat(all_neg_matched, ignore_index=True)
+    neg_matched["match_group"] = np.arange(len(neg_matched))
+    res = pd.concat([pos, neg_matched], ignore_index=True)
+    res = sort_chrom_pos(res)
+    return res
 
 
 def filter_snp(V):
