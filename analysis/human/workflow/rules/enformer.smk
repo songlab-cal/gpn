@@ -99,6 +99,9 @@ rule process_enformer_precomputed_full:
         genome = Genome(input[1])
         V = check_ref_alt(V, genome)
         print(V.shape)
+        # two hg19 pos can map to one hg38 pos
+        V.drop_duplicates(COORDINATES, keep=False, inplace=True)
+        print(V.shape)
         print(V)
         V.to_parquet(output[0], index=False)
 
@@ -129,10 +132,8 @@ rule run_vep_embeddings_enformer:
 
         cols = ["chrom", "pos", "ref", "alt"]
         V = load_dataset_from_file_or_dir(wildcards["dataset"]).to_pandas()
-        print(V)
 
         coords = pd.read_parquet(input.coords)
-        print(coords)
         
         labels = [f"feature_{i}" for i in range(5313)]
 
@@ -140,22 +141,15 @@ rule run_vep_embeddings_enformer:
 
         for chrom, data_path in tqdm(zip(enformer_chroms, input.data)):
             coords_c = coords.merge(V.loc[V.chrom==chrom, cols], on=cols, how="inner")
-            print(coords_c)
             f = h5py.File(data_path)
             #data = f["SAD"][:]  # load into memory
             data = f["SAD"]  # do not load into memory
             data = pd.DataFrame(data[coords_c.idx.values].astype(float), columns=labels)
             res  = pd.concat([coords_c, data], axis=1)
-            print(res)
             recoded = (res.ref != f["ref"][res.idx.values].astype(str)).values
-            print(recoded.mean())
             res.loc[recoded, data.columns] *= -1
-            print(res)
             all_res.append(res)
         res = pd.concat(all_res, ignore_index=True)
-        print(res)
 
         V = V.merge(res, on=cols, how="left")
-        print(V)
-        print(V["feature_0"].isna().mean())
         V[labels].to_parquet(output[0], index=False)
