@@ -89,7 +89,7 @@ rule run_vep_gpn:
     output:
         "results/preds/{dataset}/{alignment}/{species}/{window_size}/{model}.parquet",
     wildcard_constraints:
-        dataset="|".join(datasets + ["results/variants_enformer", "results/gnomad/all/defined/128"]),
+        dataset="|".join(datasets + ["results/variants_enformer", "results/gnomad/all/defined/128"] + d1),
         alignment="[A-Za-z0-9_]+",
         species="[A-Za-z0-9_-]+",
         window_size="\d+",
@@ -99,7 +99,7 @@ rule run_vep_gpn:
         workflow.cores
     shell:
         """
-        torchrun --nproc_per_node 4 -m gpn.msa.inference vep {wildcards.dataset} {input[0]} \
+        torchrun --nproc_per_node $(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}') -m gpn.msa.inference vep {wildcards.dataset} {input[0]} \
         {wildcards.window_size} {input[1]} {output} \
         --per_device_batch_size 2048 --dataloader_num_workers {threads} {params}
         """
@@ -112,7 +112,7 @@ rule run_vep_embedding_gpn:
     output:
         "results/preds/vep_embedding/{dataset}/{alignment}/{species}/{window_size}/{model}.parquet",
     wildcard_constraints:
-        dataset="|".join(datasets + ["results/variants_enformer", "results/gnomad/all/defined/128"]),
+        dataset="|".join(datasets + ["results/variants_enformer", "results/gnomad/all/defined/128"] + d1),
         alignment="[A-Za-z0-9_]+",
         species="[A-Za-z0-9_-]+",
         window_size="\d+",
@@ -122,7 +122,7 @@ rule run_vep_embedding_gpn:
         workflow.cores
     shell:
         """
-        torchrun --nproc_per_node 4 -m gpn.msa.inference vep_embedding {wildcards.dataset} {input[0]} \
+        torchrun --nproc_per_node $(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}') -m gpn.msa.inference vep_embedding {wildcards.dataset} {input[0]} \
         {wildcards.window_size} {input[1]} {output} \
         --per_device_batch_size 2048 --dataloader_num_workers {threads} {params}
         """

@@ -115,6 +115,17 @@ models = sum(
 best_model = models[0]
 #models = [best_model]
 
+m1 = [
+    best_model,
+]
+
+d1 = [
+    "results/eqtl/matched/ge",
+    "results/eqtl/matched/leafcutter",
+]
+
+
+
 include: "rules/common.smk"
 include: "rules/training.smk"
 include: "rules/vep.smk"
@@ -156,3 +167,8 @@ rule all:
         #f"results/preds/results/gnomad/all/defined/128/{best_model}.parquet",
         #f"results/add_preds/results/gnomad/all/defined/128/{best_model}.parquet",
         #f"results/add_preds/results/gnomad/all/defined/128/{best_model}.tsv.bgz.tbi",
+
+rule all_temp1:
+    input:
+        expand("results/preds/{dataset}/{model}.parquet", model=m1, dataset=d1),
+        expand("results/preds/vep_embedding/{dataset}/{model}.parquet", model=m1, dataset=d1),
