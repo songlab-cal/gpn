@@ -117,6 +117,9 @@ best_model = models[0]
 
 m1 = [
     best_model,
+    "phyloP",
+    "phastCons",
+    "phyloP-Zoonomia",
 ]
 
 d1 = [
@@ -171,4 +174,4 @@ rule all:
 rule all_temp1:
     input:
         expand("results/preds/{dataset}/{model}.parquet", model=m1, dataset=d1),
-        expand("results/preds/vep_embedding/{dataset}/{model}.parquet", model=m1, dataset=d1),
+        #expand("results/preds/vep_embedding/{dataset}/{model}.parquet", model=m1, dataset=d1),
