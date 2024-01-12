@@ -8,6 +8,7 @@ import os
 import pandas as pd
 import tempfile
 import torch
+from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModel, Trainer, TrainingArguments
 
 import gpn.model
@@ -53,6 +54,7 @@ class VEPEmbedding(torch.nn.Module):
 def run_vep(
     variants, genome, tokenizer, model, window_size,
     per_device_batch_size=8, dataloader_num_workers=0,
+    n_shards=None, shard=None,
 ):
     def tokenize(seqs):
         return tokenizer(
@@ -121,9 +123,21 @@ def run_vep(
         per_device_eval_batch_size=per_device_batch_size,
         dataloader_num_workers=dataloader_num_workers,
         remove_unused_columns=False,
+        torch_compile=True,
     )
     trainer = Trainer(model=model, args=training_args)
-    return trainer.predict(test_dataset=variants).predictions
+
+    # runs out of memory randomly during inference, I suspect there's a memory leak
+    # so we shard the dataset and run inference on each shard separately
+
+    #return np.concatenate([
+    #    trainer.predict(test_dataset=variants.shard(N_SHARDS, i, contiguous=True)).predictions
+    #    for i in tqdm(range(N_SHARDS))
+    #])
+
+    return trainer.predict(test_dataset=variants.shard(n_shards, shard, contiguous=True)).predictions
+
+    #return trainer.predict(test_dataset=variants).predictions
 
 
 if __name__ == "__main__":
@@ -160,6 +174,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--is-file", action="store_true", help="VARIANTS_PATH is a file, not directory",
     )
+    parser.add_argument("--n-shards", type=int, default=100)
+    parser.add_argument("--shard", type=int, default=0)
     args = parser.parse_args()
 
     variants = load_dataset_from_file_or_dir(
@@ -173,8 +189,8 @@ if __name__ == "__main__":
     #    (df.source == "ClinVar") |
     #    ((df.label=="Common") & (df.consequence.str.contains("missense")))
     #)
-    #df["is_valid"] = True
-    df["is_valid"] = df.Element.isin(['LDLR'])# 'PKLR-48h', 'IRF4'])  # for MPRA
+    df["is_valid"] = True
+    #df["is_valid"] = df.Element.isin(['LDLR'])# 'PKLR-48h', 'IRF4'])  # for MPRA
     # Additional code to select only 1000 from each label
     #valid_indices = df[df.is_valid].groupby('label').apply(lambda x: x.sample(min(len(x), 1000), random_state=1)).index.get_level_values(1)
     #df["is_valid"] = df.index.isin(valid_indices)
@@ -191,6 +207,7 @@ if __name__ == "__main__":
         variants, genome, tokenizer, model, max_lengths[args.model_path],
         per_device_batch_size=args.per_device_batch_size,
         dataloader_num_workers=args.dataloader_num_workers,
+        n_shards=args.n_shards, shard=args.shard,
     )
     directory = os.path.dirname(args.output_path)
     if directory != "" and not os.path.exists(directory):

@@ -282,6 +282,34 @@ rule merge_msa:
             print(z[chrom].info)
 
 
+# this is very hacky, just for an ablation
+rule msa_ablation_subset:
+    input:
+        "results/msa/multiz100way/89/all.zarr",
+        "config/species/multiz100way/89.txt",
+        "config/species/multiz100way/{subset}/{species}.txt"
+    output:
+        directory("results/msa/multiz100way_{subset}/{species}/all.zarr"),
+    threads: workflow.cores
+    run:
+        import zarr
+
+        input_species = pd.read_csv(input[1], header=None).values.ravel().tolist()
+        output_species = pd.read_csv(input[2], header=None).values.ravel().tolist()
+        output_idx = [input_species.index(s) for s in output_species]
+        print(output_idx)
+
+        z_input = zarr.open(input[0], mode="r")
+        z_output = zarr.open_group(output[0], mode='w')
+
+        for chrom in tqdm(CHROMS):
+            z_output.create_dataset(
+                chrom,
+                data=z_input[chrom][:, output_idx],
+                chunks=(512, len(output_idx))
+            )
+
+
 def model_config(wildcards):
     s = wildcards.model_size
     w = int(wildcards.dataset.split("/")[0])

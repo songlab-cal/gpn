@@ -22,10 +22,12 @@ rule run_vep_nucleotide_transformer:
     priority: 20
     shell:
         """
-        torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}') workflow/scripts/run_vep_nucleotide_transformer.py {wildcards.dataset} {input} \
+        python workflow/scripts/run_vep_nucleotide_transformer.py {wildcards.dataset} {input} \
         {wildcards.model} {output} --dataloader-num-workers 16 {params}
         """
 
+# seems to be running out of memory, will not spend more time on this since it's not a priority
+# torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}') workflow/scripts/run_vep_nucleotide_transformer.py {wildcards.dataset} {input} \
 
 rule run_vep_embeddings_nucleotide_transformer:
     input:
@@ -42,6 +44,9 @@ rule run_vep_embeddings_nucleotide_transformer:
     priority: 20
     shell:
         """
-        torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}') workflow/scripts/run_vep_embeddings_nucleotide_transformer.py {wildcards.dataset} {input} \
+        python workflow/scripts/run_vep_embeddings_nucleotide_transformer.py {wildcards.dataset} {input} \
         {wildcards.model} {output} --dataloader-num-workers 16 {params}
         """
+
+# seems to be running out of memory, will not spend more time on this since it's not a priority
+# torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}') workflow/scripts/run_vep_embeddings_nucleotide_transformer.py {wildcards.dataset} {input} \
