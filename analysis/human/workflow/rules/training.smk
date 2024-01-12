@@ -296,7 +296,7 @@ rule msa_ablation_subset:
 
         input_species = pd.read_csv(input[1], header=None).values.ravel().tolist()
         output_species = pd.read_csv(input[2], header=None).values.ravel().tolist()
-        output_idx = [input_species.index(s) for s in output_species]
+        output_idx = [0] + [1 + input_species.index(s) for s in output_species]
         print(output_idx)
 
         z_input = zarr.open(input[0], mode="r")
