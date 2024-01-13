@@ -44,9 +44,8 @@ datasets = [
     #"songlab/human_variants",
     #"results/gtex/merged",
     #"results/gwas/matched",
-    #"results/mpra/processed",
     "results/mpra/merged",
-    #"results/eqtl/matched/ge",
+    "results/eqtl/matched/ge",
     #"results/eqtl/matched/leafcutter",
 ]
 
@@ -161,8 +160,8 @@ models = [hyenadna_models[-1]]
 rule all:
     input:
         #expand("results/preds/{dataset}/{model}.parquet", model=models, dataset=datasets),
-        #expand("results/preds/vep_embedding/{dataset}/{model}.parquet", model=models, dataset=datasets),
-        expand("results/preds/vep_embedding/{dataset}/{model}.{shard}.parquet", model=models, dataset=datasets, shard=range(n_shards)),
+        expand("results/preds/vep_embedding/{dataset}/{model}.parquet", model=models, dataset=datasets),
+        #expand("results/preds/vep_embedding/{dataset}/{model}.{shard}.parquet", model=models, dataset=datasets, shard=range(n_shards)),
         #expand("results/dataset/{dataset}/train.parquet", dataset=hparams["dataset"]),
         #expand("results/checkpoints/{model}", model=models),
         #expand("results/preds/{dataset}/{model}.{window_size_ablation}.parquet", model=models, dataset=datasets, window_size_ablation=[4, 8, 16, 32, 64]),

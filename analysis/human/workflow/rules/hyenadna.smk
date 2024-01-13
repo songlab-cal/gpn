@@ -46,3 +46,16 @@ rule run_vep_embeddings_hyenadna:
         {wildcards.model} {output} --dataloader-num-workers {threads} {params} \
         --n-shards {n_shards} --shard {wildcards.shard}
         """
+
+
+rule hyenadna_merge_shards:
+    input:
+        expand("results/preds/vep_embedding/{{dataset}}/{{model}}.{shard}.parquet", shard=range(n_shards)),
+    output:
+        "results/preds/vep_embedding/{dataset}/{model}.parquet",
+    wildcard_constraints:
+        dataset="|".join(datasets + ["results/variants_enformer", "results/gnomad/all/defined/128"]),
+        model="|".join(hyenadna_models),
+    run:
+        df = pd.concat([pd.read_parquet(f) for f in input], ignore_index=True)
+        df.to_parquet(output[0], index=False)

@@ -54,7 +54,7 @@ class VEPEmbedding(torch.nn.Module):
 def run_vep(
     variants, genome, tokenizer, model, window_size,
     per_device_batch_size=8, dataloader_num_workers=0,
-    n_shards=None, shard=None,
+    #n_shards=None, shard=None,
 ):
     def tokenize(seqs):
         return tokenizer(
@@ -130,14 +130,14 @@ def run_vep(
     # runs out of memory randomly during inference, I suspect there's a memory leak
     # so we shard the dataset and run inference on each shard separately
 
+    # this is a sharding within the sharding
+    #N_SHARDS = 2
     #return np.concatenate([
     #    trainer.predict(test_dataset=variants.shard(N_SHARDS, i, contiguous=True)).predictions
-    #    for i in tqdm(range(N_SHARDS))
+    #    for i in range(N_SHARDS)
     #])
 
-    return trainer.predict(test_dataset=variants.shard(n_shards, shard, contiguous=True)).predictions
-
-    #return trainer.predict(test_dataset=variants).predictions
+    return trainer.predict(test_dataset=variants).predictions
 
 
 if __name__ == "__main__":
@@ -181,6 +181,7 @@ if __name__ == "__main__":
     variants = load_dataset_from_file_or_dir(
         args.variants_path, split=args.split, is_file=args.is_file,
     )
+    variants = variants.shard(args.n_shards, args.shard, contiguous=True)
     subset_chroms = np.unique(variants["chrom"])
     genome = Genome(args.genome_path, subset_chroms=subset_chroms)
 
@@ -207,7 +208,7 @@ if __name__ == "__main__":
         variants, genome, tokenizer, model, max_lengths[args.model_path],
         per_device_batch_size=args.per_device_batch_size,
         dataloader_num_workers=args.dataloader_num_workers,
-        n_shards=args.n_shards, shard=args.shard,
+        #n_shards=args.n_shards, shard=args.shard,
     )
     directory = os.path.dirname(args.output_path)
     if directory != "" and not os.path.exists(directory):
