@@ -42,11 +42,10 @@ CHROMS = np.concatenate(list(SPLIT_CHROMS.values()))
 
 datasets = [
     #"songlab/human_variants",
-    #"results/gtex/merged",
-    #"results/gwas/matched",
-    "results/mpra/merged",
+    "results/gwas/matched",
     "results/eqtl/matched/ge",
-    #"results/eqtl/matched/leafcutter",
+    "results/eqtl/matched/leafcutter",
+    #"results/mpra/merged",
 ]
 
 model_template = "{dataset}/{model_size}/{loss_weight}/{seed}/{max_steps}/{use_aux_features}/{weight_conserved}/{flip_nonconserved}"
@@ -66,7 +65,8 @@ hparams = {
         # changing window size
         #"multiz100way/89/32/16/True/defined.phastCons.percentile-75_0.05_0.001",
         #"multiz100way/89/64/32/True/defined.phastCons.percentile-75_0.05_0.001",
-        #"multiz100way/89/256/128/True/defined.phastCons.percentile-75_0.05_0.001",
+        "multiz100way/89/256/128/True/defined.phastCons.percentile-75_0.05_0.001",
+        "multiz100way/89/512/256/True/defined.phastCons.percentile-75_0.05_0.001",
     ],
     "use_aux_features": [
         True,
@@ -148,7 +148,7 @@ include: "rules/hyenadna.smk"
 #models += hyenadna_models
 #models.append(nucleotide_transformer_models[-1])
 #models.append(hyenadna_models[-1])
-models = [hyenadna_models[-1]]
+#models = [hyenadna_models[-1]]
 #models.append("ESM-1b")
 #models.append("msa_multiz100way/89")
 #models.append("phyloP")
