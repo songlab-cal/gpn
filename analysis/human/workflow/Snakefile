@@ -117,19 +117,6 @@ models = sum(
 best_model = models[0]
 #models = [best_model]
 
-m1 = [
-    best_model,
-    "phyloP",
-    "phastCons",
-    "phyloP-Zoonomia",
-]
-
-d1 = [
-    "results/eqtl/matched/ge",
-    "results/eqtl/matched/leafcutter",
-]
-
-
 
 include: "rules/common.smk"
 include: "rules/training.smk"
@@ -157,6 +144,14 @@ include: "rules/hyenadna.smk"
 #models = ["ESM-1b"]
 #pd.DataFrame(models).to_csv("models.txt", index=False, header=False)
 
+
+core_models_functionality = [
+    best_model,
+    nucleotide_transformer_models[-1],
+    hyenadna_models[-1],
+]
+
+
 rule all:
     input:
         #expand("results/preds/{dataset}/{model}.parquet", model=models, dataset=datasets),
@@ -175,7 +170,18 @@ rule all:
         #f"results/add_preds/results/gnomad/all/defined/128/{best_model}.parquet",
         #f"results/add_preds/results/gnomad/all/defined/128/{best_model}.tsv.bgz.tbi",
 
-rule all_temp1:
+
+rule functionality:
     input:
-        expand("results/preds/{dataset}/{model}.parquet", model=m1, dataset=d1),
-        #expand("results/preds/vep_embedding/{dataset}/{model}.parquet", model=m1, dataset=d1),
+        expand(
+            "results/preds/results/gwas/matched/{m}.LogisticRegression.parquet",
+            m=core_models_functionality + ["Enformer"],
+        ),
+        expand(
+            "results/preds/results/eqtl/matched/ge/{m}.LogisticRegression.parquet",
+            m=core_models_functionality + ["Enformer"],
+        ),
+        expand(
+            "results/preds/results/eqtl/matched/leafcutter/{m}.LogisticRegression.parquet",
+            m=core_models_functionality,
+        ),

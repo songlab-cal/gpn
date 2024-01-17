@@ -1,5 +1,8 @@
 from liftover import get_lifter
 from scipy.spatial.distance import cdist
+from sklearn.linear_model import LogisticRegressionCV
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
 
 
 COORDINATES = ["chrom", "pos", "ref", "alt"]
@@ -124,3 +127,23 @@ def filter_snp(V):
     V = V[V.ref.isin(NUCLEOTIDES)]
     V = V[V.alt.isin(NUCLEOTIDES)]
     return V
+
+
+def train_predict_lr(V_train, V_test, features):
+    clf = Pipeline([
+        ('scaler', StandardScaler()),
+        ('linear', LogisticRegressionCV(
+            random_state=42,
+            scoring="roc_auc",
+            n_jobs=-1,
+            max_iter=1000,
+            Cs=np.logspace(-5, 0, 10),
+        ))
+    ])
+    clf.fit(V_train[features], V_train.label)
+    linear = clf.named_steps["linear"]
+    C = linear.C_
+    Cs = linear.Cs_
+    #if C == Cs[0] or C == Cs[-1]:
+    #    raise Exception(f"{C=} {Cs[0]=} {Cs[-1]=}")
+    return -clf.predict_proba(V_test[features])[:, 1]
