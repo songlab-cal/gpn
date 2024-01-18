@@ -321,6 +321,8 @@ def model_config(wildcards):
         conf = " --per_device_train_batch_size 256 --per_device_eval_batch_size 256 --gradient_accumulation_steps 2"
     elif s == "medium" and w == 512:
         conf = " --per_device_train_batch_size 128 --per_device_eval_batch_size 128 --gradient_accumulation_steps 4"
+    elif s == "medium" and w == 1024:
+        conf = " --per_device_train_batch_size 32 --per_device_eval_batch_size 32 --gradient_accumulation_steps 16"
     elif s == "small" and w <= 256:
         conf = ",num_hidden_layers=8,num_attention_heads=8,hidden_size=512,intermediate_size=2048 --per_device_train_batch_size 512 --per_device_eval_batch_size 512 --gradient_accumulation_steps 1"
     elif s == "tiny" and w == 128:

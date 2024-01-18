@@ -67,6 +67,7 @@ hparams = {
         #"multiz100way/89/64/32/True/defined.phastCons.percentile-75_0.05_0.001",
         "multiz100way/89/256/128/True/defined.phastCons.percentile-75_0.05_0.001",
         "multiz100way/89/512/256/True/defined.phastCons.percentile-75_0.05_0.001",
+        "multiz100way/89/1024/512/True/defined.phastCons.percentile-75_0.05_0.001",
     ],
     "use_aux_features": [
         True,
@@ -149,6 +150,8 @@ core_models_functionality = [
     best_model,
     nucleotide_transformer_models[-1],
     hyenadna_models[-1],
+    "multiz100way/89/256/128/True/defined.phastCons.percentile-75_0.05_0.001/medium/0.1/42/30000/True/True/True",
+    "multiz100way/89/512/256/True/defined.phastCons.percentile-75_0.05_0.001/medium/0.1/42/30000/True/True/True",
 ]
 
 
