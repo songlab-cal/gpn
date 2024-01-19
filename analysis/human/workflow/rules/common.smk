@@ -1,7 +1,9 @@
+import bioframe as bf
+from gpn.data import load_table
 from liftover import get_lifter
 from scipy.spatial.distance import cdist
 from sklearn.linear_model import LogisticRegressionCV
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, RobustScaler
 from sklearn.pipeline import Pipeline
 
 
@@ -80,23 +82,6 @@ rule tabix:
         "tabix -s 1 -b 2 -e 2 {input}"
 
 
-# old version, used for current gwas variant set
-#def match_columns(df, target, covariates):
-#    print("WARNING: enforcing same chrom in a naive, slow manner")
-#    pos = df[df[target]]
-#    neg = df[~df[target]]
-#    D = cdist(pos[covariates], neg[covariates])
-#
-#    closest = []
-#    dists = []
-#    for i in tqdm(range(len(pos))):
-#        D[i, neg.chrom != pos.iloc[i].chrom] = np.inf  # ensure picking from same chrom
-#        j = np.argmin(D[i])
-#        closest.append(j)
-#        D[:, j] = np.inf  # ensure it cannot be picked up again
-#    return pd.concat([pos, neg.iloc[closest]])
-
-
 def match_columns(df, target, covariates):
     all_pos = []
     all_neg_matched = []
@@ -147,3 +132,40 @@ def train_predict_lr(V_train, V_test, features):
     #if C == Cs[0] or C == Cs[-1]:
     #    raise Exception(f"{C=} {Cs[0]=} {Cs[-1]=}")
     return -clf.predict_proba(V_test[features])[:, 1]
+
+
+rule get_tss:
+    input:
+        "results/annotation.gtf.gz",
+    output:
+        "results/tss.parquet",
+    run:
+        annotation = load_table(input[0])
+        tx = annotation.query('feature=="transcript"').copy()
+        tx["gene_id"] = tx.attribute.str.extract(r'gene_id "([^;]*)";')
+        tx["transcript_biotype"] = tx.attribute.str.extract(r'transcript_biotype "([^;]*)";')
+        tx = tx[tx.transcript_biotype=="protein_coding"]
+        tss = tx.copy()
+        tss[["start", "end"]] = tss.progress_apply(
+            lambda w: (w.start, w.start+1) if w.strand=="+" else (w.end-1, w.end),
+            axis=1, result_type="expand"
+        )
+        tss = tss[["chrom", "start", "end", "gene_id"]]
+        print(tss)
+        tss.to_parquet(output[0], index=False)
+
+
+rule get_exon:
+    input:
+        "results/annotation.gtf.gz",
+    output:
+        "results/exon.parquet",
+    run:
+        annotation = load_table(input[0])
+        exon = annotation.query('feature=="exon"').copy()
+        exon["gene_id"] = exon.attribute.str.extract(r'gene_id "([^;]*)";')
+        exon["transcript_biotype"] = exon.attribute.str.extract(r'transcript_biotype "([^;]*)";')
+        exon = exon[exon.transcript_biotype=="protein_coding"]
+        exon = exon[["chrom", "start", "end", "gene_id"]]
+        print(exon)
+        exon.to_parquet(output[0], index=False)

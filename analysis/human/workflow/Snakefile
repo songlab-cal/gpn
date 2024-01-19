@@ -157,8 +157,8 @@ core_models_functionality = [
 
 rule all:
     input:
-        #expand("results/preds/{dataset}/{model}.parquet", model=models, dataset=datasets),
-        expand("results/preds/vep_embedding/{dataset}/{model}.parquet", model=models, dataset=datasets),
+        expand("results/preds/{dataset}/{model}.parquet", model="phyloP-Zoonomia", dataset=datasets),
+        #expand("results/preds/vep_embedding/{dataset}/{model}.parquet", model=core_models_functionality, dataset=datasets),
         #expand("results/preds/vep_embedding/{dataset}/{model}.{shard}.parquet", model=models, dataset=datasets, shard=range(n_shards)),
         #expand("results/dataset/{dataset}/train.parquet", dataset=hparams["dataset"]),
         #expand("results/checkpoints/{model}", model=models),
@@ -180,11 +180,11 @@ rule functionality:
             "results/preds/results/gwas/matched/{m}.LogisticRegression.parquet",
             m=core_models_functionality + ["Enformer"],
         ),
-        expand(
-            "results/preds/results/eqtl/matched/ge/{m}.LogisticRegression.parquet",
-            m=core_models_functionality + ["Enformer"],
-        ),
-        expand(
-            "results/preds/results/eqtl/matched/leafcutter/{m}.LogisticRegression.parquet",
-            m=core_models_functionality,
-        ),
+        #expand(
+        #    "results/preds/results/eqtl/matched/ge/{m}.LogisticRegression.parquet",
+        #    m=core_models_functionality + ["Enformer"],
+        #),
+        #expand(
+        #    "results/preds/results/eqtl/matched/leafcutter/{m}.LogisticRegression.parquet",
+        #    m=core_models_functionality,
+        #),

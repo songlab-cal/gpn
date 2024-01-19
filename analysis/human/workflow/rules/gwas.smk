@@ -43,6 +43,7 @@ rule gwas_process:
 rule gwas_match:
     input:
         "results/gwas/processed.parquet",
+        "results/tss.parquet",
     output:
         "results/gwas/matched/test.parquet",
     run:
@@ -55,7 +56,24 @@ rule gwas_match:
         V.loc[V.pip < 0.01, "label"] = False
         V = V.dropna(subset="label")
         V["label"] = V["label"].astype(bool)
+
+        tss = pd.read_parquet(input[1])
+        V["start"] = V.pos
+        V["end"] = V.start + 1
+        V = bf.closest(V, tss).rename(columns={
+            "gene_id_": "gene_id", "distance": "tss_dist"
+        }).drop(columns=[
+            "start", "end", "chrom_", "start_", "end_"
+        ])
+        match_features = ["maf", "tss_dist"]
+        for f in match_features:
+            V[f"{f}_scaled"] = RobustScaler().fit_transform(V[f].values.reshape(-1, 1))
+
         print(V.label.value_counts())
-        V = match_columns(V, "label", ["maf"])
+        V = match_columns(V, "label", [f"{f}_scaled" for f in match_features])
         print(V.label.value_counts())
+
+        print(V.groupby("label")[match_features].median())
+        V.drop(columns=[f"{f}_scaled" for f in match_features], inplace=True)
+
         V.to_parquet(output[0], index=False)

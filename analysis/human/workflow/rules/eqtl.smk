@@ -104,12 +104,42 @@ rule eqtl_merge_sample_groups:
 rule eqtl_match:
     input:
         "results/eqtl/merged/{quant_method}/merged.parquet",
+        "results/tss.parquet",
+        "results/exon.parquet",
     output:
         "results/eqtl/matched/{quant_method}/test.parquet",
     run:
         V = pd.read_parquet(input[0])
         V["label"] = V.pip > 0.9
+
+        V["start"] = V.pos
+        V["end"] = V.start + 1
+
+        if wildcards.quant_method == "ge":
+            tss = pd.read_parquet(input[1])
+            V = bf.closest(V, tss).rename(columns={
+                "gene_id_": "gene_id", "distance": "tss_dist"
+            }).drop(columns=[
+                "start", "end", "chrom_", "start_", "end_"
+            ])
+            match_features = ["maf", "tss_dist"]
+        elif wildcards.quant_method == "leafcutter":
+            exon = pd.read_parquet(input[2])
+            V = bf.closest(V, exon).rename(columns={
+                "gene_id_": "gene_id", "distance": "exon_dist"
+            }).drop(columns=[
+                "start", "end", "chrom_", "start_", "end_"
+            ])
+            match_features = ["maf", "exon_dist"]
+
+        for f in match_features:
+            V[f"{f}_scaled"] = RobustScaler().fit_transform(V[f].values.reshape(-1, 1))
+
         print(V.label.value_counts())
-        V = match_columns(V, "label", ["maf"])
+        V = match_columns(V, "label", [f"{f}_scaled" for f in match_features])
         print(V.label.value_counts())
+
+        print(V.groupby("label")[match_features].median())
+        V.drop(columns=[f"{f}_scaled" for f in match_features], inplace=True)
+
         V.to_parquet(output[0], index=False)

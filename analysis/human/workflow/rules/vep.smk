@@ -190,8 +190,6 @@ rule make_subset_for_supervised_models:
         d="gwas/matched|eqtl/matched/ge|eqtl/matched/leafcutter",
     run:
         V = pd.read_parquet(input.full_set)
-        if "match_group" not in V.columns:  # For GWAS
-            V["match_group"] = np.concatenate([np.arange(len(V)//2), np.arange(len(V)//2)])
         models = models_subset_for_supervised_models[wildcards.d]
         for model, path in zip(models, input.models):
             try:
