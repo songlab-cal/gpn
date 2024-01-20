@@ -46,6 +46,7 @@ datasets = [
     "results/eqtl/matched/ge",
     "results/eqtl/matched/leafcutter",
     #"results/mpra/merged",
+    "results/SGE/DDX3X/processed",
 ]
 
 model_template = "{dataset}/{model_size}/{loss_weight}/{seed}/{max_steps}/{use_aux_features}/{weight_conserved}/{flip_nonconserved}"
@@ -141,7 +142,7 @@ include: "rules/hyenadna.smk"
 #models.append("msa_multiz100way/89")
 models.append("phyloP")
 models.append("phastCons")
-#models.append("phyloP-Zoonomia")
+models.append("phyloP-Zoonomia")
 #models = ["ESM-1b"]
 #pd.DataFrame(models).to_csv("models.txt", index=False, header=False)
 

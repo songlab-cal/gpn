@@ -9,6 +9,7 @@ include: "gnomad.smk"
 include: "gwas.smk"
 include: "mpra.smk"
 include: "omim.smk"
+include: "SGE.smk"
 
 
 rule merge_variants:
