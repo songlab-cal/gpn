@@ -3,6 +3,7 @@ from tqdm import tqdm
 
 include: "clinvar.smk"
 include: "cosmic.smk"
+include: "dms.smk"
 include: "enformer.smk"
 include: "eqtl.smk"
 include: "gnomad.smk"

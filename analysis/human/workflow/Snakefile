@@ -42,11 +42,12 @@ CHROMS = np.concatenate(list(SPLIT_CHROMS.values()))
 
 datasets = [
     #"songlab/human_variants",
-    "results/gwas/matched",
-    "results/eqtl/matched/ge",
-    "results/eqtl/matched/leafcutter",
+    #"results/gwas/matched",
+    #"results/eqtl/matched/ge",
+    #"results/eqtl/matched/leafcutter",
     #"results/mpra/merged",
-    "results/SGE/DDX3X/processed",
+    #"results/SGE/DDX3X/processed",
+    "results/dms/merged",
 ]
 
 model_template = "{dataset}/{model_size}/{loss_weight}/{seed}/{max_steps}/{use_aux_features}/{weight_conserved}/{flip_nonconserved}"
@@ -138,7 +139,7 @@ include: "rules/hyenadna.smk"
 #models.append(nucleotide_transformer_models[-1])
 #models.append(hyenadna_models[-1])
 #models = [hyenadna_models[-1]]
-#models.append("ESM-1b")
+models.append("ESM-1b")
 #models.append("msa_multiz100way/89")
 models.append("phyloP")
 models.append("phastCons")

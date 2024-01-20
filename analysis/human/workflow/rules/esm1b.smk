@@ -14,6 +14,8 @@ rule make_ensembl_vep_input:
         "results/preds/{dataset}/ensembl_vep.input.tsv.gz",
     run:
         df = load_dataset(wildcards["dataset"], split="test").to_pandas()
+        if "consequence" not in df.columns:
+            df["consequence"] = "missense"
         df = df[df.consequence.str.contains("missense")]
         df["start"] = df.pos
         df["end"] = df.start
@@ -30,7 +32,7 @@ rule install_ensembl_vep_cache:
     output:
         directory("results/ensembl_vep_cache"),
     singularity:
-        "docker://ensemblorg/ensembl-vep"
+        "docker://ensemblorg/ensembl-vep:release_109.3"
     shell:
         "INSTALL.pl -c {output} -a cf -s homo_sapiens -y GRCh38"
 
@@ -42,7 +44,7 @@ rule run_ensembl_vep:
     output:
         "{anything}/ensembl_vep.output.tsv.gz",  # TODO: make temp
     singularity:
-        "docker://ensemblorg/ensembl-vep"
+        "docker://ensemblorg/ensembl-vep:release_109.3"
     threads: workflow.cores
     shell:
         """
