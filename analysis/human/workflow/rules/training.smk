@@ -82,14 +82,18 @@ rule filter_conservation_intervals:
         intervals = pd.read_parquet(input[0])
         print(intervals)
         top_frac = float(wildcards["top_frac"])
-        random_frac = float(wildcards["random_frac"])
-        mask_top = intervals.conservation >= intervals.conservation.quantile(1-top_frac)
-        top_intervals = intervals[mask_top]
-        print(top_intervals)
-        assert not top_intervals.conservation.isna().any()
-        random_intervals = intervals[~mask_top].sample(frac=random_frac, random_state=42)
-        print(random_intervals)
-        res = pd.concat([top_intervals, random_intervals], ignore_index=True)
+        if top_frac == 1.0:
+            print("Using entire genome")
+            res = intervals
+        else:
+            random_frac = float(wildcards["random_frac"])
+            mask_top = intervals.conservation >= intervals.conservation.quantile(1-top_frac)
+            top_intervals = intervals[mask_top]
+            print(top_intervals)
+            assert not top_intervals.conservation.isna().any()
+            random_intervals = intervals[~mask_top].sample(frac=random_frac, random_state=42)
+            print(random_intervals)
+            res = pd.concat([top_intervals, random_intervals], ignore_index=True)
         print(res)
         #res = bf.merge(res[["chrom", "start", "end"]]).drop(columns="n_intervals")
         res = res[["chrom", "start", "end"]].drop_duplicates()

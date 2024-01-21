@@ -41,13 +41,13 @@ CHROMS = np.concatenate(list(SPLIT_CHROMS.values()))
 
 
 datasets = [
-    #"songlab/human_variants",
+    "songlab/human_variants",
     #"results/gwas/matched",
     #"results/eqtl/matched/ge",
     #"results/eqtl/matched/leafcutter",
     #"results/mpra/merged",
     #"results/SGE/DDX3X/processed",
-    "results/dms/merged",
+    #"results/dms/merged",
 ]
 
 model_template = "{dataset}/{model_size}/{loss_weight}/{seed}/{max_steps}/{use_aux_features}/{weight_conserved}/{flip_nonconserved}"
@@ -59,32 +59,34 @@ hparams = {
         "multiz100way/89/128/64/True/defined.phastCons.percentile-75_0.05_0.001",
 
         # changing percentage
-        #"multiz100way/89/128/64/True/defined.phastCons.percentile-75_0.50_0.001",
+        "multiz100way/89/128/64/True/defined.phastCons.percentile-75_0.50_0.001",
+        "multiz100way/89/128/64/True/defined.phastCons.percentile-75_1.00_0.00",
 
-        # using more species
-        #"multiz100way/99/128/64/True/defined.phastCons.percentile-75_0.05_0.001",
+        # using different species
+        "multiz100way/99/128/64/True/defined.phastCons.percentile-75_0.05_0.001",
+        "multiz100way_mammals/51/128/64/True/defined.phastCons.percentile-75_0.05_0.001",
+        "multiz100way_vertebrates/51/128/64/True/defined.phastCons.percentile-75_0.05_0.001",
 
         # changing window size
         #"multiz100way/89/32/16/True/defined.phastCons.percentile-75_0.05_0.001",
         #"multiz100way/89/64/32/True/defined.phastCons.percentile-75_0.05_0.001",
         "multiz100way/89/256/128/True/defined.phastCons.percentile-75_0.05_0.001",
-        "multiz100way/89/512/256/True/defined.phastCons.percentile-75_0.05_0.001",
-        "multiz100way/89/1024/512/True/defined.phastCons.percentile-75_0.05_0.001",
+        #"multiz100way/89/512/256/True/defined.phastCons.percentile-75_0.05_0.001",
     ],
     "use_aux_features": [
         True,
-        #False,
+        False,
     ],
     "loss_weight": [
         0.1,
     ],
     "weight_conserved": [
         True,
-        #False,
+        False,
     ],
     "flip_nonconserved": [
         True,
-        #False,
+        False,
     ],
 }
 
@@ -104,8 +106,8 @@ models = sum(
             m,
             seed=[
                 42,
-                #43,
-                #44,
+                43,
+                44,
             ],
             max_steps=[
                 30_000,
@@ -118,7 +120,13 @@ models = sum(
     []
 )
 best_model = models[0]
-models = [best_model]
+#models = [best_model]
+
+models += [
+    f"{models[i]}.{window_size_ablation}"
+    for window_size_ablation in [4, 8, 16, 32, 64]
+    for i in range(3)
+]
 
 
 include: "rules/common.smk"
@@ -134,22 +142,23 @@ include: "rules/cadd.smk"
 include: "rules/spliceai.smk"
 include: "rules/hyenadna.smk"
 
+#models.append("msa_multiz100way/89")
+
 #models += nucleotide_transformer_models
 #models += hyenadna_models
 #models.append(nucleotide_transformer_models[-1])
 #models.append(hyenadna_models[-1])
 #models = [hyenadna_models[-1]]
-models.append("ESM-1b")
-#models.append("msa_multiz100way/89")
-models.append("phyloP")
-models.append("phastCons")
-models.append("phyloP-Zoonomia")
+#models.append("ESM-1b")
+#models.append("phyloP")
+#models.append("phastCons")
+#models.append("phyloP-Zoonomia")
 #models = ["ESM-1b"]
 #pd.DataFrame(models).to_csv("models.txt", index=False, header=False)
 
 
-core_models_functionality = [
-    best_model,
+core_models_functionality = models + [
+    #best_model,
     nucleotide_transformer_models[-1],
     hyenadna_models[-1],
     "multiz100way/89/256/128/True/defined.phastCons.percentile-75_0.05_0.001/medium/0.1/42/30000/True/True/True",
@@ -160,7 +169,7 @@ core_models_functionality = [
 rule all:
     input:
         expand("results/preds/{dataset}/{model}.parquet", model=models, dataset=datasets),
-        #expand("results/preds/vep_embedding/{dataset}/{model}.parquet", model=core_models_functionality, dataset=datasets),
+        #expand("results/preds/vep_embedding/{dataset}/{model}.parquet", model=models, dataset=datasets),
         #expand("results/preds/vep_embedding/{dataset}/{model}.{shard}.parquet", model=models, dataset=datasets, shard=range(n_shards)),
         #expand("results/dataset/{dataset}/train.parquet", dataset=hparams["dataset"]),
         #expand("results/checkpoints/{model}", model=models),
@@ -182,10 +191,10 @@ rule functionality:
             "results/preds/results/gwas/matched/{m}.LogisticRegression.parquet",
             m=core_models_functionality + ["Enformer"],
         ),
-        expand(
-            "results/preds/results/eqtl/matched/ge/{m}.LogisticRegression.parquet",
-            m=core_models_functionality + ["Enformer"],
-        ),
+        #expand(
+        #    "results/preds/results/eqtl/matched/ge/{m}.LogisticRegression.parquet",
+        #    m=core_models_functionality + ["Enformer"],
+        #),
         #expand(
         #    "results/preds/results/eqtl/matched/leafcutter/{m}.LogisticRegression.parquet",
         #    m=core_models_functionality,
