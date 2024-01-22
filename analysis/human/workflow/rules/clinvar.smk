@@ -52,3 +52,15 @@ rule filter_clinvar:
         ]
         print(df)
         df.to_parquet(output[0], index=False)
+
+
+rule filter_clinvar_mis_pat_ben:
+    input:
+        "results/clinvar/all.parquet",
+    output:
+        "results/clinvar/mis_pat_ben/test.parquet",
+    run:
+        df = pd.read_parquet(input[0])
+        df = df[df.consequence.str.contains("missense")]
+        print(df)
+        df.to_parquet(output[0], index=False)

@@ -365,7 +365,7 @@ rule train_gpn_msa:
         --weight_decay 0.01 \
         --optim adamw_torch --learning_rate 1e-4 --lr_scheduler_type cosine \
         --seed {wildcards.seed} \
-        --dataloader_num_workers 16 \
+        --dataloader_num_workers 8 \
         --save_strategy steps --save_steps 5000 --evaluation_strategy steps \
         --eval_steps 5000 --logging_steps 5000 --max_steps {wildcards.max_steps} \
         --warmup_steps 1000 --save_total_limit 1 --load_best_model_at_end \

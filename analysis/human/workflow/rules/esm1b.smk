@@ -32,7 +32,7 @@ rule install_ensembl_vep_cache:
     output:
         directory("results/ensembl_vep_cache"),
     singularity:
-        "docker://ensemblorg/ensembl-vep:release_109.3"
+        "docker://ensemblorg/ensembl-vep:release_109.1"
     shell:
         "INSTALL.pl -c {output} -a cf -s homo_sapiens -y GRCh38"
 
@@ -44,7 +44,7 @@ rule run_ensembl_vep:
     output:
         "{anything}/ensembl_vep.output.tsv.gz",  # TODO: make temp
     singularity:
-        "docker://ensemblorg/ensembl-vep:release_109.3"
+        "docker://ensemblorg/ensembl-vep:release_109.1"
     threads: workflow.cores
     shell:
         """
@@ -130,6 +130,8 @@ rule run_vep_esm1b:
     threads: workflow.cores
     run:
         variants = load_dataset(wildcards["dataset"], split="test").to_pandas()
+        if "consequence" not in variants.columns:
+            variants["consequence"] = "missense"
         variants["is_valid"] = variants.consequence.str.contains("missense")
         df = variants.copy()
         variants = variants[variants.is_valid]
