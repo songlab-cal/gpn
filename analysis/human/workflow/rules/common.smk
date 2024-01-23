@@ -5,6 +5,7 @@ from scipy.spatial.distance import cdist
 from sklearn.linear_model import LogisticRegressionCV
 from sklearn.preprocessing import StandardScaler, RobustScaler
 from sklearn.pipeline import Pipeline
+from sklearn.metrics import roc_auc_score
 
 
 COORDINATES = ["chrom", "pos", "ref", "alt"]
@@ -132,6 +133,13 @@ def train_predict_lr(V_train, V_test, features):
     #if C == Cs[0] or C == Cs[-1]:
     #    raise Exception(f"{C=} {Cs[0]=} {Cs[-1]=}")
     return -clf.predict_proba(V_test[features])[:, 1]
+
+
+def train_predict_best_feature(V_train, V_test, features):
+    best_feature_idx = np.argmax([
+        roc_auc_score(V_train.label, -V_train[f]) for f in features
+    ])
+    return V_test[features[best_feature_idx]]
 
 
 rule get_tss:

@@ -231,6 +231,26 @@ ruleorder: run_vep_functionality_lr > run_vep_gpn
 ruleorder: run_vep_functionality_lr > run_vep_hyenadna
 
 
+rule concat_embeddings:
+    input:
+        "results/preds/vep_embedding/results/{d}/{m1}.parquet", 
+        "results/preds/vep_embedding/results/{d}/{m2}.parquet", 
+    output:
+        "results/preds/vep_embedding/results/{d}/{m1}/concat/{m2}.parquet", 
+    wildcard_constraints:
+        d="gwas/matched|eqtl/matched/ge|eqtl/matched/leafcutter",
+    run:
+        df1 = pd.read_parquet(input[0])
+        df2 = pd.read_parquet(input[1])
+        if wildcards.m1 == "Enformer":
+            df1 = df1.abs()
+        if wildcards.m2 == "Enformer":
+            df2 = df2.abs()
+        df = pd.concat([df1, df2], axis=1)
+        print(df)
+        df.to_parquet(output[0], index=False)
+
+
 rule run_vep_functionality_lr:
     input:
         "results/{d}/test.parquet",
@@ -260,3 +280,51 @@ rule run_vep_functionality_lr:
         V_full[COORDINATES].merge(
             V[COORDINATES + ["score"]], on=COORDINATES, how="left"
         ).to_parquet(output[0], index=False)
+
+
+rule run_vep_functionality_best_feature:
+    input:
+        "results/{d}/test.parquet",
+        "results/test_subset/{d}/variants.parquet",
+        "results/preds/vep_embedding/results/{d}/{model}.parquet", 
+    output:
+        "results/preds/results/{d}/{model}.BestFeature.parquet", 
+    wildcard_constraints:
+        d="gwas/matched|eqtl/matched/ge|eqtl/matched/leafcutter",
+    run:
+        V_full = pd.read_parquet(input[0])
+        V_subset = pd.read_parquet(input[1])
+        df = pd.read_parquet(input[2])
+        if wildcards.model == "Enformer":
+            df = df.abs()
+        features = df.columns.values
+        V_full = pd.concat([V_full, df], axis=1)
+        V = V_full.merge(V_subset, on=COORDINATES, how="inner")
+
+        for chrom in tqdm(V.chrom.unique()):
+            mask_train = V.chrom != chrom
+            mask_test = ~mask_train
+            V.loc[mask_test, "score"] = train_predict_best_feature(V[mask_train], V[mask_test], features)
+
+        V_full[COORDINATES].merge(
+            V[COORDINATES + ["score"]], on=COORDINATES, how="left"
+        ).to_parquet(output[0], index=False)
+
+
+rule run_vep_functionality_sum_features:
+    input:
+        "results/{d}/test.parquet",
+        "results/preds/vep_embedding/results/{d}/{model}.parquet", 
+    output:
+        "results/preds/results/{d}/{model}.SumFeatures.parquet", 
+    wildcard_constraints:
+        d="gwas/matched|eqtl/matched/ge|eqtl/matched/leafcutter",
+    run:
+        V = pd.read_parquet(input[0])
+        df = pd.read_parquet(input[1])
+        if wildcards.model == "Enformer":
+            df = df.abs()
+        features = df.columns.values
+        V = pd.concat([V, df], axis=1)
+        V["score"] = V[features].sum(axis=1)
+        V.to_parquet(output[0], index=False)
