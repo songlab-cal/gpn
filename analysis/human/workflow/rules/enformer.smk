@@ -14,60 +14,6 @@ rule download_enformer_precomputed:
         "wget -O {output} https://storage.googleapis.com/dm-enformer/variant-scores/1000-genomes/enformer/1000G.MAF_threshold%3D0.005.{wildcards.chrom}.h5"
 
 
-rule process_enformer_precomputed:
-    input:
-        "results/enformer/{chrom}.h5",
-    output:
-        temp("results/enformer/{chrom}.parquet"),
-    wildcard_constraints:
-        chrom="|".join(enformer_chroms),
-    run:
-        import h5py
-        from liftover import get_lifter
-        converter = get_lifter('hg19', 'hg38')
-
-        f = h5py.File(input[0])
-        X = f["SAD"][:]
-
-        df = pd.DataFrame({
-            "chrom": f["chr"][:].astype(str),
-            "pos": f["pos"][:],
-            "ref": f["ref"][:].astype(str),
-            "alt": f["alt"][:].astype(str),
-            "Enformer_l1": -np.linalg.norm(X, axis=1, ord=1).astype(float),
-            "Enformer_l2": -np.linalg.norm(X, axis=1, ord=2).astype(float),
-            "Enformer_linf": -np.linalg.norm(X, axis=1, ord=np.inf).astype(float),
-        })
-        df.chrom = df.chrom.str.replace("chr", "")
-        df = df[(df.ref.str.len() == 1) & (df.alt.str.len() == 1)]
-
-        def get_new_pos(v):
-            try:
-                res = converter[v.chrom][v.pos]
-                assert len(res) == 1
-                chrom, pos, strand = res[0]
-                assert chrom.replace("chr", "")==v.chrom
-                return pos
-            except:
-                return -1
-        
-        df.pos = df.progress_apply(get_new_pos, axis=1)
-        df = df[df.pos != -1]
-        print(df)
-        df.to_parquet(output[0], index=False)
-
-
-rule merge_enformer_precomputed:
-    input:
-        expand("results/enformer/{chrom}.parquet", chrom=[str(i) for i in range(1, 23)]),
-    output:
-        "results/enformer/merged.parquet",
-    run:
-        df = pd.concat([pd.read_parquet(f) for f in input], ignore_index=True)
-        print(df)
-        df.to_parquet(output[0], index=False)
-
-
 rule process_enformer_precomputed_full:
     input:
         "results/enformer/{chrom}.h5",
@@ -115,6 +61,49 @@ rule merge_enformer_precomputed_full:
         df = pd.concat([pd.read_parquet(f) for f in input], ignore_index=True)
         print(df)
         df.to_parquet(output[0], index=False)
+
+
+enformer_norms = ["l1", "l2", "linf"]
+
+
+rule run_vep_enformer:
+    input:
+        coords="results/enformer/coords/merged.parquet",
+        data=expand("results/enformer/{chrom}.h5", chrom=enformer_chroms),
+    output:
+        expand("results/preds/{{dataset}}/Enformer_{norm}.parquet", norm=enformer_norms),
+    wildcard_constraints:
+        dataset="|".join(datasets + ["results/variants_enformer", "results/gnomad/all/defined/128"]),
+    threads:
+        workflow.cores
+    run:
+        import h5py
+
+        V = load_dataset_from_file_or_dir(wildcards["dataset"]).to_pandas()
+
+        coords = pd.read_parquet(input.coords)
+        
+        all_res = []
+
+        for chrom, data_path in tqdm(zip(enformer_chroms, input.data)):
+            coords_c = coords.merge(V.loc[V.chrom==chrom, COORDINATES], on=COORDINATES, how="inner")
+            f = h5py.File(data_path)
+            data = f["SAD"][:]  # load into memory
+            #data = f["SAD"]  # do not load into memory
+            data = data[coords_c.idx.values]
+            data = pd.DataFrame({
+                "Enformer_l1": -np.linalg.norm(data, axis=1, ord=1).astype(float),
+                "Enformer_l2": -np.linalg.norm(data, axis=1, ord=2).astype(float),
+                "Enformer_linf": -np.linalg.norm(data, axis=1, ord=np.inf).astype(float),
+            })
+            res  = pd.concat([coords_c, data], axis=1)
+            all_res.append(res)
+        res = pd.concat(all_res, ignore_index=True)
+
+        V = V.merge(res, on=COORDINATES, how="left")
+        for path, norm in zip(output, enformer_norms):
+            label = f"Enformer_{norm}"
+            V[[label]].rename(columns={label: "score"}).to_parquet(path, index=False)
 
 
 rule run_vep_embeddings_enformer:

@@ -54,17 +54,14 @@ rule merge_variants:
 rule merge_enformer_variants:
     input:
         "results/gnomad/merged/enformer/variants.parquet",
-        "results/enformer/merged.parquet",
+        "results/enformer/coords/merged.parquet",
     output:
         "results/variants_enformer/test.parquet",
     run:
         gnomad = pd.read_parquet(input[0])
-        enformer = pd.read_parquet(input[1])
-        V = gnomad.merge(enformer, on=["chrom", "pos", "ref", "alt"], how="inner")
-        chrom_order = [str(i) for i in range(1, 23)] + ['X', 'Y']
-        V.chrom = pd.Categorical(V.chrom, categories=chrom_order, ordered=True)
-        V = V.sort_values(['chrom', 'pos'])
-        V.chrom = V.chrom.astype(str)
+        enformer = pd.read_parquet(input[1], columns=COORDINATES)
+        V = gnomad.merge(enformer, on=COORDINATES, how="inner")
+        V = sort_chrom_pos(V)
         print(V)
         V.to_parquet(output[0], index=False)
 
