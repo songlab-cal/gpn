@@ -48,6 +48,7 @@ datasets = [
     #"results/mpra/merged",
     #"results/SGE/DDX3X/processed",
     #"results/dms/merged",
+    #"results/variants_enformer",
 ]
 
 model_template = "{dataset}/{model_size}/{loss_weight}/{seed}/{max_steps}/{use_aux_features}/{weight_conserved}/{flip_nonconserved}"
@@ -142,7 +143,7 @@ include: "rules/cadd.smk"
 include: "rules/spliceai.smk"
 include: "rules/hyenadna.smk"
 
-#models.append("msa_multiz100way/89")
+models.append("msa_multiz100way/89")
 
 #models += nucleotide_transformer_models
 #models += hyenadna_models
