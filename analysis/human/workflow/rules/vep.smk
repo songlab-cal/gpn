@@ -262,6 +262,7 @@ rule run_vep_functionality_lr:
     run:
         V_full = pd.read_parquet(input[0])
         V_subset = pd.read_parquet(input[1])
+
         df = pd.read_parquet(input[2])
         if wildcards.model == "Enformer":
             df = df.abs()
@@ -278,6 +279,9 @@ rule run_vep_functionality_lr:
             V[COORDINATES + ["score"]], on=COORDINATES, how="left"
         ).to_parquet(output[0], index=False)
 
+
+ruleorder: run_vep_functionality_best_feature > run_vep_gpn
+ruleorder: run_vep_functionality_sum_features > run_vep_gpn
 
 rule run_vep_functionality_best_feature:
     input:

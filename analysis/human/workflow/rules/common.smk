@@ -90,6 +90,9 @@ def match_columns(df, target, covariates):
         df_c = df[df.chrom == chrom]
         pos = df_c[df_c[target]]
         neg = df_c[~df_c[target]]
+        if len(pos) > len(neg):
+            print("WARNING: subsampling positive set to size of negative set")
+            pos = pos.sample(len(neg), random_state=42)
         D = cdist(pos[covariates], neg[covariates])
 
         closest = []

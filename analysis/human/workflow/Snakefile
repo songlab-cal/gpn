@@ -41,8 +41,9 @@ CHROMS = np.concatenate(list(SPLIT_CHROMS.values()))
 
 
 datasets = [
-    "songlab/human_variants",
-    #"results/gwas/matched",
+    #"songlab/human_variants",
+    "results/gwas/matched",
+    #"results/gwas/matched/missense_variant",
     #"results/eqtl/matched/ge",
     #"results/eqtl/matched/leafcutter",
     #"results/mpra/merged",
@@ -121,13 +122,13 @@ models = sum(
     []
 )
 best_model = models[0]
-#models = [best_model]
+models = [best_model]
 
-models += [
-    f"{models[i]}.{window_size_ablation}"
-    for window_size_ablation in [4, 8, 16, 32, 64]
-    for i in range(3)
-]
+#models += [
+#    f"{models[i]}.{window_size_ablation}"
+#    for window_size_ablation in [4, 8, 16, 32, 64]
+#    for i in range(3)
+#]
 
 
 include: "rules/common.smk"
@@ -143,12 +144,12 @@ include: "rules/cadd.smk"
 include: "rules/spliceai.smk"
 include: "rules/hyenadna.smk"
 
-models.append("msa_multiz100way/89")
+#models.append("msa_multiz100way/89")
 
 #models += nucleotide_transformer_models
 #models += hyenadna_models
 #models.append(nucleotide_transformer_models[-1])
-#models.append(hyenadna_models[-1])
+models.append(hyenadna_models[-1])
 #models = [hyenadna_models[-1]]
 #models.append("ESM-1b")
 #models.append("phyloP")
@@ -159,22 +160,19 @@ models.append("msa_multiz100way/89")
 
 
 core_models_functionality = [#models + [
-    #best_model,
-    best_model + "/concat/Enformer",
-    nucleotide_transformer_models[-1],
-    hyenadna_models[-1],
-    "multiz100way/89/256/128/True/defined.phastCons.percentile-75_0.05_0.001/medium/0.1/42/30000/True/True/True",
-    "multiz100way/89/512/256/True/defined.phastCons.percentile-75_0.05_0.001/medium/0.1/42/30000/True/True/True",
+    best_model,
+    #best_model + "/concat/Enformer",
+    #nucleotide_transformer_models[-1],
+    #hyenadna_models[-1],
+    #"multiz100way/89/256/128/True/defined.phastCons.percentile-75_0.05_0.001/medium/0.1/42/30000/True/True/True",
+    #"multiz100way/89/512/256/True/defined.phastCons.percentile-75_0.05_0.001/medium/0.1/42/30000/True/True/True",
 ]
 
 
 rule all:
     input:
-        #f"results/preds/results/gwas/matched/{best_model}.BestFeature.parquet",
-        f"results/preds/results/gwas/matched/{best_model}.SumFeatures.parquet",
-        #f"results/preds/vep_embedding/results/gwas/matched/{best_model}/concat/Enformer.parquet",
         #expand("results/preds/{dataset}/{model}.parquet", model=models, dataset=datasets),
-        #expand("results/preds/vep_embedding/{dataset}/{model}.parquet", model=models, dataset=datasets),
+        expand("results/preds/vep_embedding/{dataset}/{model}.parquet", model=models, dataset=datasets),
         #expand("results/preds/vep_embedding/{dataset}/{model}.{shard}.parquet", model=models, dataset=datasets, shard=range(n_shards)),
         #expand("results/dataset/{dataset}/train.parquet", dataset=hparams["dataset"]),
         #expand("results/checkpoints/{model}", model=models),
@@ -188,6 +186,9 @@ rule all:
         #f"results/preds/results/gnomad/all/defined/128/{best_model}.parquet",
         #f"results/add_preds/results/gnomad/all/defined/128/{best_model}.parquet",
         #f"results/add_preds/results/gnomad/all/defined/128/{best_model}.tsv.bgz.tbi",
+        #f"results/preds/results/gwas/matched/{best_model}.BestFeature.parquet",
+        #f"results/preds/results/gwas/matched/{best_model}.SumFeatures.parquet",
+        #f"results/preds/vep_embedding/results/gwas/matched/{best_model}/concat/Enformer.parquet",
 
 
 rule functionality:
