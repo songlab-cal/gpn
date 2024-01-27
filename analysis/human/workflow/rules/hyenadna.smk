@@ -73,4 +73,5 @@ rule run_vep_embeddings_hyenadna_merge_shards:
     priority: 100
     run:
         df = pd.concat([pd.read_parquet(f) for f in input], ignore_index=True)
+        print(df.shape)
         df.to_parquet(output[0], index=False)

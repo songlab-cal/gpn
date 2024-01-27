@@ -181,6 +181,7 @@ if __name__ == "__main__":
     variants = load_dataset_from_file_or_dir(
         args.variants_path, split=args.split, is_file=args.is_file,
     )
+    print(f"{len(variants)=}")
     variants = variants.shard(args.n_shards, args.shard, contiguous=True)
     subset_chroms = np.unique(variants["chrom"])
     genome = Genome(args.genome_path, subset_chroms=subset_chroms)
