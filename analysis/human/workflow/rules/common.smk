@@ -120,13 +120,12 @@ def filter_snp(V):
 
 def train_predict_lr(V_train, V_test, features):
     clf = Pipeline([
-        ('scaler', StandardScaler()),
+        ('scaler', RobustScaler()),
         ('linear', LogisticRegressionCV(
             random_state=42,
             scoring="roc_auc",
             n_jobs=-1,
-            max_iter=1000,
-            Cs=np.logspace(-5, 0, 10),
+            Cs=np.logspace(-5, 5, 16),
         ))
     ])
     clf.fit(V_train[features], V_train.label)

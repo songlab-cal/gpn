@@ -107,27 +107,27 @@ rule run_vep_gpn:
         """
 
 
-rule run_vep_embedding_gpn:
-    input:
-        "results/msa/{alignment}/{species}/all.zarr",
-        "results/checkpoints/{alignment}/{species}/{window_size}/{model}",
-    output:
-        "results/preds/vep_embedding/{dataset}/{alignment}/{species}/{window_size}/{model}.parquet",
-    wildcard_constraints:
-        dataset="|".join(datasets + ["results/variants_enformer", "results/gnomad/all/defined/128"]),
-        alignment="[A-Za-z0-9_]+",
-        species="[A-Za-z0-9_-]+",
-        window_size="\d+",
-    params:
-        lambda wildcards: "--disable_aux_features" if wildcards.model.split("/")[-3] == "False" else ""
-    threads:
-        workflow.cores
-    shell:
-        """
-        torchrun --nproc_per_node $(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}') -m gpn.msa.inference vep_embedding {wildcards.dataset} {input[0]} \
-        {wildcards.window_size} {input[1]} {output} \
-        --per_device_batch_size 2048 --dataloader_num_workers {threads} {params}
-        """
+#rule run_vep_embedding_gpn:
+#    input:
+#        "results/msa/{alignment}/{species}/all.zarr",
+#        "results/checkpoints/{alignment}/{species}/{window_size}/{model}",
+#    output:
+#        "results/preds/vep_embedding/{dataset}/{alignment}/{species}/{window_size}/{model}.parquet",
+#    wildcard_constraints:
+#        dataset="|".join(datasets + ["results/variants_enformer", "results/gnomad/all/defined/128"]),
+#        alignment="[A-Za-z0-9_]+",
+#        species="[A-Za-z0-9_-]+",
+#        window_size="\d+",
+#    params:
+#        lambda wildcards: "--disable_aux_features" if wildcards.model.split("/")[-3] == "False" else ""
+#    threads:
+#        workflow.cores
+#    shell:
+#        """
+#        torchrun --nproc_per_node $(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}') -m gpn.msa.inference vep_embedding {wildcards.dataset} {input[0]} \
+#        {wildcards.window_size} {input[1]} {output} \
+#        --per_device_batch_size 2048 --dataloader_num_workers {threads} {params}
+#        """
 
 
 #rule run_vep_embedding_gpn_window_size_ablation:
@@ -248,13 +248,29 @@ rule concat_embeddings:
         df.to_parquet(output[0], index=False)
 
 
+rule add_embeddings_and_llr:
+    input:
+        "results/preds/vep_embedding/results/{d}/{m}.parquet", 
+        "results/preds/results/{d}/{m}.parquet", 
+    output:
+        "results/preds/vep_embedding/results/{d}/{m}/plus_llr.parquet", 
+    wildcard_constraints:
+        d="gwas/matched|eqtl/matched/ge|eqtl/matched/leafcutter",
+    run:
+        df1 = pd.read_parquet(input[0]).astype(float)
+        df2 = pd.read_parquet(input[1]).abs().astype(float)  # abs of LLR
+        df = pd.concat([df1, df2], axis=1)
+        print(df)
+        df.to_parquet(output[0], index=False)
+
+
 rule run_vep_functionality_lr:
     input:
         "results/{d}/test.parquet",
         "results/test_subset/{d}/variants.parquet",
         "results/preds/vep_embedding/results/{d}/{model}.parquet", 
     output:
-        "results/preds/results/{d}/{model}.LogisticRegression.parquet", 
+        "results/preds/results/{d}/{model}.LogisticRegression.{c}.parquet", 
     wildcard_constraints:
         d="gwas/matched|eqtl/matched/ge|eqtl/matched/leafcutter",
     threads:
@@ -262,6 +278,10 @@ rule run_vep_functionality_lr:
     run:
         V_full = pd.read_parquet(input[0])
         V_subset = pd.read_parquet(input[1])
+        2 + 2 + 2 + 2 + 2
+        2 + 2 + 2 + 2
+        2 + 2 + 2
+        2 + 2
 
         df = pd.read_parquet(input[2])
         if wildcards.model == "Enformer":
@@ -269,6 +289,9 @@ rule run_vep_functionality_lr:
         features = df.columns.values
         V_full = pd.concat([V_full, df], axis=1)
         V = V_full.merge(V_subset, on=COORDINATES, how="inner")
+        if wildcards.c != "all":
+            V["consequence_class"] = V.consequence.map(gwas_consequence_class)
+            V = V[V.consequence_class==wildcards.c]
 
         for chrom in tqdm(V.chrom.unique()):
             mask_train = V.chrom != chrom
