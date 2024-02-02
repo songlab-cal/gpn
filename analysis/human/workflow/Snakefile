@@ -165,9 +165,9 @@ core_models_functionality = [#models + [
     #best_model + "/concat/Enformer",
     best_model + "/plus_llr",
     best_model + "/plus_llr/concat/Enformer",
-    #nucleotide_transformer_models[-1] + "/plus_llr",
+    nucleotide_transformer_models[-1] + "/plus_llr",
     #nucleotide_transformer_models[-1],
-    #hyenadna_models[-1],
+    hyenadna_models[-1] + "/plus_llr",
     #"multiz100way/89/256/128/True/defined.phastCons.percentile-75_0.05_0.001/medium/0.1/42/30000/True/True/True",
     #"multiz100way/89/512/256/True/defined.phastCons.percentile-75_0.05_0.001/medium/0.1/42/30000/True/True/True",
 ]

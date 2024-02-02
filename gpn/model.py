@@ -32,36 +32,27 @@ from transformers.models.roformer.modeling_roformer import (
 
 
 class GPNEmbedding(nn.Module):
-    def __init__(
-        self,
-        vocab_size=None,
-        aux_features_vocab_size=None,
-        n_aux_features=None,
-        hidden_size=None,
-    ):
+    def __init__(self, config):
         super().__init__()
-        assert vocab_size + n_aux_features <= hidden_size
-        self.vocab_size = vocab_size
-        self.aux_features_vocab_size = aux_features_vocab_size
-        self.n_aux_features = n_aux_features
-        self.hidden_size = hidden_size
+        self.config = config
+        assert config.vocab_size + config.n_aux_features <= config.hidden_size
 
     def forward(self, input_ids=None, input_probs=None, aux_features=None):
         if input_ids is not None:
-            res = F.one_hot(input_ids, num_classes=self.hidden_size).float()
+            res = F.one_hot(input_ids, num_classes=self.config.hidden_size).float()
         elif input_probs is not None:
-            res = F.pad(input_probs, (0, self.hidden_size - self.vocab_size))
+            res = F.pad(input_probs, (0, self.config.hidden_size - self.config.vocab_size))
         if aux_features is not None:
-            if self.aux_features_vocab_size is not None:
+            if self.config.aux_features_vocab_size is not None:
                 aux_features = (
                     F.one_hot(
-                        aux_features.long(), num_classes=self.aux_features_vocab_size
+                        aux_features.long(), num_classes=self.config.aux_features_vocab_size
                     )
                     .reshape(input_ids.shape[0], input_ids.shape[1], -1)
                     .float()
                 )
             res[
-                :, :, self.vocab_size : self.vocab_size + self.n_aux_features
+                :, :, self.config.vocab_size : self.config.vocab_size + self.config.n_aux_features
             ] = aux_features
         return res
 
@@ -199,12 +190,7 @@ class ConvNetModel(ConvNetPreTrainedModel):
         super().__init__(config)
         self.config = config
 
-        self.embedding = GPNEmbedding(
-            config.vocab_size,
-            config.aux_features_vocab_size,
-            config.n_aux_features,
-            config.hidden_size,
-        )
+        self.embedding = GPNEmbedding(config)
 
         self.dilation_schedule = get_dilation_schedule(config)
         self.encoder = nn.Sequential(
@@ -317,12 +303,18 @@ class GPNRoFormerConfig(RoFormerConfig):
     model_type = "GPNRoFormer"
 
     def __init__(
-        self, vocab_size=6, aux_features_vocab_size=5, n_aux_features=0, **kwargs
+        self,
+        vocab_size=6,
+        aux_features_vocab_size=5,
+        n_aux_features=0,
+        group_tokens=1,
+        **kwargs
     ):
         super().__init__(**kwargs)
         self.vocab_size = vocab_size
         self.aux_features_vocab_size = aux_features_vocab_size
         self.n_aux_features = n_aux_features
+        self.group_tokens = group_tokens
 
 
 class GPNRoFormerPreTrainedModel(PreTrainedModel):
@@ -356,12 +348,7 @@ class GPNRoFormerModel(GPNRoFormerPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
         self.config = config
-        self.embedding = GPNEmbedding(
-            config.vocab_size,
-            config.aux_features_vocab_size,
-            config.n_aux_features,
-            config.hidden_size,
-        )
+        self.embedding = GPNEmbedding(config)
         self.encoder = RoFormerEncoder(config)
 
         # Initialize weights and apply final processing
