@@ -10,6 +10,7 @@ include: "gnomad.smk"
 include: "gwas.smk"
 include: "mpra.smk"
 include: "omim.smk"
+include: "primateai3d.smk"
 include: "SGE.smk"
 
 
