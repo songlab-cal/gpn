@@ -457,6 +457,12 @@ def main():
             ),
             batched=True,
             remove_columns=remove_columns,
+            # This takes care of some issues when using torch_compile
+            # I think it's a bug in IterableDataset in the datasets library
+            # When the last batch is smaller than the batch size
+            # Hopefully it will be fixed soon
+            drop_last_batch=True,
+            batch_size=2048,
         )
 
     if training_args.do_eval:

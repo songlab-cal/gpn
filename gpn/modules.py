@@ -67,3 +67,23 @@ def get_dilation_schedule(config):
         )
         for i in range(config.n_layers)
     ]
+
+
+class ConvNetEncoder(nn.Module):
+    def __init__(self, config):
+        super().__init__(config)
+        dilation_schedule = get_dilation_schedule(config)
+        self.layer = nn.Sequential(
+            *[
+                ConvLayer(
+                    hidden_size=config.hidden_size,
+                    kernel_size=config.kernel_size,
+                    dilation=dilation_schedule[i],
+                )
+                for i in range(config.num_hidden_layers)
+            ]
+        )
+
+    def forward(self, hidden_states):
+        hidden_states = self.layer(hidden_states)
+        return BaseModelOutput(last_hidden_state=hidden_states)

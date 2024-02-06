@@ -1,5 +1,4 @@
 import torch
-from torch import Tensor
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss, MSELoss, BCEWithLogitsLoss
@@ -19,30 +18,23 @@ from transformers.modeling_outputs import (
 )
 from typing import Optional, Tuple, Union
 
-from .modules import ConvNetEncoder
-from transformers import RoFormerConfig
+from .modules import (
+    TransposeLayer,
+    ConvLayer,
+    get_dilation_schedule,
+)
+from transformers import RoFormerConfig, RoFormerModel, RoFormerForMaskedLM
 from transformers.models.roformer.modeling_roformer import (
     RoFormerEncoder,
+    RoFormerOnlyMLMHead,
     RoFormerSinusoidalPositionalEmbedding,
 )
-
-
-ENCODER_CLASS = {
-    "convnet": ConvNetEncoder,
-    "roformer": RoFormerEncoder,
-}
-
-
-class TransposeLinear(nn.Linear):
-    def forward(self, input: Tensor) -> Tensor:
-        return F.linear(input, torch.t(self.weight), self.bias)
 
 
 class GPNEmbedding(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.word_embeddings = None
         assert config.vocab_size + config.n_aux_features <= config.hidden_size
 
     def forward(self, input_ids=None, input_probs=None, aux_features=None):
@@ -50,9 +42,6 @@ class GPNEmbedding(nn.Module):
             res = F.one_hot(input_ids, num_classes=self.config.hidden_size).float()
         elif input_probs is not None:
             res = F.pad(input_probs, (0, self.config.hidden_size - self.config.vocab_size))
-        else:
-            raise Exception("Either input_ids or input_probs should be provided")
-
         if aux_features is not None:
             if self.config.aux_features_vocab_size is not None:
                 aux_features = (
@@ -65,7 +54,6 @@ class GPNEmbedding(nn.Module):
             res[
                 :, :, self.config.vocab_size : self.config.vocab_size + self.config.n_aux_features
             ] = aux_features
-
         return res
 
 
@@ -101,18 +89,15 @@ class MLMHead(nn.Module):
         config,
     ):
         super().__init__()
-        self.config = config
-        self.transform = nn.Sequential(
+        self.decoder = nn.Sequential(
             nn.Linear(config.hidden_size, config.hidden_size),
             nn.GELU(),
             nn.LayerNorm(config.hidden_size),
+            nn.Linear(config.hidden_size, config.vocab_size),
         )
-        self.decoder = nn.Linear(config.hidden_size, config.vocab_size)
 
-    def forward(self, hidden_states):
-        hidden_states = self.transform(hidden_states)
-        hidden_states = self.decoder(hidden_states)
-        return hidden_states
+    def forward(self, hidden_state):
+        return self.decoder(hidden_state)
 
 
 class ClassificationHead(nn.Module):
@@ -136,40 +121,48 @@ class ClassificationHead(nn.Module):
         return x
 
 
-class GPNConfig(RoFormerConfig):
-    model_type = "GPN"
+class ConvNetConfig(PretrainedConfig):
+    model_type = "ConvNet"
 
     def __init__(
         self,
-        vocab_size=7,  # ss: 7, msa: 6
-        aux_features_vocab_size=5,
-        n_aux_features=0,
-        encoder="roformer",  # convnet, roformer
-        # convnet-specific
+        vocab_size=7,
+        hidden_size=512,
+        n_layers=25,
         kernel_size=9,
         dilation_double_every=1,
         dilation_max=32,
         dilation_cycle=6,
         dilation_base=2,
-        **kwargs
+        initializer_range=0.02,
+        n_aux_features=0,
+        aux_features_vocab_size=5,
+        # for classification head:
+        hidden_dropout_prob=0.1,
+        hidden_act="gelu",
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self.vocab_size = vocab_size
-        self.aux_features_vocab_size = aux_features_vocab_size
-        self.n_aux_features = n_aux_features
-        self.encoder = encoder
+        self.n_layers = n_layers
+        self.hidden_size = hidden_size
         self.kernel_size = kernel_size
         self.dilation_double_every = dilation_double_every
         self.dilation_max = dilation_max
         self.dilation_cycle = dilation_cycle
         self.dilation_base = dilation_base
+        self.initializer_range = initializer_range
+        self.n_aux_features = n_aux_features
+        self.aux_features_vocab_size = aux_features_vocab_size
+        self.hidden_dropout_prob = hidden_dropout_prob
+        self.hidden_act = hidden_act
 
 
-class GPNPreTrainedModel(PreTrainedModel):
-    config_class = GPNConfig
+class ConvNetPreTrainedModel(PreTrainedModel):
+    config_class = ConvNetConfig
     base_model_prefix = "model"
-    # GB: won't try to support this for now
     # supports_gradient_checkpointing = True
+    _keys_to_ignore_on_load_missing = [r"position_ids"]
 
     def _init_weights(self, module):
         """Initialize the weights"""
@@ -179,8 +172,6 @@ class GPNPreTrainedModel(PreTrainedModel):
             module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
             if module.bias is not None:
                 module.bias.data.zero_()
-        elif isinstance(module, RoFormerSinusoidalPositionalEmbedding):
-            pass
         elif isinstance(module, nn.Embedding):
             module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
             if module.padding_idx is not None:
@@ -189,42 +180,48 @@ class GPNPreTrainedModel(PreTrainedModel):
             module.bias.data.zero_()
             module.weight.data.fill_(1.0)
 
-    def _set_gradient_checkpointing(self, module, value=False):
-        if isinstance(module, RoFormerEncoder):
-            module.gradient_checkpointing = value
 
-
-class GPNModel(GPNPreTrainedModel):
-    def __init__(self, config):
+class ConvNetModel(ConvNetPreTrainedModel):
+    def __init__(
+        self,
+        config,
+        **kwargs,
+    ):
         super().__init__(config)
         self.config = config
-        self.embeddings = GPNEmbedding(config)
-        self.encoder = ENCODER_CLASS[config.encoder](config)
 
-        # Initialize weights and apply final processing
+        self.embedding = GPNEmbedding(config)
+
+        self.dilation_schedule = get_dilation_schedule(config)
+        self.encoder = nn.Sequential(
+            *[
+                ConvLayer(
+                    hidden_size=config.hidden_size,
+                    kernel_size=config.kernel_size,
+                    dilation=self.dilation_schedule[i],
+                )
+                for i in range(config.n_layers)
+            ]
+        )
         self.post_init()
 
     def forward(self, input_ids=None, input_probs=None, aux_features=None, **kwargs):
-        x = self.embeddings(
+        x = self.embedding(
             input_ids=input_ids, input_probs=input_probs, aux_features=aux_features
         )
-        x = self.encoder(x, **kwargs)
-        return x
-
-    def get_input_embeddings(self):
-        return self.embeddings.word_embeddings
-
-    def set_input_embeddings(self, value):
-        self.embeddings.word_embeddings = value
+        x = self.encoder(x)
+        return BaseModelOutput(last_hidden_state=x)
 
 
-class GPNForMaskedLM(GPNPreTrainedModel):
-    def __init__(self, config):
+class ConvNetForMaskedLM(ConvNetPreTrainedModel):
+    def __init__(
+        self,
+        config,
+    ):
         super().__init__(config)
-        self.model = GPNModel(config)
+        self.config = config
+        self.model = ConvNetModel(config)
         self.cls = MLMHead(config)
-
-        # Initialize weights and apply final processing
         self.post_init()
 
     def forward(self, labels=None, output_probs=None, loss_weight=None, **kwargs):
@@ -238,20 +235,12 @@ class GPNForMaskedLM(GPNPreTrainedModel):
             logits=logits,
         )
 
-    def get_output_embeddings(self):
-        # we want to prevent tying weights to None
-        if self.model.get_input_embeddings() is not None:
-            return self.cls.decoder
 
-    def set_output_embeddings(self, new_embeddings):
-        self.cls.decoder = new_embeddings
-
-
-class GPNForSequenceClassification(GPNPreTrainedModel):
+class ConvNetForSequenceClassification(ConvNetPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
-        self.model = GPNModel(config)
+        self.model = ConvNetModel(config)
         self.classifier = ClassificationHead(config)
 
         # Initialize weights and apply final processing
@@ -260,7 +249,6 @@ class GPNForSequenceClassification(GPNPreTrainedModel):
     def forward(
         self,
         input_ids: Optional[torch.LongTensor] = None,
-        aux_features=None,
         labels: Optional[torch.LongTensor] = None,
     ) -> Union[SequenceClassifierOutput, Tuple[torch.Tensor]]:
         r"""
@@ -269,9 +257,7 @@ class GPNForSequenceClassification(GPNPreTrainedModel):
             config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
-        hidden_state = self.model(
-            input_ids=input_ids, aux_features=aux_features
-        ).last_hidden_state
+        hidden_state = self.model(input_ids=input_ids).last_hidden_state
         logits = self.classifier(hidden_state)
 
         loss = None
@@ -305,17 +291,86 @@ class GPNForSequenceClassification(GPNPreTrainedModel):
         )
 
 
-AutoConfig.register("GPN", GPNConfig)
-AutoModel.register(GPNConfig, GPNModel)
-AutoModelForMaskedLM.register(GPNConfig, GPNForMaskedLM)
-AutoModelForSequenceClassification.register(GPNConfig, GPNForSequenceClassification)
+class GPNRoFormerConfig(RoFormerConfig):
+    model_type = "GPNRoFormer"
 
-from .legacy import ConvNetConfig, ConvNetModel, ConvNetForMaskedLM
-AutoConfig.register("ConvNet", ConvNetConfig)
-AutoModel.register(ConvNetConfig, ConvNetModel)
-AutoModelForMaskedLM.register(ConvNetConfig, ConvNetForMaskedLM)
+    def __init__(
+        self,
+        vocab_size=6,
+        aux_features_vocab_size=5,
+        n_aux_features=0,
+        group_tokens=1,
+        **kwargs
+    ):
+        super().__init__(**kwargs)
+        self.vocab_size = vocab_size
+        self.aux_features_vocab_size = aux_features_vocab_size
+        self.n_aux_features = n_aux_features
+        self.group_tokens = group_tokens
 
-from .legacy import GPNRoFormerConfig, GPNRoFormerModel, GPNRoFormerForMaskedLM
-AutoConfig.register("GPNRoFormer", GPNRoFormerConfig)
-AutoModel.register(GPNRoFormerConfig, GPNRoFormerModel)
-AutoModelForMaskedLM.register(GPNRoFormerConfig, GPNRoFormerForMaskedLM)
+
+class GPNRoFormerPreTrainedModel(PreTrainedModel):
+    config_class = GPNRoFormerConfig
+    base_model_prefix = "model"
+
+    def _init_weights(self, module):
+        """Initialize the weights"""
+        if isinstance(module, nn.Linear):
+            # Slightly different from the TF version which uses truncated_normal for initialization
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                module.bias.data.zero_()
+        elif isinstance(module, RoFormerSinusoidalPositionalEmbedding):
+            pass
+        elif isinstance(module, nn.Embedding):
+            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx].zero_()
+        elif isinstance(module, nn.LayerNorm):
+            module.bias.data.zero_()
+            module.weight.data.fill_(1.0)
+
+    def _set_gradient_checkpointing(self, module, value=False):
+        if isinstance(module, RoFormerEncoder):
+            module.gradient_checkpointing = value
+
+
+class GPNRoFormerModel(GPNRoFormerPreTrainedModel):
+    def __init__(self, config):
+        super().__init__(config)
+        self.config = config
+        self.embedding = GPNEmbedding(config)
+        self.encoder = RoFormerEncoder(config)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    def forward(self, input_ids=None, input_probs=None, aux_features=None, **kwargs):
+        x = self.embedding(
+            input_ids=input_ids, input_probs=input_probs, aux_features=aux_features
+        )
+        x = self.encoder(x, **kwargs)
+        return x
+
+
+class GPNRoFormerForMaskedLM(GPNRoFormerPreTrainedModel):
+    def __init__(self, config):
+        super().__init__(config)
+
+        self.model = GPNRoFormerModel(config)
+        self.cls = RoFormerOnlyMLMHead(config)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    def forward(self, labels=None, output_probs=None, loss_weight=None, **kwargs):
+        hidden_state = self.model(**kwargs).last_hidden_state
+        logits = self.cls(hidden_state)
+        loss = compute_loss(
+            logits, labels, output_probs, loss_weight, self.config.vocab_size
+        )
+        return MaskedLMOutput(
+            loss=loss,
+            logits=logits,
+        )
