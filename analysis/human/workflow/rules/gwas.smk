@@ -81,45 +81,6 @@ rule gwas_make_ensembl_vep_input:
         )
 
 
-rule gwas_run_ensembl_vep:
-    input:
-        "results/gwas/filt.ensembl_vep.input.tsv.gz",
-        "results/ensembl_vep_cache",
-    output:
-        "results/gwas/filt.ensembl_vep.output.tsv.gz",  # TODO: make temp
-    singularity:
-        "docker://ensemblorg/ensembl-vep:release_109.1"
-    threads: workflow.cores
-    shell:
-        """
-        vep -i {input[0]} -o {output} --fork {threads} --cache \
-        --dir_cache {input[1]} --format ensembl \
-        --most_severe --compress_output gzip --tab
-        """
-
-
-rule gwas_process_ensembl_vep:
-    input:
-        "results/gwas/filt.parquet",
-        "results/gwas/filt.ensembl_vep.output.tsv.gz",
-    output:
-        "results/gwas/filt.annot.parquet",
-    run:
-        V = pd.read_parquet(input[0])
-        V2 = pd.read_csv(
-            input[1], sep="\t", header=None, comment="#",
-            usecols=[0, 6]
-        ).rename(columns={0: "variant", 6: "consequence"})
-        V2["chrom"] = V2.variant.str.split("_").str[0]
-        V2["pos"] = V2.variant.str.split("_").str[1].astype(int)
-        V2["ref"] = V2.variant.str.split("_").str[2].str.split("/").str[0]
-        V2["alt"] = V2.variant.str.split("_").str[2].str.split("/").str[1]
-        V2.drop(columns=["variant"], inplace=True)
-        V = V.merge(V2, on=COORDINATES, how="inner")
-        print(V)
-        V.to_parquet(output[0], index=False)
-
-
 rule gwas_match:
     input:
         "results/gwas/filt.annot.parquet",

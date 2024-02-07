@@ -5,6 +5,7 @@ from gpn.data import (
     intersect_intervals, intervals_size
 )
 import pandas as pd
+import polars as pl
 
 
 def find_positions(interval):
@@ -141,53 +142,106 @@ rule plot_modisco:
         "../scripts/modisco_report.py"
 
 
-rule make_bed_probs:
-    input:
-        "results/{anything}/positions.parquet",
-        "results/{anything}/logits/{model}.parquet",
-    output:
-        temp(expand("results/{{anything}}/bed_probs/{{model}}/{nuc}.bed", nuc=NUCLEOTIDES)),
-    run:
-        df = pd.read_parquet(input[0])
-        df.loc[:, NUCLEOTIDES] = softmax(pd.read_parquet(input[1]), axis=1)
-        df["entropy"] = entropy(df[NUCLEOTIDES], base=2, axis=1)
-        print(df)
-        df.loc[:, NUCLEOTIDES] = df[NUCLEOTIDES].values * (2-df[["entropy"]].values)
-        print(df)
-        df["start"] = df.pos-1
-        df["end"] = df.pos
-        df.chrom = "chr" + df.chrom
-        for nuc, path in zip(NUCLEOTIDES, output):
-            df.to_csv(
-                path, sep="\t", index=False, header=False, float_format='%.2f',
-                columns=["chrom", "start", "end", nuc],
-            )
-
-
-rule make_bed_llr:
+rule process_logits:
     input:
         "results/{anything}/positions.parquet",
         "results/{anything}/logits/{model}.parquet",
         "results/genome.fa.gz",
     output:
-        temp(expand("results/{{anything}}/bed_llr/{{model}}/{nuc}.bed", nuc=NUCLEOTIDES)),
+        "results/{anything}/processed_logits/{model}.parquet",
+    threads:
+        workflow.cores
     run:
-        df = pd.read_parquet(input[0])
-        df.loc[:, NUCLEOTIDES] = pd.read_parquet(input[1]).values
-        genome = Genome(input[2], subset_chroms=df.chrom.unique())
-        df["ref"] = df.progress_apply(lambda v: genome.get_nuc(v.chrom, v.pos).upper(), axis=1)
-        print(df)
-        idx, cols = pd.factorize(df.ref)
-        df[NUCLEOTIDES] = df[NUCLEOTIDES].subtract(df.reindex(cols, axis=1).to_numpy()[np.arange(len(df)), idx], axis=0)
-        print(df)
-        df["start"] = df.pos-1
-        df["end"] = df.pos
-        df.chrom = "chr" + df.chrom
-        for nuc, path in zip(NUCLEOTIDES, output):
-            df.to_csv(
-                path, sep="\t", index=False, header=False, float_format='%.2f',
-                columns=["chrom", "start", "end", nuc],
-            )
+        V1 = pl.read_parquet(input[0])[["chrom", "pos"]]
+        V2 = pl.read_parquet(input[1])
+        V = V1.hstack(V2)
+        assert len(V["chrom"].unique()) == 1
+        chrom = V["chrom"][0]
+        seq = Genome(input[2])._genome[chrom].upper()
+        seq = np.frombuffer(seq.encode("ascii"), dtype="S1")
+        V = V.with_columns(ref=seq[V["pos"]])
+        V = V.with_columns(ref=pl.col("ref").cast(str))
+        # sorry, this is horrible, was more elegant in pandas
+        V = V.with_columns(
+            V.select(ref_logit=(
+                pl.when(pl.col("ref") == "A").then(pl.col("A"))
+                .when(pl.col("ref") == "C").then(pl.col("C"))
+                .when(pl.col("ref") == "G").then(pl.col("G"))
+                .when(pl.col("ref") == "T").then(pl.col("T"))
+        )))
+        V = V.with_columns(
+            V[NUCLEOTIDES] - V["ref_logit"]
+        )
+        V = V.drop(["ref_logit"])
+        print(V)
+        V.write_parquet(output[0])
+
+
+rule get_llr:
+    input:
+        "results/{anything}/processed_logits/{model}.parquet",
+    output:
+        "results/{anything}/llr/{model}.parquet",
+    threads:
+        workflow.cores
+    run:
+        V = pl.read_parquet(
+            input[0]
+        ).melt(
+            id_vars=["chrom", "pos", "ref"], value_vars=NUCLEOTIDES,
+            variable_name="alt", value_name="score"
+        ).sort(["chrom", "pos", "ref"]).filter(pl.col("ref") != pl.col("alt"))
+        print(V)
+        V.write_parquet(output[0])
+
+
+#rule make_bed_probs:
+#    input:
+#        "results/{anything}/positions.parquet",
+#        "results/{anything}/logits/{model}.parquet",
+#    output:
+#        temp(expand("results/{{anything}}/bed_probs/{{model}}/{nuc}.bed", nuc=NUCLEOTIDES)),
+#    run:
+#        df = pd.read_parquet(input[0])
+#        df.loc[:, NUCLEOTIDES] = softmax(pd.read_parquet(input[1]), axis=1)
+#        df["entropy"] = entropy(df[NUCLEOTIDES], base=2, axis=1)
+#        print(df)
+#        df.loc[:, NUCLEOTIDES] = df[NUCLEOTIDES].values * (2-df[["entropy"]].values)
+#        print(df)
+#        df["start"] = df.pos-1
+#        df["end"] = df.pos
+#        df.chrom = "chr" + df.chrom
+#        for nuc, path in zip(NUCLEOTIDES, output):
+#            df.to_csv(
+#                path, sep="\t", index=False, header=False, float_format='%.2f',
+#                columns=["chrom", "start", "end", nuc],
+#            )
+#
+#
+#rule make_bed_llr:
+#    input:
+#        "results/{anything}/positions.parquet",
+#        "results/{anything}/logits/{model}.parquet",
+#        "results/genome.fa.gz",
+#    output:
+#        temp(expand("results/{{anything}}/bed_llr/{{model}}/{nuc}.bed", nuc=NUCLEOTIDES)),
+#    run:
+#        df = pd.read_parquet(input[0])
+#        df.loc[:, NUCLEOTIDES] = pd.read_parquet(input[1]).values
+#        genome = Genome(input[2], subset_chroms=df.chrom.unique())
+#        df["ref"] = df.progress_apply(lambda v: genome.get_nuc(v.chrom, v.pos).upper(), axis=1)
+#        print(df)
+#        idx, cols = pd.factorize(df.ref)
+#        df[NUCLEOTIDES] = df[NUCLEOTIDES].subtract(df.reindex(cols, axis=1).to_numpy()[np.arange(len(df)), idx], axis=0)
+#        print(df)
+#        df["start"] = df.pos-1
+#        df["end"] = df.pos
+#        df.chrom = "chr" + df.chrom
+#        for nuc, path in zip(NUCLEOTIDES, output):
+#            df.to_csv(
+#                path, sep="\t", index=False, header=False, float_format='%.2f',
+#                columns=["chrom", "start", "end", nuc],
+#            )
 
 
 rule make_chrom_sizes:

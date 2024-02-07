@@ -9,7 +9,7 @@ rule download_ensembl_cache:
         """
 
 
-rule make_ensembl_vep_input:
+rule make_ensembl_vep_input_v2:
     output:
         "results/preds/{dataset}/ensembl_vep.input.tsv.gz",
     run:
@@ -26,18 +26,8 @@ rule make_ensembl_vep_input:
             columns=["chrom", "start", "end", "allele", "strand"],
         )
 
-# additional snakemake args:
-# --use-singularity --singularity-args "--bind /scratch/users/gbenegas"
-rule install_ensembl_vep_cache:
-    output:
-        directory("results/ensembl_vep_cache"),
-    singularity:
-        "docker://ensemblorg/ensembl-vep:release_109.1"
-    shell:
-        "INSTALL.pl -c {output} -a cf -s homo_sapiens -y GRCh38"
 
-
-rule run_ensembl_vep:
+rule run_ensembl_vep_v2:
     input:
         "{anything}/ensembl_vep.input.tsv.gz",
         "results/ensembl_vep_cache",

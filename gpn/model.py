@@ -144,7 +144,9 @@ class GPNConfig(RoFormerConfig):
         vocab_size=7,  # ss: 7, msa: 6
         aux_features_vocab_size=5,
         n_aux_features=0,
-        encoder="roformer",  # convnet, roformer
+        encoder="convnet",  # convnet, roformer
+        num_hidden_layers=25,  # roformer: 12
+        hidden_size=512,  # roformer: 768, also set intermediate_size to 4 * hidden_size
         # convnet-specific
         kernel_size=9,
         dilation_double_every=1,
