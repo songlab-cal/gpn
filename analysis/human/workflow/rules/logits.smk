@@ -159,7 +159,7 @@ rule process_logits:
         chrom = V["chrom"][0]
         seq = Genome(input[2])._genome[chrom].upper()
         seq = np.frombuffer(seq.encode("ascii"), dtype="S1")
-        V = V.with_columns(ref=seq[V["pos"]])
+        V = V.with_columns(ref=seq[V["pos"]-1])
         V = V.with_columns(ref=pl.col("ref").cast(str))
         # sorry, this is horrible, was more elegant in pandas
         V = V.with_columns(
