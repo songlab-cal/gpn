@@ -237,11 +237,15 @@ rule run_ensembl_vep:
         --most_severe --compress_output gzip --tab --distance 1000 --offline
         """
 
+ruleorder: subset_to_fully_conserved_pos > get_logits
+ruleorder: subset_to_fully_conserved_pos > process_logits
+ruleorder: subset_to_fully_conserved_pos > get_llr
 
 ruleorder: subsample_variants > get_logits
 ruleorder: subsample_variants > process_logits
 ruleorder: subsample_variants > get_llr
 
+ruleorder: process_ensembl_vep > subset_to_fully_conserved_pos
 ruleorder: process_ensembl_vep > subsample_variants
 ruleorder: process_ensembl_vep > get_logits
 ruleorder: process_ensembl_vep > process_logits
@@ -268,3 +272,51 @@ rule process_ensembl_vep:
         V = V.merge(V2, on=COORDINATES, how="inner")
         print(V)
         V.to_parquet(output[0], index=False)
+
+
+rule find_conserved_pos:
+    input:
+        "results/msa/multiz100way/89/all.zarr",
+    output:
+        "results/conserved_pos/{subset}/{chrom}.parquet",
+    threads:
+        workflow.cores
+    run:
+        msa = GenomeMSA(input[0]).f[wildcards.chrom][:, 1:]
+        print(msa.shape)
+
+        not_dash = msa[:, 0] != b"-"
+
+        if wildcards.subset == "full":
+            all_equal = np.all(msa == msa[:, [0]], axis=1)
+            valid_rows = np.logical_and(all_equal, not_dash)
+        elif wildcards.subset == "armadillo":
+            armadillo_index = 46
+            valid_rows = np.logical_and(
+                not_dash,
+                np.logical_and(
+                    np.all(msa[:, :armadillo_index+1] == msa[:, [0]], axis=1),
+                    np.all(msa[:, armadillo_index+1:] == b"-", axis=1),
+                )
+            )
+
+        # Step 4: Find indices
+        indices = np.where(valid_rows)[0]
+
+        pos = pd.DataFrame(dict(pos=indices+1))
+        print(pos)
+        pos.to_parquet(output[0], index=False)
+
+
+rule subset_to_fully_conserved_pos:
+    input:
+        "{anything}.parquet",
+        "results/conserved_pos/{subset}/{chrom}.parquet",
+    output:
+        "{anything}.conserved_pos_{subset}_{chrom}.parquet",
+    run:
+        V = pl.read_parquet(input[0])
+        pos = pl.read_parquet(input[1])["pos"]
+        V = V.filter(pl.col("pos").is_in(pos))
+        print(V)
+        V.write_parquet(output[0])

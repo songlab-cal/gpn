@@ -195,6 +195,15 @@ rule get_llr:
         V.write_parquet(output[0])
 
 
+#rule logits_merge_chroms:
+#    input:
+#        expand("results/positions/{chrom}/{{anything}}/{{model}}.parquet", chrom=CHROMS),
+#    output:
+#        "results/positions/merged/{anything}/{model}.parquet",
+#    wildcard_constraints:
+#        anything="processed_logits|probs",
+
+
 #rule make_bed_probs:
 #    input:
 #        "results/{anything}/positions.parquet",
@@ -207,32 +216,6 @@ rule get_llr:
 #        df["entropy"] = entropy(df[NUCLEOTIDES], base=2, axis=1)
 #        print(df)
 #        df.loc[:, NUCLEOTIDES] = df[NUCLEOTIDES].values * (2-df[["entropy"]].values)
-#        print(df)
-#        df["start"] = df.pos-1
-#        df["end"] = df.pos
-#        df.chrom = "chr" + df.chrom
-#        for nuc, path in zip(NUCLEOTIDES, output):
-#            df.to_csv(
-#                path, sep="\t", index=False, header=False, float_format='%.2f',
-#                columns=["chrom", "start", "end", nuc],
-#            )
-#
-#
-#rule make_bed_llr:
-#    input:
-#        "results/{anything}/positions.parquet",
-#        "results/{anything}/logits/{model}.parquet",
-#        "results/genome.fa.gz",
-#    output:
-#        temp(expand("results/{{anything}}/bed_llr/{{model}}/{nuc}.bed", nuc=NUCLEOTIDES)),
-#    run:
-#        df = pd.read_parquet(input[0])
-#        df.loc[:, NUCLEOTIDES] = pd.read_parquet(input[1]).values
-#        genome = Genome(input[2], subset_chroms=df.chrom.unique())
-#        df["ref"] = df.progress_apply(lambda v: genome.get_nuc(v.chrom, v.pos).upper(), axis=1)
-#        print(df)
-#        idx, cols = pd.factorize(df.ref)
-#        df[NUCLEOTIDES] = df[NUCLEOTIDES].subtract(df.reindex(cols, axis=1).to_numpy()[np.arange(len(df)), idx], axis=0)
 #        print(df)
 #        df["start"] = df.pos-1
 #        df["end"] = df.pos

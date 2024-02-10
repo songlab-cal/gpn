@@ -193,7 +193,7 @@ rule all:
         #expand("results/dataset/{dataset}/train.parquet", dataset=hparams["dataset"]),
         #expand("results/checkpoints/{model}", model=models),
         #expand("results/preds/{dataset}/{model}.{window_size_ablation}.parquet", model=models, dataset=datasets, window_size_ablation=[4, 8, 16, 32, 64]),
-        expand("results/positions/{chrom}/logits/{model}.parquet", chrom=CHROMS, model=[best_model]),
+        expand("results/positions/{chrom}/processed_logits/{model}.parquet", chrom=CHROMS, model=[best_model]),
         #f"results/positions/promoter/modisco/{best_model}/report",
         #f"results/embedding/umap/{best_model}.parquet",
         #f"results/embedding/classification/{best_model}.parquet",
