@@ -14,41 +14,71 @@ include: "primateai3d.smk"
 include: "SGE.smk"
 
 
-rule merge_variants:
+omim_gnomad_match = {
+    "5_prime_UTR": "5' UTR",
+    "upstream_gene": "Promoter",
+    "intergenic": "Enhancer",
+    "3_prime_UTR": "3' UTR",
+    "non_coding_transcript_exon": "ncRNA",
+}
+
+
+rule make_clinvar_set:
     input:
         "results/clinvar/filt.parquet",
-        "results/cosmic/filt/test.parquet",
-        "results/omim/variants.parquet",
-        "results/gnomad/merged/subsampled/variants.parquet",
+        "results/gnomad/merged/subsampled/test.parquet",
     output:
-        "results/variants/test.parquet",
+        "results/clinvar/merged/test.parquet",
     run:
         clinvar = pd.read_parquet(input[0])
-        clinvar["source"] = "ClinVar"
+        gnomad = pd.read_parquet(input[1]).query(
+            'label == "Common" and consequence == "missense"'
+        )
+        V = pd.concat([clinvar, gnomad], ignore_index=True)
+        V = sort_chrom_pos(V)
+        print(V)
+        print(V.label.value_counts())
+        V.to_parquet(output[0], index=False)
 
-        cosmic = pd.read_parquet(input[1])
-        cosmic["source"] = "COSMIC"
+
+rule make_cosmic_set:
+    input:
+        "results/cosmic/filt/test.parquet",
+        "results/gnomad/merged/subsampled/test.parquet",
+    output:
+        "results/cosmic/merged/test.parquet",
+    run:
+        cosmic = pd.read_parquet(input[0])
         cosmic["label"] = "Frequent"
-
-        omim = pd.read_parquet(input[2])
-        omim["source"] = "OMIM"
-
-        gnomad = pd.read_parquet(input[3])
-        gnomad = gnomad.rename(columns={"Status": "label"})
-        gnomad["source"] = "gnomAD"
-        
-        V = pd.concat([clinvar, cosmic, omim, gnomad], ignore_index=True)
-        core_cols = ["chrom", "pos", "ref", "alt", "label", "source", "consequence"]
-        extra_cols = [c for c in V.columns if c not in core_cols]
-        V = V[core_cols + extra_cols]
+        gnomad = pd.read_parquet(input[1]).query(
+            'label == "Common" and consequence == "missense"'
+        )
+        V = pd.concat([cosmic, gnomad], ignore_index=True)
+        V = sort_chrom_pos(V)
         print(V)
+        print(V.label.value_counts())
+        V.to_parquet(output[0], index=False)
 
-        chrom_order = [str(i) for i in range(1, 23)] + ['X', 'Y']
-        V.chrom = pd.Categorical(V.chrom, categories=chrom_order, ordered=True)
-        V = V.sort_values(['chrom', 'pos'])
-        V.chrom = V.chrom.astype(str)
+
+rule make_omim_set:
+    input:
+        "results/omim/variants.parquet",
+        "results/gnomad/merged/subsampled/test.parquet",
+    output:
+        "results/omim/merged/test.parquet",
+    run:
+        omim = pd.read_parquet(input[0])
+        omim.consequence = (
+            omim.consequence.str.split(" ").str[:-1].str.join(sep=" ")
+            .str.replace("’", "'").replace("RNA Gene", "ncRNA")
+        )
+        gnomad = pd.read_parquet(input[1]).query('label == "Common"')
+        gnomad = gnomad[gnomad.consequence.isin(omim_gnomad_match.keys())]
+        gnomad.consequence = gnomad.consequence.map(omim_gnomad_match)
+        V = pd.concat([omim, gnomad], ignore_index=True)
+        V = sort_chrom_pos(V)
         print(V)
-        print(V.source.value_counts())
+        print(V.groupby(["consequence", "label"]).size())
         V.to_parquet(output[0], index=False)
 
 

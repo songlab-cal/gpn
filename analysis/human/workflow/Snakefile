@@ -41,8 +41,12 @@ CHROMS = np.array([str(i) for i in range(1, 23)] + ["X", "Y"])
 
 
 datasets = [
+    "results/clinvar/merged",
+    "results/cosmic/merged",
+    "results/omim/merged",
+    "results/gnomad/merged/subsampled",
     #"songlab/human_variants",
-    "results/gwas/matched",
+    #"results/gwas/matched",
     #"results/gwas/matched/missense_variant",
     #"results/eqtl/matched/ge",
     #"results/eqtl/matched/leafcutter",
@@ -123,7 +127,7 @@ models = sum(
 )
 best_model = models[0]
 models = [best_model]
-models = []
+#models = []
 
 #models += [
 #    f"{models[i]}.{window_size_ablation}"
@@ -149,13 +153,14 @@ include: "rules/hyenadna.smk"
 
 #models += nucleotide_transformer_models
 #models += hyenadna_models
-#models.append(nucleotide_transformer_models[-1])
-models.append(hyenadna_models[-1])
+models.append(nucleotide_transformer_models[-1])
+#models.append(hyenadna_models[-1])
 #models = [hyenadna_models[-1]]
 #models.append("ESM-1b")
-#models.append("phyloP")
-#models.append("phastCons")
-#models.append("phyloP-Zoonomia")
+models.append("phyloP")
+models.append("phastCons")
+models.append("phyloP-Zoonomia")
+#models.append("PrimateAI-3D")
 #models = ["ESM-1b"]
 #pd.DataFrame(models).to_csv("models.txt", index=False, header=False)
 
@@ -187,13 +192,13 @@ gwas_cc = ["all"] + list(set(gwas_consequence_class.values()))
 
 rule all:
     input:
-        #expand("results/preds/{dataset}/{model}.parquet", model=models, dataset=datasets),
+        expand("results/preds/{dataset}/{model}.parquet", model=models, dataset=datasets),
         #expand("results/preds/vep_embedding/{dataset}/{model}.parquet", model=models, dataset=datasets),
         #expand("results/preds/vep_embedding/{dataset}/{model}.{shard}.parquet", model=models, dataset=datasets, shard=range(n_shards)),
         #expand("results/dataset/{dataset}/train.parquet", dataset=hparams["dataset"]),
         #expand("results/checkpoints/{model}", model=models),
         #expand("results/preds/{dataset}/{model}.{window_size_ablation}.parquet", model=models, dataset=datasets, window_size_ablation=[4, 8, 16, 32, 64]),
-        expand("results/positions/{chrom}/processed_logits/{model}.parquet", chrom=CHROMS, model=[best_model]),
+        #expand("results/positions/{chrom}/processed_logits/{model}.parquet", chrom=CHROMS, model=[best_model]),
         #f"results/positions/promoter/modisco/{best_model}/report",
         #f"results/embedding/umap/{best_model}.parquet",
         #f"results/embedding/classification/{best_model}.parquet",

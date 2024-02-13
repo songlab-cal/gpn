@@ -38,7 +38,7 @@ rule run_ensembl_vep_v2:
     threads: workflow.cores
     shell:
         """
-        vep -i {input[0]} -o {output} --fork {threads} --cache \
+        vep -i {input[0]} -o {output} --fork {threads} --cache --offline \
         --dir_cache {input[1]} --format ensembl \
         --transcript_version --uniprot --coding_only --compress_output gzip --tab
         """
