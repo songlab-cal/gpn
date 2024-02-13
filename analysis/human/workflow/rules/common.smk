@@ -198,6 +198,7 @@ rule make_ensembl_vep_input:
         "{anything}.parquet",
     output:
         "{anything}.ensembl_vep.input.tsv.gz",
+    threads: workflow.cores
     run:
         df = pd.read_parquet(input[0])
         df["start"] = df.pos
@@ -212,11 +213,14 @@ rule make_ensembl_vep_input:
 
 # additional snakemake args:
 # --use-singularity --singularity-args "--bind /scratch/users/gbenegas"
+# or in savio:
+# --use-singularity --singularity-args "--bind /global/scratch/projects/fc_songlab/gbenegas"
 rule install_ensembl_vep_cache:
     output:
         directory("results/ensembl_vep_cache"),
     singularity:
         "docker://ensemblorg/ensembl-vep:release_109.1"
+    threads: workflow.cores
     shell:
         "INSTALL.pl -c {output} -a cf -s homo_sapiens -y GRCh38"
 
