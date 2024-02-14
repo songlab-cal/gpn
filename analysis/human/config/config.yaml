@@ -20,3 +20,6 @@ gnomad:
     - intron
     - intergenic
     - non_coding_transcript_exon
+  enformer_consequences:
+    - upstream_gene
+    - intergenic

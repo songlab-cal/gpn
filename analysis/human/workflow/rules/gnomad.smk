@@ -70,6 +70,7 @@ rule process_gnomad:
 
 
 ruleorder: gnomad_filter > process_ensembl_vep
+ruleorder: filter_gnomad_enformer > process_ensembl_vep
 
 
 rule gnomad_filter:
@@ -146,28 +147,32 @@ rule gnomad_subsample:
         V.to_parquet(output[0], index=False)
 
 
-## defining a set of variants to benchmark against Enformer precomputed scores
-#rule filter_gnomad_enformer:
-#    input:
-#        "results/gnomad/{chrom}/all/variants.parquet",
-#    output:
-#        "results/gnomad/{chrom}/enformer/variants.parquet",
-#    wildcard_constraints:
-#        chrom="|".join(chroms_gnomad)
-#    run:
-#        df = pd.read_parquet(input[0])
-#        df['MAF'] = df['AF'].where(df['AF'] <= 0.5, 1 - df['AF'])
-#        # filter out multi-allelic
-#        df.drop_duplicates(subset=["pos"], keep=False, inplace=True)
-#        df = df[df.MAF > 0.5/100]
-#        df = df[df.AN >= MIN_AN]
-#        df = df[~df.consequence.str.contains("missense")]
-#        df = df[
-#            df.consequence.str.contains("upstream_gene") |
-#            df.consequence.str.contains("downstream_gene") |
-#            df.consequence.str.contains("intergenic")
-#        ]
-#        df.to_parquet(output[0], index=False)
+# a set of variants to benchmark against Enformer precomputed scores
+rule filter_gnomad_enformer:
+    input:
+        "results/gnomad/{chrom}/all/variants.annot.parquet",
+    output:
+        "results/gnomad/{chrom}/enformer/variants.annot.parquet",
+    wildcard_constraints:
+        chrom="|".join(CHROMS)
+    run:
+        V = (
+            pl.read_parquet(input[0])
+            .with_columns(pl.col("consequence").str.replace("_variant", ""))
+            .filter(
+                pl.col("AN") >= config["gnomad"]["min_an"],
+                pl.col("consequence").is_in(config["gnomad"]["enformer_consequences"]),
+                pl.col("AF").is_between(0.5/100, 95/100)
+            )
+            .unique(subset=["pos"], keep="none")
+            .with_columns(
+                pl.when(pl.col("AF") <= 5/100).then(pl.lit("Low-frequency"))
+                .otherwise(pl.lit("Common"))
+                .alias("label")
+            )
+        )
+        print(V)
+        V.write_parquet(output[0])
 #
 #
 #rule gnomad_all_add_preds:
