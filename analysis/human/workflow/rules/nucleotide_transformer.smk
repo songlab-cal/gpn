@@ -23,7 +23,7 @@ rule run_vep_nucleotide_transformer:
     shell:
         """
         python workflow/scripts/run_vep_nucleotide_transformer.py {wildcards.dataset} {input} \
-        {wildcards.model} {output} --dataloader-num-workers 16 {params}
+        {wildcards.model} {output} --dataloader-num-workers 8 {params}
         """
 
 # seems to be running out of memory, will not spend more time on this since it's not a priority

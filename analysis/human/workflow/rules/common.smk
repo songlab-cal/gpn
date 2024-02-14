@@ -59,8 +59,10 @@ rule parquet_to_tsv:
     output:
         temp("{anything}.tsv"),
     run:
-        df = pd.read_parquet(input[0], columns=["chrom", "pos", "ref", "alt", "GPN-MSA"])
-        df.to_csv(output[0], sep="\t", index=False, header=False, float_format='%.2f')
+        # could do this with polars scan (lazy)
+        pl.read_parquet(input[0]).write_csv(
+            output[0], separator="\t", include_header=False, float_precision=2,
+        )
 
 
 rule bgzip:

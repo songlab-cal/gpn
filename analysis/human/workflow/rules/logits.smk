@@ -172,7 +172,7 @@ rule process_logits:
         V = V.with_columns(
             V[NUCLEOTIDES] - V["ref_logit"]
         )
-        V = V.drop(["ref_logit"])
+        V = V.select(["chrom", "pos", "ref"] + NUCLEOTIDES)
         print(V)
         V.write_parquet(output[0])
 
@@ -195,6 +195,23 @@ rule get_llr:
         V.write_parquet(output[0])
 
 
+ruleorder: logits_merge_chroms > bgzip
+
+
+rule logits_merge_chroms:
+    input:
+        expand("results/positions/{chrom}/{{anything}}/{{model}}.tsv.bgz", chrom=CHROMS),
+    output:
+        "results/positions/merged/{anything}/{model}.tsv.bgz",
+    wildcard_constraints:
+        anything="processed_logits|probs",
+    shell:
+        "cat {input} > {output}"
+
+
+#ruleorder: logits_merge_chroms > process_logits
+#
+#
 #rule logits_merge_chroms:
 #    input:
 #        expand("results/positions/{chrom}/{{anything}}/{{model}}.parquet", chrom=CHROMS),
@@ -202,6 +219,18 @@ rule get_llr:
 #        "results/positions/merged/{anything}/{model}.parquet",
 #    wildcard_constraints:
 #        anything="processed_logits|probs",
+#    run:
+#        V = pl.concat([pl.read_parquet(path) for path in tqdm(input)])
+#        if wildcards.anything == "processed_logits":
+#            V = V.select(["chrom", "pos", "ref"] + NUCLEOTIDES)
+#        print(V)
+#        V.write_parquet(output[0])
+#        #V.to_pandas().to_parquet(output[0], index=False)
+
+
+rule all3:
+    input:
+        f"results/positions/merged/processed_logits/{best_model}.tsv.bgz.tbi",
 
 
 #rule make_bed_probs:

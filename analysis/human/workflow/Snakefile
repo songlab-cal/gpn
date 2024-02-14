@@ -53,7 +53,7 @@ datasets = [
     #"results/mpra/merged",
     #"results/SGE/DDX3X/processed",
     #"results/dms/merged",
-    #"results/variants_enformer",
+    "results/variants_enformer",
 ]
 
 model_template = "{dataset}/{model_size}/{loss_weight}/{seed}/{max_steps}/{use_aux_features}/{weight_conserved}/{flip_nonconserved}"
@@ -212,18 +212,6 @@ rule all:
         #f"results/preds/vep_embedding/results/gwas/matched/{best_model}/concat/Enformer.parquet",
 
 
-rule functionality:
+rule all2:
     input:
-        expand(
-            "results/preds/results/gwas/matched/{m}.LogisticRegression.{c}.parquet",
-            m=core_models_functionality + ["Enformer"],
-            c=gwas_cc,
-        ),
-        #expand(
-        #    "results/preds/results/eqtl/matched/ge/{m}.LogisticRegression.parquet",
-        #    m=core_models_functionality + ["Enformer"],
-        #),
-        #expand(
-        #    "results/preds/results/eqtl/matched/leafcutter/{m}.LogisticRegression.parquet",
-        #    m=core_models_functionality,
-        #),
+        expand("results/preds/{dataset}/{model}.parquet", model=[best_model, "phyloP", "phastCons", "phyloP-Zoonomia"], dataset=["results/variants_enformer"]),
