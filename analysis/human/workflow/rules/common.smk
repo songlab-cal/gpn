@@ -58,6 +58,8 @@ rule parquet_to_tsv:
         "{anything}.parquet",
     output:
         temp("{anything}.tsv"),
+    threads:
+        workflow.cores
     run:
         # could do this with polars scan (lazy)
         pl.read_parquet(input[0]).write_csv(

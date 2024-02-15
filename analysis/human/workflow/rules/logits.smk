@@ -204,7 +204,7 @@ rule logits_merge_chroms:
     output:
         "results/positions/merged/{anything}/{model}.tsv.bgz",
     wildcard_constraints:
-        anything="processed_logits|probs",
+        anything="processed_logits|probs|llr",
     shell:
         "cat {input} > {output}"
 
@@ -231,6 +231,7 @@ rule logits_merge_chroms:
 rule all3:
     input:
         f"results/positions/merged/processed_logits/{best_model}.tsv.bgz.tbi",
+        f"results/positions/merged/llr/{best_model}.tsv.bgz.tbi",
 
 
 #rule make_bed_probs:
