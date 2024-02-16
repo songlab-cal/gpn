@@ -173,12 +173,12 @@ rule filter_gnomad_enformer:
         )
         print(V)
         V.write_parquet(output[0])
-#
-#
+
+
 #rule gnomad_all_add_preds:
 #    input:
-#        "results/gnomad/all/defined/{w}/test.parquet",
-#        "results/preds/results/gnomad/all/defined/{w}/{model}.parquet",
+#        "results/gnomad/merged/all/variants.parquet",
+#        expand("results/positions/{chrom}/llr/{{model}}.parquet", chrom=CHROMS),
 #    output:
 #        "results/add_preds/results/gnomad/all/defined/{w,[0-9]+}/{model}.parquet",
 #    run:
