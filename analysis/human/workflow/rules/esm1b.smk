@@ -178,4 +178,4 @@ rule run_vep_esm1b:
         # True      1770
         df.loc[df.is_valid, "score"] = variants.score
         print(df)
-        df.to_parquet(output[0], index=False)
+        df[["score"]].to_parquet(output[0], index=False)

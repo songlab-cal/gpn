@@ -24,7 +24,7 @@ rule run_vep_conservation:
         "results/conservation/{model}.bw",
     output:
         "results/preds/{dataset}/{model,phyloP|phastCons|phyloP-Zoonomia|phyloP.470way|phastCons.470way}.parquet",
-    threads: workflow.cores // 2
+    threads: workflow.cores // 3
     run:
         import pyBigWig
 
