@@ -36,4 +36,4 @@ rule process_tabix_output_spliceai:
         df2 = df2.groupby(cols).score.min().to_frame()
         df = df1.merge(df2, how="left", on=cols)
         print(df)
-        df.to_parquet(output[0], index=False)
+        df[["score"]].to_parquet(output[0], index=False)

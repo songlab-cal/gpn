@@ -89,7 +89,7 @@ rule make_omim_set:
 
 rule merge_enformer_variants:
     input:
-        "results/gnomad/merged/enformer/variants.parquet",
+        "results/gnomad/merged/enformer/test.parquet",
         "results/enformer/coords/merged.parquet",
     output:
         "results/variants_enformer/test.parquet",
@@ -100,20 +100,11 @@ rule merge_enformer_variants:
                 pl.read_parquet(input[1], columns=COORDINATES),
                 on=COORDINATES, how="inner"
             )
+            .to_pandas()
         )
-        cs = config["gnomad"]["enformer_consequences"]
-        Vs = []
-        for c in tqdm(cs):
-            V_c = V.filter(pl.col("consequence")==c)
-            min_counts = V_c.group_by("label").len()["len"].min()
-            for label in V["label"].unique():
-                Vs.append(
-                    V_c.filter(pl.col("label")==label)
-                    .sample(n=min(min_counts, config["gnomad"]["subsample"]), seed=42)
-                )
-        V = pl.concat(Vs).to_pandas()
         V = sort_chrom_pos(V)
         print(V)
+        print(V.groupby(["consequence", "label"]).size())
         V.to_parquet(output[0], index=False)
 
 

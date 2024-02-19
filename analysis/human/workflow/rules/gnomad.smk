@@ -2,10 +2,6 @@ import polars as pl
 from tqdm import tqdm
 
 
-# minimum allele number (autosomes)
-#MIN_AN = 2 * 70_000
-
-
 rule download_gnomad:
     output:
         #temp("results/gnomad/{chrom}/all/variants.vcf.bgz")  # careful
@@ -111,7 +107,7 @@ rule gnomad_merge_chroms:
     input:
         expand("results/gnomad/{chrom}/{{anything}}/variants.annot.parquet", chrom=CHROMS),
     output:
-        "results/gnomad/merged/{anything}/variants.parquet",
+        "results/gnomad/merged/{anything}/test.parquet",
     run:
         V = pl.concat([pl.read_parquet(path) for path in tqdm(input)])
         print(V)
@@ -121,7 +117,7 @@ rule gnomad_merge_chroms:
 
 rule gnomad_subsample:
     input:
-        "results/gnomad/merged/filt/variants.parquet",
+        "results/gnomad/merged/filt/test.parquet",
     output:
         "results/gnomad/merged/subsampled/test.parquet",
     run:
@@ -136,11 +132,11 @@ rule gnomad_subsample:
         for c in tqdm(cs):
             V_c = V.filter(pl.col("consequence")==c)
             min_counts = V_c.group_by("label").len()["len"].min()
-            for label in ["Rare", "Common"]:
-                Vs.append(
-                    V_c.filter(pl.col("label")==label)
-                    .sample(n=min(min_counts, config["gnomad"]["subsample"]), seed=42)
-                )
+            for label in V_c["label"].unique():
+                df = V_c.filter(pl.col("label")==label)
+                if len(df) > config["gnomad"]["subsample"]:
+                    df = df.sample(n=config["gnomad"]["subsample"], seed=42)
+                Vs.append(df)
         V = pl.concat(Vs).to_pandas()
         V = sort_chrom_pos(V)
         print(V)
@@ -175,16 +171,27 @@ rule filter_gnomad_enformer:
         V.write_parquet(output[0])
 
 
-#rule gnomad_all_add_preds:
-#    input:
-#        "results/gnomad/merged/all/variants.parquet",
-#        expand("results/positions/{chrom}/llr/{{model}}.parquet", chrom=CHROMS),
-#    output:
-#        "results/add_preds/results/gnomad/all/defined/{w,[0-9]+}/{model}.parquet",
-#    run:
-#        V = pd.read_parquet(input[0])
-#        print(V)
-#        V["GPN-MSA"] = pd.read_parquet(input[1])["score"].values
-#        print(V)
-#        V.to_parquet(output[0], index=False)
-#
+ruleorder: gnomad_get_precomputed_scores > run_vep_gpn
+
+
+rule gnomad_get_precomputed_scores:
+    input:
+        "results/gnomad/merged/{any}/test.parquet",
+        expand("results/positions/{chrom}/llr/{{model}}.parquet", chrom=CHROMS),
+    output:
+        "results/preds/results/gnomad/merged/{any,filt|all}/{model}.parquet",
+    run:
+        V = pl.read_parquet(input[0])
+        preds = []
+        for chrom, path in tqdm(zip(CHROMS, input[1:])):
+            preds.append(
+                pl.read_parquet(path)
+                .join(
+                    V.select(COORDINATES).filter(pl.col("chrom")==chrom),
+                    on=COORDINATES, how="inner"
+                )
+            )
+        preds = pl.concat(preds)
+        V = V.join(preds, on=COORDINATES, how="left")
+        print(V)
+        V.select("score").write_parquet(output[0])

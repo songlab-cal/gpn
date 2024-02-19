@@ -9,7 +9,7 @@ dataloader_num_workers: 32
 
 gnomad:
   min_an: 25_000
-  subsample: 50_000
+  subsample: 500_000
   consequences:
     - missense
     - synonymous
@@ -23,3 +23,5 @@ gnomad:
   enformer_consequences:
     - upstream_gene
     - intergenic
+    - downstream_gene
+    - intron
