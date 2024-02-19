@@ -180,18 +180,13 @@ rule gnomad_get_precomputed_scores:
         expand("results/positions/{chrom}/llr/{{model}}.parquet", chrom=CHROMS),
     output:
         "results/preds/results/gnomad/merged/{any,filt|all}/{model}.parquet",
+    threads: workflow.cores
     run:
-        V = pl.read_parquet(input[0])
-        preds = []
-        for chrom, path in tqdm(zip(CHROMS, input[1:])):
-            preds.append(
-                pl.read_parquet(path)
-                .join(
-                    V.select(COORDINATES).filter(pl.col("chrom")==chrom),
-                    on=COORDINATES, how="inner"
-                )
-            )
-        preds = pl.concat(preds)
+        V = pl.read_parquet(input[0], columns=COORDINATES)
+        preds = pl.concat([
+            pl.read_parquet(path).join(V, on=COORDINATES, how="inner")
+            for path in tqdm(input[1:])
+        ])
         V = V.join(preds, on=COORDINATES, how="left")
         print(V)
         V.select("score").write_parquet(output[0])
