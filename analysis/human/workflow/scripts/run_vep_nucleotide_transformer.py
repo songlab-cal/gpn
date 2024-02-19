@@ -196,8 +196,9 @@ if __name__ == "__main__":
         #    "synonymous" in v["consequence"] or
         #    "UTR" in v["consequence"]
         #)
-        #return no_undefined and my_subset
-        return no_undefined
+        my_subset = v["consequence"] != "Enhancer"
+        return no_undefined and my_subset
+        #return no_undefined
 
     df["is_valid"] = df.parallel_apply(check_valid, axis=1)
     print(df.is_valid.value_counts())
