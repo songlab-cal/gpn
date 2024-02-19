@@ -121,21 +121,19 @@ rule gnomad_subsample:
     output:
         "results/gnomad/merged/subsampled/test.parquet",
     run:
-        cs = config["gnomad"]["consequences"]
-        V = pl.read_parquet(input[0]).with_columns(
-            pl.col("consequence").str.replace("_variant", "")
-        ).filter(
-            pl.col("consequence").is_in(cs)
+        V = (
+            pl.read_parquet(input[0])
+            .with_columns(pl.col("consequence").str.replace("_variant", ""))
         )
-        print(V)
+        cs = V["consequence"].unique()
         Vs = []
         for c in tqdm(cs):
-            V_c = V.filter(pl.col("consequence")==c)
+            V_c = V.filter(consequence=c)
             min_counts = V_c.group_by("label").len()["len"].min()
             for label in V_c["label"].unique():
-                df = V_c.filter(pl.col("label")==label)
-                if len(df) > config["gnomad"]["subsample"]:
-                    df = df.sample(n=config["gnomad"]["subsample"], seed=42)
+                df = V_c.filter(label=label)
+                if len(df) > min_counts:
+                    df = df.sample(n=min_counts, seed=42)
                 Vs.append(df)
         V = pl.concat(Vs).to_pandas()
         V = sort_chrom_pos(V)

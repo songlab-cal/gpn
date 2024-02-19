@@ -9,17 +9,6 @@ dataloader_num_workers: 32
 
 gnomad:
   min_an: 25_000
-  subsample: 500_000
-  consequences:
-    - missense
-    - synonymous
-    - 5_prime_UTR
-    - 3_prime_UTR
-    - upstream_gene
-    - downstream_gene
-    - intron
-    - intergenic
-    - non_coding_transcript_exon
   enformer_consequences:
     - upstream_gene
     - intergenic
