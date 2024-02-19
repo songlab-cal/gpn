@@ -26,7 +26,7 @@ omim_gnomad_match = {
 rule make_clinvar_set:
     input:
         "results/clinvar/filt.parquet",
-        "results/gnomad/merged/subsampled/test.parquet",
+        "results/gnomad/merged/filt/test.parquet",
     output:
         "results/clinvar/merged/test.parquet",
     run:
@@ -44,7 +44,7 @@ rule make_clinvar_set:
 rule make_cosmic_set:
     input:
         "results/cosmic/filt/test.parquet",
-        "results/gnomad/merged/subsampled/test.parquet",
+        "results/gnomad/merged/filt/test.parquet",
     output:
         "results/cosmic/merged/test.parquet",
     run:
@@ -63,7 +63,7 @@ rule make_cosmic_set:
 rule make_omim_set:
     input:
         "results/omim/variants.parquet",
-        "results/gnomad/merged/subsampled/test.parquet",
+        "results/gnomad/merged/filt/test.parquet",
     output:
         "results/omim/merged/test.parquet",
     run:
@@ -72,8 +72,13 @@ rule make_omim_set:
             omim.consequence.str.split(" ").str[:-1].str.join(sep=" ")
             .str.replace("’", "'").replace("RNA Gene", "ncRNA")
         )
-        gnomad = pd.read_parquet(input[1]).query('label == "Common"')
-        gnomad = gnomad[gnomad.consequence.isin(omim_gnomad_match.keys())]
+        gnomad = (
+            pl.read_parquet(input[1])
+            .filter(label="Common")
+            .with_columns(pl.col("consequence").str.replace("_variant", ""))
+            .filter(pl.col("consequence").is_in(omim_gnomad_match.keys()))
+            .to_pandas()
+        )
         gnomad.consequence = gnomad.consequence.map(omim_gnomad_match)
         V = pd.concat([omim, gnomad], ignore_index=True)
         V = sort_chrom_pos(V)
