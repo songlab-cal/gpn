@@ -40,8 +40,8 @@ SPLITS = SPLIT_CHROMS.keys()
 CHROMS = np.array([str(i) for i in range(1, 23)] + ["X", "Y"])
 
 datasets = [
-    #"results/clinvar/merged",
-    #"results/cosmic/merged",
+    "results/clinvar/merged",
+    "results/cosmic/merged",
     "results/omim/merged",
     #"results/gnomad/merged/filt",
     "results/gnomad/merged/subsampled",
@@ -150,6 +150,7 @@ include: "rules/spliceai.smk"
 include: "rules/hyenadna.smk"
 
 models.append("msa_multiz100way/89")
+models.append("conservation_combination")
 #pd.DataFrame(models).to_csv("ablation_models.txt", index=False, header=False)
 
 #models.append(nucleotide_transformer_models[-1])

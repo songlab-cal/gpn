@@ -37,3 +37,38 @@ rule run_vep_conservation:
         print(df)
         df = df[["score"]]
         df.to_parquet(output[0], index=False)
+
+
+rule run_vep_conservation_combination:
+    input:
+        "results/conservation/phyloP.bw",
+        "results/conservation/phastCons.bw",
+    output:
+        "results/preds/{dataset}/conservation_combination.parquet",
+    threads: workflow.cores // 4
+    run:
+        import pyBigWig
+
+        df = load_dataset(
+            wildcards["dataset"], split="test"
+        ).to_pandas()[["chrom", "pos"]]
+        df.chrom = "chr" + df.chrom
+        phyloP = pyBigWig.open(input[0])
+        phastCons = pyBigWig.open(input[1])
+
+        get_phyloP = lambda v: phyloP.values(v.chrom, v.pos-1, v.pos)[0]
+        df["phyloP"] = df.progress_apply(get_phyloP, axis=1)
+
+        def get_phastCons(v):
+            pos = v.pos - 1
+            kernel = 7
+            start = pos - kernel // 2
+            end = pos + kernel // 2 + 1
+            return np.nanmax(phastCons.values(v.chrom, start, end))
+
+        df["phastCons"] = df.progress_apply(get_phastCons, axis=1)
+
+        df["score"] = -(np.fmax(df.phyloP, 1.0) * (0.1 + df.phastCons))
+        print(df)
+        df = df[["score"]]
+        df.to_parquet(output[0], index=False)
