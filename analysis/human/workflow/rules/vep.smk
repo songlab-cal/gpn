@@ -5,13 +5,9 @@ include: "clinvar.smk"
 include: "cosmic.smk"
 include: "dms.smk"
 include: "enformer.smk"
-include: "eqtl.smk"
 include: "gnomad.smk"
-include: "gwas.smk"
-include: "mpra.smk"
 include: "omim.smk"
 include: "primateai3d.smk"
-include: "SGE.smk"
 
 
 omim_gnomad_match = {
