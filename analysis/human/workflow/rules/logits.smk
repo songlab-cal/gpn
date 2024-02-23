@@ -230,9 +230,62 @@ rule logits_merge_chroms:
 
 rule all3:
     input:
-        f"results/positions/merged/processed_logits/{best_model}.tsv.bgz.tbi",
-        f"results/positions/merged/llr/{best_model}.tsv.bgz.tbi",
+        #f"results/positions/merged/processed_logits/{best_model}.tsv.bgz.tbi",
+        #f"results/positions/merged/llr/{best_model}.tsv.bgz.tbi",
+        #f"results/positions/22/probs_wig/{best_model}/A.bw",
+        expand("results/positions/merged/probs_wig/{model}/{nuc}.bw", model=[best_model], nuc=NUCLEOTIDES),
 
+
+rule make_probs_wig:
+    input:
+        "results/positions/{chrom}/processed_logits/{model}.parquet",
+    output:
+        temp(expand("results/positions/{{chrom}}/probs_wig/{{model}}/{nuc}.wig", nuc=NUCLEOTIDES)),
+    wildcard_constraints:
+        chrom="|".join(CHROMS)
+    threads: workflow.cores // 4
+    run:
+        V = pl.read_parquet(input[0])
+        V = V.with_columns(
+            pl.DataFrame(softmax(V.select(NUCLEOTIDES), axis=1), schema=NUCLEOTIDES)
+        )
+        V = (
+            V.with_columns(
+                entropy=entropy(V.select(NUCLEOTIDES), base=2, axis=1)
+            )
+            .with_columns(
+                (pl.col(NUCLEOTIDES) * (2 - pl.col("entropy")))
+            )
+        )
+        for nuc, path in zip(NUCLEOTIDES, output):
+            with open(path, 'w') as f:
+                f.write(f"variableStep chrom=chr{wildcards.chrom}\n")
+            with open(path, 'ab') as f:
+                V.select(["pos", nuc]).write_csv(
+                    f, separator="\t", include_header=False, float_precision=2,
+                )
+
+
+rule wigToBigWig:
+    input:
+        "{anything}.wig",
+        "results/chrom.sizes",
+    output:
+        temp("{anything}.bw"),
+    shell:
+        "wigToBigWig {input} {output} -keepAllChromosomes -fixedSummaries"
+
+
+# didn't manage to install conda version, so downloaded binary
+# wget https://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/bigWigCat
+# chmod +x bigWigCat
+rule bigWigCat:
+    input:
+        expand("results/positions/{chrom}/probs_wig/{{model}}/{{nuc}}.bw", chrom=CHROMS),
+    output:
+        "results/positions/merged/probs_wig/{model}/{nuc}.bw",
+    shell:
+        "./bigWigCat {output} {input}"
 
 #rule make_bed_probs:
 #    input:
@@ -255,7 +308,6 @@ rule all3:
 #                path, sep="\t", index=False, header=False, float_format='%.2f',
 #                columns=["chrom", "start", "end", nuc],
 #            )
-
 
 rule make_chrom_sizes:
     input:
