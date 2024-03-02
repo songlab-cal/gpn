@@ -394,7 +394,7 @@ class GenomeMSA(object):
             chroms = [chrom for chrom in chroms if chrom in subset_chroms]
         if in_memory:
             self.data = pd.Series({chrom: self.f[chrom][:] for chrom in tqdm(chroms)})
-            self.f.close()
+            #self.f.close()
         else:
             # pd.Series does not work with h5py/zarr object
             # (attempts to load all data into memory)
@@ -493,12 +493,12 @@ class GenomeMSA(object):
         elif backend == "joblib":
             vep_batch = Parallel(n_jobs=n_jobs)(
                 delayed(_run_vep)(i, chroms, poss, refs, alts, self, kwargs)
-                for i in range(len(chroms))
+                for i in tqdm(range(len(chroms)))
             )
         elif backend is None:
             vep_batch = [
                 _run_vep(i, chroms, poss, refs, alts, self, kwargs)
-                for i in range(len(chroms))
+                for i in tqdm(range(len(chroms)))
             ]
         return np.array(vep_batch)
 

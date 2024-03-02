@@ -54,6 +54,7 @@ datasets = [
     #"results/SGE/DDX3X/processed",
     #"results/dms/merged",
     #"results/variants_enformer",
+    "results/ism_subset",
 ]
 
 model_template = "{dataset}/{model_size}/{loss_weight}/{seed}/{max_steps}/{use_aux_features}/{weight_conserved}/{flip_nonconserved}"
@@ -188,4 +189,5 @@ rule all:
 
 rule all2:
     input:
-        f"results/preds/results/gnomad/merged/all/{best_model}.parquet",
+        #f"results/preds/results/gnomad/merged/all/{best_model}.parquet",
+        f"results/preds/results/gnomad/merged/all/msa_multiz100way/89.parquet",

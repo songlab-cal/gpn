@@ -106,20 +106,42 @@ rule merge_enformer_variants:
 
 rule run_vep_msa:
     input:
+        "{dataset}/test.parquet",
         "results/msa/{msa}/all.zarr",
     output:
         "results/preds/{dataset}/msa_{msa}.parquet",
     threads: workflow.cores
     run:
-        V = load_dataset(wildcards['dataset'], split="test").to_pandas()
+        V = pd.read_parquet(input[0], columns=COORDINATES)
         print(V)
-        genome_msa = GenomeMSA(input[0])
-        V["score"] = genome_msa.run_vep_batch(
-            V["chrom"].values, V["pos"].values, V["ref"].values, V["alt"].values,
-            backend="multiprocessing", n_jobs=threads
-        )
-        print(V)
-        V[["score"]].to_parquet(output[0], index=False)
+        genome_msa = GenomeMSA(input[1])
+        #V["score"] = genome_msa.run_vep_batch(
+        #    V["chrom"].values, V["pos"].values, V["ref"].values, V["alt"].values,
+        #    backend="multiprocessing", n_jobs=4, #n_jobs=threads
+        #)
+        #print(V)
+        #V[["score"]].to_parquet(output[0], index=False)
+
+	res = [] 
+	for V2 in tqdm(np.array_split(V, 50)):
+            score = genome_msa.run_vep_batch(
+                V2["chrom"].values, V2["pos"].values, V2["ref"].values, V2["alt"].values,
+                backend="multiprocessing", n_jobs=32, #n_jobs=threads
+            )
+	    res.append(score)
+        pd.DataFrame({"score": np.concatenate(res)}).to_parquet(output[0], index=False)
+
+	#res = [] 
+	#assert (V.chrom.unique() == np.array(CHROMS)).all()
+	#for chrom in tqdm(["21", "22"]):
+        #    genome_msa = GenomeMSA(input[1], subset_chroms=[chrom], in_memory=True)
+	#    V2 = V[V.chrom==chrom]
+        #    score = genome_msa.run_vep_batch(
+        #        V2["chrom"].values, V2["pos"].values, V2["ref"].values, V2["alt"].values,
+        #        backend="multiprocessing", n_jobs=32, #n_jobs=threads
+        #    )
+	#    res.append(score)
+        #pd.DataFrame({"score": np.concatenate(res)}).to_parquet(output[0], index=False)
 
 
 rule run_vep_gpn:

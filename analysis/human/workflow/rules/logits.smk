@@ -287,27 +287,6 @@ rule bigWigCat:
     shell:
         "./bigWigCat {output} {input}"
 
-#rule make_bed_probs:
-#    input:
-#        "results/{anything}/positions.parquet",
-#        "results/{anything}/logits/{model}.parquet",
-#    output:
-#        temp(expand("results/{{anything}}/bed_probs/{{model}}/{nuc}.bed", nuc=NUCLEOTIDES)),
-#    run:
-#        df = pd.read_parquet(input[0])
-#        df.loc[:, NUCLEOTIDES] = softmax(pd.read_parquet(input[1]), axis=1)
-#        df["entropy"] = entropy(df[NUCLEOTIDES], base=2, axis=1)
-#        print(df)
-#        df.loc[:, NUCLEOTIDES] = df[NUCLEOTIDES].values * (2-df[["entropy"]].values)
-#        print(df)
-#        df["start"] = df.pos-1
-#        df["end"] = df.pos
-#        df.chrom = "chr" + df.chrom
-#        for nuc, path in zip(NUCLEOTIDES, output):
-#            df.to_csv(
-#                path, sep="\t", index=False, header=False, float_format='%.2f',
-#                columns=["chrom", "start", "end", nuc],
-#            )
 
 rule make_chrom_sizes:
     input:

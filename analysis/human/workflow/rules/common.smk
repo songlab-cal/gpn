@@ -328,3 +328,32 @@ rule subset_to_fully_conserved_pos:
         V = V.filter(pl.col("pos").is_in(pos))
         print(V)
         V.write_parquet(output[0])
+
+
+rule hack_variant_dataset:
+    input:
+        "results/positions/22/llr/multiz100way/89/128/64/True/defined.phastCons.percentile-75_0.05_0.001/medium/0.1/42/30000/True/True/True.subsample_10000000.parquet",
+    output:
+        "results/ism_subset/test.parquet",
+    shell:
+        "cp {input} {output}"
+
+
+rule hack_nonflip:
+    input:
+        "results/preds/results/ism_subset/multiz100way/89/128/64/True/defined.phastCons.percentile-75_0.05_0.001/medium/0.1/42/30000/True/True/False.parquet",
+
+
+rule pli_convert:
+    input:
+        "/scratch/users/czye/GPN/genome_wide_eda/variants_by_gene_cds.csv.gz",
+    output:
+        "results/pli/variants.parquet",
+    run:
+        V = pl.read_csv(
+            input[0], has_header=False,
+            columns=[1, 2, 3, 4],
+            new_columns=["chrom", "pos", "ref", "alt"],
+        ).with_columns(pl.col("chrom").cast(str))
+        print(V)
+        V.write_parquet(output[0])
