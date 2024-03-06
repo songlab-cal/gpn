@@ -354,6 +354,6 @@ rule pli_convert:
             input[0], has_header=False,
             columns=[1, 2, 3, 4],
             new_columns=["chrom", "pos", "ref", "alt"],
-        ).with_columns(pl.col("chrom").cast(str))
+        ).with_columns(pl.col("chrom").cast(str)).sort(["chrom", "pos"])
         print(V)
         V.write_parquet(output[0])
