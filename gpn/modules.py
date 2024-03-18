@@ -2,6 +2,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss
+from transformers.modeling_outputs import (
+    BaseModelOutput,
+    MaskedLMOutput,
+    SequenceClassifierOutput,
+)
 
 
 class TransposeLayer(nn.Module):
@@ -65,13 +70,13 @@ def get_dilation_schedule(config):
             config.dilation_base
             ** ((i % config.dilation_cycle) // config.dilation_double_every),
         )
-        for i in range(config.n_layers)
+        for i in range(config.num_hidden_layers)
     ]
 
 
 class ConvNetEncoder(nn.Module):
     def __init__(self, config):
-        super().__init__(config)
+        super().__init__()
         dilation_schedule = get_dilation_schedule(config)
         self.layer = nn.Sequential(
             *[
