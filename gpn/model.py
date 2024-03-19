@@ -160,6 +160,8 @@ class GPNConfig(RoFormerConfig):
         self.aux_features_vocab_size = aux_features_vocab_size
         self.n_aux_features = n_aux_features
         self.encoder = encoder
+        self.num_hidden_layers = num_hidden_layers
+        self.hidden_size = hidden_size
         self.kernel_size = kernel_size
         self.dilation_double_every = dilation_double_every
         self.dilation_max = dilation_max
