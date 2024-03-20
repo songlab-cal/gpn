@@ -179,3 +179,28 @@ rule run_vep_esm1b:
         df.loc[df.is_valid, "score"] = variants.score
         print(df)
         df[["score"]].to_parquet(output[0], index=False)
+
+
+ruleorder: run_vep_esm1b_dms2 > run_vep_esm1b
+
+
+rule run_vep_esm1b_dms2:
+    input:
+        "results/dms2/snv/test.parquet",
+        "results/esm1b/scores.parquet",
+    output:
+        "results/preds/results/dms2/snv/ESM-1b.parquet",
+    run:
+        V = pl.read_parquet(input[0])
+        print(V)
+        scores = (
+            pl.read_parquet(input[1])
+            .with_columns(
+                (pl.col("ref") + pl.col("pos").cast(str) + pl.col("alt")).alias("mutant")
+            )
+            .drop(["pos", "ref", "alt"])
+        )
+        print(scores)
+        V = V.join(scores, on=["uniprot_id", "mutant"], how="left")
+        print(V)
+        V[["score"]].write_parquet(output[0])

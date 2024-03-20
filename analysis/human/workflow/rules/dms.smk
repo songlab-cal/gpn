@@ -68,3 +68,69 @@ rule dms_merge:
         V = sort_chrom_pos(V)
         print(V)
         V.to_parquet(output[0], index=False)
+
+
+rule dms_fix_chrom:
+    input:
+        "results/dms2/snv_to_aa_table_proteingym26_031224.parquet",
+        "results/genome.fa.gz",
+    output:
+        "results/dms2/snv/test.parquet",
+    run:
+        V = pd.read_parquet(input[0])
+        V.chrom = V.chrom.astype(str)
+        assert ((V.ref.isin(NUCLEOTIDES).all()) and (V.alt.isin(NUCLEOTIDES)).all())
+        assert (V.ref != V.alt).all()
+        genome = Genome(input[1])
+        V["fasta_ref"] = V.progress_apply(lambda v: genome.get_nuc(v.chrom, v.pos).upper(), axis=1)
+        V["mismatched"] = V.ref != V.fasta_ref
+        for col in ["ref", "alt"]:
+            V[col] = V.apply(lambda v: v[col] if not v.mismatched else str(Seq(v[col]).reverse_complement()), axis=1)
+        assert (V.ref == V.fasta_ref).all()
+        assert (V.ref != V.alt).all()
+        V = V.drop(columns=["fasta_ref"])
+        V = sort_chrom_pos(V)
+        print(V)
+        V.to_parquet(output[0], index=False)
+
+
+ruleorder: dms2_get_precomputed_scores > run_vep_gpn
+
+
+rule dms2_get_precomputed_scores:
+    input:
+        "results/dms2/snv/test.parquet",
+        expand("results/positions/{chrom}/llr/{{model}}.parquet", chrom=CHROMS),
+    output:
+        "results/preds/results/dms2/snv/{model}.parquet",
+    threads: workflow.cores
+    run:
+        V = pl.read_parquet(input[0], columns=COORDINATES)
+        preds = pl.concat([
+            pl.read_parquet(path).join(V, on=COORDINATES, how="inner")
+            for path in tqdm(input[1:])
+        ])
+        V = V.join(preds, on=COORDINATES, how="left")
+        print(V)
+        V.select("score").write_parquet(output[0])
+
+
+rule process_dms_measurements:
+    input:
+        "results/dms2/metadata/DMS_substitutions.csv",
+        "results/dms2/measurements",
+    output:
+        "results/dms2/processed_measurements.parquet",
+    run:
+        metadata = pd.read_csv(input[0])
+        print(metadata)
+        metadata = metadata[metadata.DMS_id.str.contains("HUMAN")]
+        print(metadata)
+        dfs = []
+        for dms_id in tqdm(metadata.DMS_id):
+            df = pd.read_csv(input[1] + f"/{dms_id}.csv")
+            df["DMS"] = dms_id
+            dfs.append(df)
+        df = pd.concat(dfs, ignore_index=True)
+        print(df)
+        df.to_parquet(output[0], index=False)

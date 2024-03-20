@@ -122,26 +122,14 @@ rule run_vep_msa:
         #print(V)
         #V[["score"]].to_parquet(output[0], index=False)
 
-	res = [] 
-	for V2 in tqdm(np.array_split(V, 50)):
+        res = [] 
+        for V2 in tqdm(np.array_split(V, 10)):
             score = genome_msa.run_vep_batch(
                 V2["chrom"].values, V2["pos"].values, V2["ref"].values, V2["alt"].values,
-                backend="multiprocessing", n_jobs=32, #n_jobs=threads
+                backend="multiprocessing", n_jobs=threads
             )
-	    res.append(score)
+            res.append(score)
         pd.DataFrame({"score": np.concatenate(res)}).to_parquet(output[0], index=False)
-
-	#res = [] 
-	#assert (V.chrom.unique() == np.array(CHROMS)).all()
-	#for chrom in tqdm(["21", "22"]):
-        #    genome_msa = GenomeMSA(input[1], subset_chroms=[chrom], in_memory=True)
-	#    V2 = V[V.chrom==chrom]
-        #    score = genome_msa.run_vep_batch(
-        #        V2["chrom"].values, V2["pos"].values, V2["ref"].values, V2["alt"].values,
-        #        backend="multiprocessing", n_jobs=32, #n_jobs=threads
-        #    )
-	#    res.append(score)
-        #pd.DataFrame({"score": np.concatenate(res)}).to_parquet(output[0], index=False)
 
 
 rule run_vep_gpn:

@@ -1,4 +1,5 @@
 import bioframe as bf
+from Bio.Seq import Seq
 from gpn.data import load_table
 from liftover import get_lifter
 from scipy.spatial.distance import cdist
