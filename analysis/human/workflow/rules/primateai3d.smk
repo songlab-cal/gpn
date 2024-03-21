@@ -19,11 +19,12 @@ rule primateai3d_process:
 
 rule primateai3d_run_vep:
     input:
+        "{dataset}/test.parquet",
         "results/primateai3d/scores.parquet",
     output:
         "results/preds/{dataset}/PrimateAI-3D.parquet",
     run:
-        V = load_dataset(wildcards['dataset'], split="test").to_pandas()
-        score = pd.read_parquet(input[0])
-        V = V.merge(score, on=COORDINATES, how="left")
-        V[["score"]].to_parquet(output[0], index=False)
+        V = pl.read_parquet(input[0])
+        score = pl.read_parquet(input[1])
+        V = V.join(score, on=COORDINATES, how="left")
+        V.select("score").write_parquet(output[0])
