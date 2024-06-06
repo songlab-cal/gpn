@@ -267,6 +267,7 @@ class DataTrainingArguments:
     soft_masked_loss_weight_train: Optional[float] = field(default=1.0)
     soft_masked_loss_weight_evaluation: Optional[float] = field(default=1.0)
     soft_masked_loss_weight_test: Optional[float] = field(default=1.0)
+    total_batch_size: Optional[int] = field(default=2048)
     do_test: bool = field(default=False)
 
     def __post_init__(self):
@@ -448,7 +449,7 @@ def main():
         "validation": data_args.soft_masked_loss_weight_evaluation,
     }
 
-    remove_columns = ["assembly", "chrom", "start", "end", "strand", "seq"]
+    remove_columns = list(list(raw_datasets["train"].take(1))[0].keys())
 
     if training_args.do_train:
         train_dataset = raw_datasets["train"].map(
@@ -462,7 +463,7 @@ def main():
             # When the last batch is smaller than the batch size
             # Hopefully it will be fixed soon
             drop_last_batch=True,
-            batch_size=2048,
+            batch_size=data_args.total_batch_size,
         )
 
     if training_args.do_eval:
