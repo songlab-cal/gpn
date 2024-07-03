@@ -40,10 +40,10 @@ SPLITS = SPLIT_CHROMS.keys()
 CHROMS = np.array([str(i) for i in range(1, 23)] + ["X", "Y"])
 
 datasets = [
-    "results/clinvar/merged",
-    "results/cosmic/merged",
+    #"results/clinvar/merged",
+    #"results/cosmic/merged",
     #"results/omim/merged",
-    "results/gnomad/merged/filt",
+    #"results/gnomad/merged/filt",
     #"results/gnomad/merged/subsampled",
     #"songlab/human_variants",
     #"results/gwas/matched",
@@ -56,6 +56,7 @@ datasets = [
     #"results/variants_enformer",
     #"results/ism_subset",
     #"results/dms2/snv",
+    "results/clinvar/likely",
 ]
 
 model_template = "{dataset}/{model_size}/{loss_weight}/{seed}/{max_steps}/{use_aux_features}/{weight_conserved}/{flip_nonconserved}"
@@ -157,11 +158,11 @@ include: "rules/hyenadna.smk"
 
 #models.append(nucleotide_transformer_models[-1])
 #models.append(hyenadna_models[-1])
-#models.append("ESM-1b")
-#models.append("phyloP")
-#models.append("phastCons")
-#models.append("phyloP-Zoonomia")
-models.append("PrimateAI-3D")
+models.append("ESM-1b")
+models.append("phyloP")
+models.append("phastCons")
+models.append("phyloP-Zoonomia")
+#models.append("PrimateAI-3D")
 
 
 rule all:

@@ -358,3 +358,33 @@ rule pli_convert:
         ).with_columns(pl.col("chrom").cast(str)).sort(["chrom", "pos"])
         print(V)
         V.write_parquet(output[0])
+
+
+rule pli_convert2:
+    input:
+        "/scratch/users/czye/GPN/genome_wide_eda/variants_by_gene_exon+splice.csv",
+    output:
+        "results/pli2/variants.parquet",
+    run:
+        V = pl.read_csv(
+            input[0], has_header=False,
+            columns=[1, 2, 3, 4],
+            new_columns=["chrom", "pos", "ref", "alt"],
+        ).with_columns(pl.col("chrom").cast(str)).sort(["chrom", "pos"])
+        print(V)
+        V.write_parquet(output[0])
+
+
+rule pli_convert3:
+    input:
+        "/scratch/users/czye/GPN/genome_wide_eda/variants_intron_0.01pct.csv",
+    output:
+        "results/pli3/variants.parquet",
+    run:
+        V = pl.read_csv(
+            input[0], has_header=False,
+            columns=[1, 2, 3, 4],
+            new_columns=["chrom", "pos", "ref", "alt"],
+        ).with_columns(pl.col("chrom").cast(str)).sort(["chrom", "pos"])
+        print(V)
+        V.write_parquet(output[0])

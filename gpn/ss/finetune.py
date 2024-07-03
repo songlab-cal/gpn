@@ -175,12 +175,22 @@ class DataTrainingArguments:
         metadata={"help": "The number of processes to use for the preprocessing."},
     )
     do_test: bool = field(default=False)
-    output_preds_dir: Optional[str] = field(
+    output_preds_path: Optional[str] = field(
         default=None,
     )
     problem_type: Optional[str] = field(
         default=None,
     )
+    label_column_name: Optional[str] = field(
+        default=None,
+        metadata={
+            "help": (
+                "The name of the label column in the input dataset or a CSV/JSON file. "
+                'If not specified, will use the "labels" column for single/multi-label classification task'
+            )
+        },
+    )
+    total_batch_size: Optional[int] = field(default=512)
 
 
 def main():
@@ -206,6 +216,10 @@ def main():
         datefmt="%m/%d/%Y %H:%M:%S",
         handlers=[logging.StreamHandler(sys.stdout)],
     )
+
+    if training_args.should_log:
+        # The default of training_args.log_level is passive, so we set log level at info here to have that default.
+        transformers.utils.logging.set_verbosity_info()
 
     log_level = training_args.get_process_log_level()
     logger.setLevel(log_level)
@@ -255,6 +269,10 @@ def main():
         use_auth_token=True if model_args.use_auth_token else None,
     )
     print(raw_datasets)
+
+    if data_args.label_column_name is not None and data_args.label_column_name != "labels":
+        for key in raw_datasets.keys():
+            raw_datasets[key] = raw_datasets[key].rename_column(data_args.label_column_name, "labels")
 
     labels = raw_datasets["train"][0]["labels"]
     if isinstance(labels, Iterable):
@@ -338,11 +356,22 @@ def main():
         if col not in ["input_ids", "labels"]
     ]
 
-    processed_datasets = raw_datasets.map(
-        tokenize_function,
-        batched=True,
-        remove_columns=remove_columns,
-    )
+    processed_datasets = DatasetDict()
+    for split in raw_datasets.keys():
+        extra_kwargs = {} if split != "train" else dict(
+            # This takes care of some issues when using torch_compile
+            # I think it's a bug in IterableDataset in the datasets library
+            # When the last batch is smaller than the batch size
+            # Hopefully it will be fixed soon
+            drop_last_batch=True,
+            batch_size=data_args.total_batch_size,
+        )
+        processed_datasets[split] = raw_datasets[split].map(
+            tokenize_function,
+            batched=True,
+            remove_columns=remove_columns,
+            **extra_kwargs,
+        )
 
     if training_args.do_train:
         train_dataset = processed_datasets["train"].shuffle(seed=42)
@@ -397,7 +426,7 @@ def main():
         predictions = test_output.predictions.astype(np.float32)
         df = raw_datasets["test"].to_pandas()
         df[[f"preds_{i}" for i in range(predictions.shape[1])]] = predictions
-        df.to_parquet(data_args.output_preds_dir, index=False)
+        df.to_parquet(data_args.output_preds_path, index=False)
 
     kwargs = {"finetuned_from": model_args.model_name_or_path, "tasks": "fill-mask"}
     if data_args.dataset_name is not None:
