@@ -8,6 +8,7 @@ from transformers import (
     AutoModel,
     AutoModelForMaskedLM,
     AutoModelForSequenceClassification,
+    AutoModelForTokenClassification,
     PretrainedConfig,
     PreTrainedModel,
 )
@@ -16,6 +17,7 @@ from transformers.modeling_outputs import (
     BaseModelOutput,
     MaskedLMOutput,
     SequenceClassifierOutput,
+    TokenClassifierOutput,
 )
 from typing import Optional, Tuple, Union
 
@@ -69,6 +71,15 @@ class GPNEmbedding(nn.Module):
         return res
 
 
+class GPNEmbedding2(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=0)
+
+    def forward(self, input_ids):
+        return self.word_embeddings(input_ids)
+
+
 def compute_loss(logits, labels, output_probs, loss_weight, vocab_size):
     loss = None
     if labels is not None and loss_weight is None:
@@ -103,11 +114,11 @@ class MLMHead(nn.Module):
         super().__init__()
         self.config = config
         self.transform = nn.Sequential(
-            nn.Linear(config.hidden_size, config.hidden_size),
+            nn.Linear(config.hidden_size, config.hidden_size, bias=config.bias),
             nn.GELU(),
-            nn.LayerNorm(config.hidden_size),
+            nn.LayerNorm(config.hidden_size, bias=config.bias),
         )
-        self.decoder = nn.Linear(config.hidden_size, config.vocab_size)
+        self.decoder = nn.Linear(config.hidden_size, config.vocab_size, bias=config.bias)
 
     def forward(self, hidden_states):
         hidden_states = self.transform(hidden_states)
@@ -136,6 +147,43 @@ class ClassificationHead(nn.Module):
         return x
 
 
+#class ClassificationHead(nn.Module):
+#    """Head for sentence-level classification tasks."""
+#
+#    def __init__(self, config):
+#        super().__init__()
+#        intermediate_size = 64
+#        kernel_size = 5
+#        self.conv1 = nn.Sequential(
+#            TransposeLayer(),
+#            nn.Conv1d(
+#                in_channels=config.hidden_size,
+#                out_channels=intermediate_size,
+#                kernel_size=kernel_size,
+#                padding="same",
+#            ),
+#            TransposeLayer(),
+#            nn.GELU(),
+#        )
+#        self.proj1 = nn.Linear(config.hidden_size, intermediate_size)
+#        self.ln1 = nn.LayerNorm(config.intermediate_size)
+#
+#        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+#        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+#        self.out_proj = nn.Linear(config.hidden_size, config.num_labels)
+#
+#        self.config = config
+#
+#    def forward(self, features, **kwargs):
+#        x = features.mean(axis=1)  # mean pooling
+#        x = self.dropout(x)
+#        x = self.dense(x)
+#        x = ACT2FN[self.config.hidden_act](x)
+#        x = self.dropout(x)
+#        x = self.out_proj(x)
+#        return x
+
+
 class GPNConfig(RoFormerConfig):
     model_type = "GPN"
 
@@ -146,13 +194,18 @@ class GPNConfig(RoFormerConfig):
         n_aux_features=0,
         encoder="convnet",  # convnet, roformer
         num_hidden_layers=25,  # roformer: 12
-        hidden_size=512,  # roformer: 768, also set intermediate_size to 4 * hidden_size
+        hidden_size=512,  # roformer: 768
+        intermediate_size=2048,  # roformer: 3072 (usually 4 * hidden_size)
+        hidden_dropout_prob=0.0,
+        bias=False,
         # convnet-specific
-        kernel_size=9,
+        first_kernel_size=15,
+        rest_kernel_size=5,
         dilation_double_every=1,
-        dilation_max=32,
+        dilation_max=9999,
         dilation_cycle=6,
         dilation_base=2,
+        pos_weight=None,
         **kwargs
     ):
         super().__init__(**kwargs)
@@ -162,11 +215,16 @@ class GPNConfig(RoFormerConfig):
         self.encoder = encoder
         self.num_hidden_layers = num_hidden_layers
         self.hidden_size = hidden_size
-        self.kernel_size = kernel_size
+        self.intermediate_size = intermediate_size
+        self.hidden_dropout_prob = hidden_dropout_prob
+        self.bias = bias
+        self.first_kernel_size = first_kernel_size
+        self.rest_kernel_size = rest_kernel_size
         self.dilation_double_every = dilation_double_every
         self.dilation_max = dilation_max
         self.dilation_cycle = dilation_cycle
         self.dilation_base = dilation_base
+        self.pos_weight = pos_weight
 
 
 class GPNPreTrainedModel(PreTrainedModel):
@@ -190,7 +248,8 @@ class GPNPreTrainedModel(PreTrainedModel):
             if module.padding_idx is not None:
                 module.weight.data[module.padding_idx].zero_()
         elif isinstance(module, nn.LayerNorm):
-            module.bias.data.zero_()
+            if module.bias is not None:
+                module.bias.data.zero_()
             module.weight.data.fill_(1.0)
 
     def _set_gradient_checkpointing(self, module, value=False):
@@ -204,6 +263,7 @@ class GPNModel(GPNPreTrainedModel):
         self.config = config
         self.embeddings = GPNEmbedding(config)
         self.encoder = ENCODER_CLASS[config.encoder](config)
+        self.ln_f = nn.LayerNorm(config.hidden_size, bias=config.bias)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -213,6 +273,13 @@ class GPNModel(GPNPreTrainedModel):
             input_ids=input_ids, input_probs=input_probs, aux_features=aux_features
         )
         x = self.encoder(x, **kwargs)
+
+
+        # should be optional
+        x = self.ln_f(x.last_hidden_state)
+        x = BaseModelOutput(last_hidden_state=x)
+
+
         return x
 
     def get_input_embeddings(self):
@@ -309,10 +376,54 @@ class GPNForSequenceClassification(GPNPreTrainedModel):
         )
 
 
+class GPNForTokenClassification(GPNPreTrainedModel):
+    def __init__(self, config):
+        super().__init__(config)
+        self.num_labels = config.num_labels
+        self.pos_weight = config.pos_weight
+
+        self.model = GPNModel(config)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.classifier = nn.Linear(
+            config.hidden_size,
+            # for binary classification we'll use BCEWithLogitsLoss
+            config.num_labels if config.num_labels > 2 else 1,
+        )
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    def forward(
+        self,
+        input_ids: Optional[torch.LongTensor] = None,
+        aux_features=None,
+        labels: Optional[torch.LongTensor] = None,
+    ) -> TokenClassifierOutput:
+        x = self.model(
+            input_ids=input_ids, aux_features=aux_features
+        ).last_hidden_state
+        x = self.dropout(x)
+        logits = self.classifier(x)
+
+        loss = None
+        if labels is not None:
+            assert self.num_labels == 2  # only binary implemented for now
+            loss_fct = BCEWithLogitsLoss(
+                pos_weight=torch.tensor(self.pos_weight)
+            )
+            loss = loss_fct(torch.squeeze(logits), labels.float())
+
+        return TokenClassifierOutput(
+            loss=loss,
+            logits=logits,
+        )
+
+
 AutoConfig.register("GPN", GPNConfig)
 AutoModel.register(GPNConfig, GPNModel)
 AutoModelForMaskedLM.register(GPNConfig, GPNForMaskedLM)
 AutoModelForSequenceClassification.register(GPNConfig, GPNForSequenceClassification)
+AutoModelForTokenClassification.register(GPNConfig, GPNForTokenClassification)
 
 from .legacy import ConvNetConfig, ConvNetModel, ConvNetForMaskedLM
 AutoConfig.register("ConvNet", ConvNetConfig)
