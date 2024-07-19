@@ -42,6 +42,7 @@ from transformers import (
     MODEL_FOR_MASKED_LM_MAPPING,
     AutoConfig,
     AutoModelForSequenceClassification,
+    AutoModelForTokenClassification,
     AutoTokenizer,
     HfArgumentParser,
     Trainer,
@@ -191,6 +192,28 @@ class DataTrainingArguments:
         },
     )
     total_batch_size: Optional[int] = field(default=512)
+    pos_weight: Optional[float] = field(
+        default=1.0,
+        metadata={"help": "Positive weight for binary token classification"}
+    )
+    token_classification: bool = field(
+        default=False,
+        metadata={
+            "help": "Whether to run token classification or sequence classification."
+        },
+    )
+    streaming: bool = field(
+        default=False,
+        metadata={
+            "help": "Whether to use streaming datasets."
+        },
+    )
+    freeze_all_layers_except_last_n: Optional[int] = field(
+        default=None,
+        metadata={
+            "help": "Freeze all layers except the last n layers."
+        },
+    )
 
 
 def main():
@@ -267,6 +290,7 @@ def main():
         data_args.dataset_config_name,
         cache_dir=model_args.cache_dir,
         use_auth_token=True if model_args.use_auth_token else None,
+        streaming=data_args.streaming,
     )
     print(raw_datasets)
 
@@ -275,10 +299,13 @@ def main():
             raw_datasets[key] = raw_datasets[key].rename_column(data_args.label_column_name, "labels")
 
     labels = raw_datasets["train"][0]["labels"]
-    if isinstance(labels, Iterable):
-        num_labels = len(labels)
+    if not data_args.token_classification:
+        if isinstance(labels, Iterable):
+            num_labels = len(labels)
+        else:
+            num_labels = 1
     else:
-        num_labels = 1
+        num_labels = 2  # hard-coding for now
     print(f"{num_labels=}")
 
     # Load pretrained model and tokenizer
@@ -292,6 +319,7 @@ def main():
         "use_auth_token": True if model_args.use_auth_token else None,
         "num_labels": num_labels,
         "problem_type": data_args.problem_type,
+        "pos_weight": data_args.pos_weight,
     }
     if model_args.config_name:
         config = AutoConfig.from_pretrained(model_args.config_name, **config_kwargs)
@@ -327,8 +355,13 @@ def main():
             "You can do it from another script, save it, and load it from here, using --tokenizer_name."
         )
 
+    model_class = (
+        AutoModelForSequenceClassification if not data_args.token_classification
+        else AutoModelForTokenClassification
+    )
+
     if model_args.model_name_or_path:
-        model = AutoModelForSequenceClassification.from_pretrained(
+        model = model_class.from_pretrained(
             model_args.model_name_or_path,
             from_tf=bool(".ckpt" in model_args.model_name_or_path),
             config=config,
@@ -338,7 +371,17 @@ def main():
         )
     else:
         logger.info("Training new model from scratch")
-        model = AutoModelForMaskedLM.from_config(config)
+        model = model_class.from_config(config)
+
+    n_unfreeze = data_args.freeze_all_layers_except_last_n
+    if n_unfreeze is not None:
+        for param in model.model.parameters():
+            param.requires_grad = False
+        if n_unfreeze > 0:
+            layers = model.model.encoder.layer[-n_unfreeze:]
+            for layer in layers:
+                for param in layer.parameters():
+                    param.requires_grad = True
 
     def tokenize_function(examples):
         return tokenizer(
@@ -369,6 +412,7 @@ def main():
         processed_datasets[split] = raw_datasets[split].map(
             tokenize_function,
             batched=True,
+            num_proc=data_args.preprocessing_num_workers,
             remove_columns=remove_columns,
             **extra_kwargs,
         )
@@ -425,7 +469,11 @@ def main():
 
         predictions = test_output.predictions.astype(np.float32)
         df = raw_datasets["test"].to_pandas()
-        df[[f"preds_{i}" for i in range(predictions.shape[1])]] = predictions
+        try:
+            df[[f"preds_{i}" for i in range(predictions.shape[1])]] = predictions
+        except:
+            df[[f"preds_{i}" for i in range(predictions.shape[1])]] = np.squeeze(predictions)
+        os.makedirs(os.path.dirname(data_args.output_preds_path), exist_ok=True)
         df.to_parquet(data_args.output_preds_path, index=False)
 
     kwargs = {"finetuned_from": model_args.model_name_or_path, "tasks": "fill-mask"}

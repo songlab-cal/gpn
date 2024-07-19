@@ -169,3 +169,41 @@ class ConvNetEncoder(nn.Module):
     def forward(self, hidden_states):
         hidden_states = self.layer(hidden_states)
         return BaseModelOutput(last_hidden_state=hidden_states)
+
+
+class MLP(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size):
+        super().__init__()
+        self.layer = nn.Sequential(
+            nn.LayerNorm(input_size, bias=False),
+            nn.Linear(input_size, hidden_size, bias=False),
+            nn.GELU(),
+            nn.Linear(hidden_size, output_size, bias=False),
+        )
+        if input_size != output_size:
+            self.shortcut = nn.Linear(input_size, output_size, bias=False)
+        else:
+            self.shortcut = nn.Identity()
+
+    def forward(self, x):
+        return self.shortcut(x) + self.layer(x)
+
+
+class CNN(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size, kernel_size=None, **kwargs):
+        super().__init__()
+        self.layer = nn.Sequential(
+            nn.LayerNorm(input_size, bias=False),
+            TransposeLayer(),
+            nn.Conv1d(input_size, hidden_size, kernel_size, bias=False, padding="same", **kwargs),
+            TransposeLayer(),
+            nn.GELU(),
+            nn.Linear(hidden_size, output_size, bias=False),
+        )
+        if input_size != output_size:
+            self.shortcut = nn.Linear(input_size, output_size, bias=False)
+        else:
+            self.shortcut = nn.Identity()
+
+    def forward(self, x):
+        return self.shortcut(x) + self.layer(x)

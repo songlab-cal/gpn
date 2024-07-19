@@ -269,6 +269,7 @@ class DataTrainingArguments:
     soft_masked_loss_weight_test: Optional[float] = field(default=1.0)
     total_batch_size: Optional[int] = field(default=2048)
     do_test: bool = field(default=False)
+    min_lr_rate: Optional[float] = field(default=None)
 
     def __post_init__(self):
         if (
@@ -340,6 +341,9 @@ def main():
     )
     # Set the verbosity to info of the Transformers logger (on main process only):
     logger.info(f"Training/evaluation parameters {training_args}")
+
+    if data_args.min_lr_rate is not None:
+        training_args.lr_scheduler_kwargs["min_lr_rate"] = data_args.min_lr_rate
 
     # Detecting last checkpoint.
     last_checkpoint = None

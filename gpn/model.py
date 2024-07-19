@@ -21,7 +21,7 @@ from transformers.modeling_outputs import (
 )
 from typing import Optional, Tuple, Union
 
-from .modules import ConvNetEncoder
+from .modules import ConvNetEncoder, MLP, CNN
 from transformers import RoFormerConfig
 from transformers.models.roformer.modeling_roformer import (
     RoFormerEncoder,
@@ -126,25 +126,27 @@ class MLMHead(nn.Module):
         return hidden_states
 
 
-class ClassificationHead(nn.Module):
-    """Head for sentence-level classification tasks."""
-
-    def __init__(self, config):
-        super().__init__()
-        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
-        self.out_proj = nn.Linear(config.hidden_size, config.num_labels)
-
-        self.config = config
-
-    def forward(self, features, **kwargs):
-        x = features.mean(axis=1)  # mean pooling
-        x = self.dropout(x)
-        x = self.dense(x)
-        x = ACT2FN[self.config.hidden_act](x)
-        x = self.dropout(x)
-        x = self.out_proj(x)
-        return x
+#class ClassificationHead(nn.Module):
+#    """Head for sentence-level classification tasks."""
+#
+#    def __init__(self, config):
+#        super().__init__()
+#        self.ln = nn.LayerNorm(config.hidden_size, bias=config.bias)
+#        self.dense = nn.Linear(config.hidden_size, config.hidden_size, bias=config.bias)
+#        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+#        self.out_proj = nn.Linear(config.hidden_size, config.num_labels, bias=config.bias)
+#
+#        self.config = config
+#
+#    def forward(self, features, **kwargs):
+#        x = features.mean(axis=1)  # mean pooling
+#        x = self.ln(x)
+#        x = self.dropout(x)
+#        x = self.dense(x)
+#        x = ACT2FN[self.config.hidden_act](x)
+#        x = self.dropout(x)
+#        x = self.out_proj(x)
+#        return x
 
 
 #class ClassificationHead(nn.Module):
@@ -153,35 +155,53 @@ class ClassificationHead(nn.Module):
 #    def __init__(self, config):
 #        super().__init__()
 #        intermediate_size = 64
-#        kernel_size = 5
-#        self.conv1 = nn.Sequential(
-#            TransposeLayer(),
-#            nn.Conv1d(
-#                in_channels=config.hidden_size,
-#                out_channels=intermediate_size,
-#                kernel_size=kernel_size,
-#                padding="same",
-#            ),
-#            TransposeLayer(),
-#            nn.GELU(),
+#        kernel_size = 3
+#        self.conv1 = CNN(
+#            config.hidden_size, intermediate_size, intermediate_size,
+#            kernel_size=kernel_size,
 #        )
-#        self.proj1 = nn.Linear(config.hidden_size, intermediate_size)
-#        self.ln1 = nn.LayerNorm(config.intermediate_size)
+#        self.conv2 = CNN(
+#            intermediate_size, intermediate_size, intermediate_size,
+#            kernel_size=kernel_size,
+#        )
+#        self.mlp = MLP(
+#            intermediate_size, intermediate_size, intermediate_size,
+#        )
+#        self.ln = nn.LayerNorm(intermediate_size, bias=False)
+#        self.final = nn.Linear(intermediate_size, config.num_labels, bias=False)
 #
-#        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
-#        self.dropout = nn.Dropout(config.hidden_dropout_prob)
-#        self.out_proj = nn.Linear(config.hidden_size, config.num_labels)
-#
-#        self.config = config
-#
-#    def forward(self, features, **kwargs):
-#        x = features.mean(axis=1)  # mean pooling
-#        x = self.dropout(x)
-#        x = self.dense(x)
-#        x = ACT2FN[self.config.hidden_act](x)
-#        x = self.dropout(x)
-#        x = self.out_proj(x)
+#    def forward(self, x, **kwargs):
+#        x = self.conv1(x)
+#        x = self.conv2(x)
+#        x = x.mean(axis=1)
+#        x = self.mlp(x)
+#        x = self.ln(x)
+#        x = self.final(x)
 #        return x
+
+
+class ClassificationHead(nn.Module):
+    """Head for sentence-level classification tasks."""
+
+    def __init__(self, config):
+        super().__init__()
+        intermediate_size = 64
+        self.mlp1 = MLP(
+            config.hidden_size, intermediate_size, intermediate_size,
+        )
+        self.mlp2 = MLP(
+            intermediate_size, intermediate_size, intermediate_size,
+        )
+        self.ln = nn.LayerNorm(intermediate_size, bias=False)
+        self.final = nn.Linear(intermediate_size, config.num_labels, bias=False)
+
+    def forward(self, x, **kwargs):
+        x = self.mlp1(x)
+        x = x.mean(axis=1)
+        x = self.mlp2(x)
+        x = self.ln(x)
+        x = self.final(x)
+        return x
 
 
 class GPNConfig(RoFormerConfig):
