@@ -176,11 +176,15 @@ class DataTrainingArguments:
         metadata={"help": "The number of processes to use for the preprocessing."},
     )
     do_test: bool = field(default=False)
+    min_lr_rate: Optional[float] = field(default=None)
     output_preds_path: Optional[str] = field(
         default=None,
     )
     problem_type: Optional[str] = field(
         default=None,
+    )
+    classification_head: Optional[str] = field(
+        default="standard",
     )
     label_column_name: Optional[str] = field(
         default=None,
@@ -212,6 +216,12 @@ class DataTrainingArguments:
         default=None,
         metadata={
             "help": "Freeze all layers except the last n layers."
+        },
+    )
+    subsample_train: Optional[float] = field(
+        default=None,
+        metadata={
+            "help": "Subsample the training dataset to this proportion."
         },
     )
 
@@ -258,6 +268,9 @@ def main():
     )
     # Set the verbosity to info of the Transformers logger (on main process only):
     logger.info(f"Training/evaluation parameters {training_args}")
+
+    if data_args.min_lr_rate is not None:
+        training_args.lr_scheduler_kwargs["min_lr_rate"] = data_args.min_lr_rate
 
     # Detecting last checkpoint.
     last_checkpoint = None
@@ -320,6 +333,7 @@ def main():
         "num_labels": num_labels,
         "problem_type": data_args.problem_type,
         "pos_weight": data_args.pos_weight,
+        "classification_head": data_args.classification_head,
     }
     if model_args.config_name:
         config = AutoConfig.from_pretrained(model_args.config_name, **config_kwargs)
@@ -328,7 +342,7 @@ def main():
             model_args.model_name_or_path, **config_kwargs
         )
     else:
-        config = CONFIG_MAPPING[model_args.model_type]()
+        config = CONFIG_MAPPING[model_args.model_type](**config_kwargs)
         logger.warning("You are instantiating a new config instance from scratch.")
         if model_args.config_overrides is not None:
             logger.info(f"Overriding config: {model_args.config_overrides}")
@@ -419,6 +433,12 @@ def main():
 
     if training_args.do_train:
         train_dataset = processed_datasets["train"].shuffle(seed=42)
+        if data_args.subsample_train is not None:
+            print("Subsampling training dataset")
+            train_dataset = train_dataset.select(
+                range(int(data_args.subsample_train * len(train_dataset))),
+            )
+            print(train_dataset)
 
     if training_args.do_eval:
         eval_dataset = processed_datasets["validation"]

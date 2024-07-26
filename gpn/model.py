@@ -126,27 +126,27 @@ class MLMHead(nn.Module):
         return hidden_states
 
 
-#class ClassificationHead(nn.Module):
-#    """Head for sentence-level classification tasks."""
-#
-#    def __init__(self, config):
-#        super().__init__()
-#        self.ln = nn.LayerNorm(config.hidden_size, bias=config.bias)
-#        self.dense = nn.Linear(config.hidden_size, config.hidden_size, bias=config.bias)
-#        self.dropout = nn.Dropout(config.hidden_dropout_prob)
-#        self.out_proj = nn.Linear(config.hidden_size, config.num_labels, bias=config.bias)
-#
-#        self.config = config
-#
-#    def forward(self, features, **kwargs):
-#        x = features.mean(axis=1)  # mean pooling
-#        x = self.ln(x)
-#        x = self.dropout(x)
-#        x = self.dense(x)
-#        x = ACT2FN[self.config.hidden_act](x)
-#        x = self.dropout(x)
-#        x = self.out_proj(x)
-#        return x
+class StandardClassificationHead(nn.Module):
+    """Head for sentence-level classification tasks."""
+
+    def __init__(self, config):
+        super().__init__()
+        self.ln = nn.LayerNorm(config.hidden_size, bias=config.bias)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size, bias=config.bias)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.out_proj = nn.Linear(config.hidden_size, config.num_labels, bias=config.bias)
+
+        self.config = config
+
+    def forward(self, features, **kwargs):
+        x = features.mean(axis=1)  # mean pooling
+        x = self.ln(x)
+        x = self.dropout(x)
+        x = self.dense(x)
+        x = ACT2FN[self.config.hidden_act](x)
+        x = self.dropout(x)
+        x = self.out_proj(x)
+        return x
 
 
 #class ClassificationHead(nn.Module):
@@ -180,7 +180,7 @@ class MLMHead(nn.Module):
 #        return x
 
 
-class ClassificationHead(nn.Module):
+class LightweightClassificationHead(nn.Module):
     """Head for sentence-level classification tasks."""
 
     def __init__(self, config):
@@ -202,6 +202,12 @@ class ClassificationHead(nn.Module):
         x = self.ln(x)
         x = self.final(x)
         return x
+
+
+CLASSIFICATION_HEAD_CLASS = {
+    "standard": StandardClassificationHead,
+    "lightweight": LightweightClassificationHead,
+}
 
 
 class GPNConfig(RoFormerConfig):
@@ -226,6 +232,8 @@ class GPNConfig(RoFormerConfig):
         dilation_cycle=6,
         dilation_base=2,
         pos_weight=None,
+        # classification-specific
+        classification_head="standard",
         **kwargs
     ):
         super().__init__(**kwargs)
@@ -245,6 +253,7 @@ class GPNConfig(RoFormerConfig):
         self.dilation_cycle = dilation_cycle
         self.dilation_base = dilation_base
         self.pos_weight = pos_weight
+        self.classification_head = classification_head
 
 
 class GPNPreTrainedModel(PreTrainedModel):
@@ -343,7 +352,7 @@ class GPNForSequenceClassification(GPNPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.model = GPNModel(config)
-        self.classifier = ClassificationHead(config)
+        self.classifier = CLASSIFICATION_HEAD_CLASS[config.classification_head](config)
 
         # Initialize weights and apply final processing
         self.post_init()
