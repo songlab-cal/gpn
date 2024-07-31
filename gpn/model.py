@@ -149,38 +149,38 @@ class StandardClassificationHead(nn.Module):
         return x
 
 
-#class ClassificationHead(nn.Module):
-#    """Head for sentence-level classification tasks."""
-#
-#    def __init__(self, config):
-#        super().__init__()
-#        intermediate_size = 64
-#        kernel_size = 3
-#        self.conv1 = CNN(
-#            config.hidden_size, intermediate_size, intermediate_size,
-#            kernel_size=kernel_size,
-#        )
-#        self.conv2 = CNN(
-#            intermediate_size, intermediate_size, intermediate_size,
-#            kernel_size=kernel_size,
-#        )
-#        self.mlp = MLP(
-#            intermediate_size, intermediate_size, intermediate_size,
-#        )
-#        self.ln = nn.LayerNorm(intermediate_size, bias=False)
-#        self.final = nn.Linear(intermediate_size, config.num_labels, bias=False)
-#
-#    def forward(self, x, **kwargs):
-#        x = self.conv1(x)
-#        x = self.conv2(x)
-#        x = x.mean(axis=1)
-#        x = self.mlp(x)
-#        x = self.ln(x)
-#        x = self.final(x)
-#        return x
+class LightweightCNNClassificationHead(nn.Module):
+    """Head for sentence-level classification tasks."""
+
+    def __init__(self, config):
+        super().__init__()
+        intermediate_size = 64
+        kernel_size = 3
+        self.conv1 = CNN(
+            config.hidden_size, intermediate_size, intermediate_size,
+            kernel_size=kernel_size,
+        )
+        self.conv2 = CNN(
+            intermediate_size, intermediate_size, intermediate_size,
+            kernel_size=kernel_size,
+        )
+        self.mlp = MLP(
+            intermediate_size, intermediate_size, intermediate_size,
+        )
+        self.ln = nn.LayerNorm(intermediate_size, bias=False)
+        self.final = nn.Linear(intermediate_size, config.num_labels, bias=False)
+
+    def forward(self, x, **kwargs):
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = x.mean(axis=1)
+        x = self.mlp(x)
+        x = self.ln(x)
+        x = self.final(x)
+        return x
 
 
-class LightweightClassificationHead(nn.Module):
+class LightweightMLPClassificationHead(nn.Module):
     """Head for sentence-level classification tasks."""
 
     def __init__(self, config):
@@ -206,7 +206,8 @@ class LightweightClassificationHead(nn.Module):
 
 CLASSIFICATION_HEAD_CLASS = {
     "standard": StandardClassificationHead,
-    "lightweight": LightweightClassificationHead,
+    "lightweight_mlp": LightweightMLPClassificationHead,
+    "lightweight_cnn": LightweightCNNClassificationHead,
 }
 
 
@@ -225,11 +226,11 @@ class GPNConfig(RoFormerConfig):
         hidden_dropout_prob=0.0,
         bias=False,
         # convnet-specific
-        first_kernel_size=15,
+        first_kernel_size=9,
         rest_kernel_size=5,
         dilation_double_every=1,
         dilation_max=9999,
-        dilation_cycle=6,
+        dilation_cycle=8,
         dilation_base=2,
         pos_weight=None,
         # classification-specific

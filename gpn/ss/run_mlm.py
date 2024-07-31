@@ -368,6 +368,7 @@ def main():
 
     # Set seed before initializing model.
     set_seed(training_args.seed)
+    np.random.seed(training_args.seed)
 
     # Downloading and loading a dataset from the hub.
     # Also works for local dataset
@@ -437,9 +438,18 @@ def main():
         logger.info("Training new model from scratch")
         model = AutoModelForMaskedLM.from_config(config)
 
-    def tokenize_function(examples, soft_masked_weight):
+    def tokenize_function(examples, soft_masked_weight, data_augmentation=False):
+        seq = examples["seq"]
+        if data_augmentation:
+            n = len(seq)
+            strand = np.random.choice(["+", "-"], n)
+            seq = [
+                seq[i] if strand[i] == "+" else str(Seq(seq[i]).reverse_complement())
+                for i in range(n)
+            ]
+
         res = tokenizer(
-            examples["seq"],
+            seq,
             return_special_tokens_mask=True,
             padding=False,
             truncation=False,
@@ -448,7 +458,7 @@ def main():
         )
         res["loss_weight"] = np.ones_like(res["input_ids"], dtype=float)
         res["loss_weight"][
-            np.char.islower([list(x) for x in examples["seq"]])
+            np.char.islower([list(x) for x in seq])
         ] = soft_masked_weight
         return res
 
@@ -460,9 +470,11 @@ def main():
     remove_columns = list(list(raw_datasets["train"].take(1))[0].keys())
 
     if training_args.do_train:
-        train_dataset = raw_datasets["train"].map(
+        train_dataset = raw_datasets["train"].shuffle(seed=training_args.seed)
+        train_dataset = train_dataset.map(
             lambda examples: tokenize_function(
-                examples, data_args.soft_masked_loss_weight_train
+                examples, data_args.soft_masked_loss_weight_train,
+                data_augmentation=True,
             ),
             batched=True,
             remove_columns=remove_columns,
