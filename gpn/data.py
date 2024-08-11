@@ -89,9 +89,15 @@ def load_repeatmasker(path):
 class Genome:
     def __init__(self, path, subset_chroms=None):
         self._genome = load_fasta(path, subset_chroms=subset_chroms)
+        self.chrom_sizes = {chrom: len(seq) for chrom, seq in self._genome.items()}
 
     def get_seq(self, chrom, start, end, strand="+"):
-        seq = self._genome[chrom][start:end]
+        chrom_size = self.chrom_sizes[chrom]
+        seq = self._genome[chrom][max(start,0):min(end,chrom_size)]
+
+        if start < 0: seq = "N" * (-start) + seq  # left padding
+        if end > chrom_size: seq = seq + "N" * (end - chrom_size)  # right padding
+
         if strand == "-":
             seq = str(Seq(seq).reverse_complement())
         return seq
