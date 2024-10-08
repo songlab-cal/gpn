@@ -21,7 +21,7 @@ from transformers.modeling_outputs import (
 )
 from typing import Optional, Tuple, Union
 
-from .modules import ConvNetEncoder, MLP, CNN
+from .modules import ByteNetEncoder, ConvNetEncoder, MLP, CNN
 from transformers import RoFormerConfig
 from transformers.models.roformer.modeling_roformer import (
     RoFormerEncoder,
@@ -30,6 +30,7 @@ from transformers.models.roformer.modeling_roformer import (
 
 
 ENCODER_CLASS = {
+    "bytenet": ByteNetEncoder,
     "convnet": ConvNetEncoder,
     "roformer": RoFormerEncoder,
 }
@@ -76,8 +77,14 @@ class GPNEmbedding2(nn.Module):
         super().__init__()
         self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=0)
 
-    def forward(self, input_ids):
+    def forward(self, input_ids, **kwargs):
         return self.word_embeddings(input_ids)
+
+
+EMBEDDING_CLASS = {
+    "one_hot": GPNEmbedding,
+    "embedding": GPNEmbedding2,
+}
 
 
 def compute_loss(logits, labels, output_probs, loss_weight, vocab_size):
@@ -113,11 +120,14 @@ class MLMHead(nn.Module):
     ):
         super().__init__()
         self.config = config
-        self.transform = nn.Sequential(
-            nn.Linear(config.hidden_size, config.hidden_size, bias=config.bias),
-            nn.GELU(),
-            nn.LayerNorm(config.hidden_size, bias=config.bias),
-        )
+        if config.mlm_head_transform:
+            self.transform = nn.Sequential(
+                nn.Linear(config.hidden_size, config.hidden_size, bias=config.bias),
+                nn.GELU(),
+                nn.LayerNorm(config.hidden_size, bias=config.bias),
+            )
+        else:
+            self.transform = nn.Identity()
         self.decoder = nn.Linear(config.hidden_size, config.vocab_size, bias=config.bias)
 
     def forward(self, hidden_states):
@@ -219,12 +229,17 @@ class GPNConfig(RoFormerConfig):
         vocab_size=7,  # ss: 7, msa: 6
         aux_features_vocab_size=5,
         n_aux_features=0,
-        encoder="convnet",  # convnet, roformer
+        embedding="one_hot",  # one_hot, embedding
+        encoder="convnet",  # convnet, roformer, bytenet
         num_hidden_layers=25,  # roformer: 12
         hidden_size=512,  # roformer: 768
         intermediate_size=2048,  # roformer: 3072 (usually 4 * hidden_size)
         hidden_dropout_prob=0.0,
         bias=False,
+        tie_word_embeddings=False,
+        mlm_head_transform=True,
+        # bytenet-specific
+        slim=False,
         # convnet-specific
         first_kernel_size=9,
         rest_kernel_size=5,
@@ -232,29 +247,35 @@ class GPNConfig(RoFormerConfig):
         dilation_max=9999,
         dilation_cycle=8,
         dilation_base=2,
-        pos_weight=None,
+        depthwise=False,
         # classification-specific
         classification_head="standard",
+        pos_weight=None,
         **kwargs
     ):
         super().__init__(**kwargs)
         self.vocab_size = vocab_size
         self.aux_features_vocab_size = aux_features_vocab_size
         self.n_aux_features = n_aux_features
+        self.embedding = embedding
         self.encoder = encoder
         self.num_hidden_layers = num_hidden_layers
         self.hidden_size = hidden_size
         self.intermediate_size = intermediate_size
         self.hidden_dropout_prob = hidden_dropout_prob
         self.bias = bias
+        self.tie_word_embeddings = tie_word_embeddings
+        self.mlm_head_transform = mlm_head_transform
+        self.slim = slim
         self.first_kernel_size = first_kernel_size
         self.rest_kernel_size = rest_kernel_size
         self.dilation_double_every = dilation_double_every
         self.dilation_max = dilation_max
         self.dilation_cycle = dilation_cycle
         self.dilation_base = dilation_base
-        self.pos_weight = pos_weight
+        self.depthwise = depthwise
         self.classification_head = classification_head
+        self.pos_weight = pos_weight
 
 
 class GPNPreTrainedModel(PreTrainedModel):
@@ -291,7 +312,7 @@ class GPNModel(GPNPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
         self.config = config
-        self.embeddings = GPNEmbedding(config)
+        self.embeddings = EMBEDDING_CLASS[config.embedding](config)
         self.encoder = ENCODER_CLASS[config.encoder](config)
         self.ln_f = nn.LayerNorm(config.hidden_size, bias=config.bias)
 

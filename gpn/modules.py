@@ -124,6 +124,41 @@ class ConvLayer(nn.Module):
         return x
 
 
+class ByteNetLayer(nn.Module):
+    def __init__(
+        self,
+        hidden_size=None,
+        slim=False,
+        bias=None,
+        **kwargs,
+    ):
+        super().__init__()
+        intermediate_size = hidden_size // 2 if slim else hidden_size
+        self.layer = nn.Sequential(
+            nn.LayerNorm(hidden_size, bias=bias),
+            nn.GELU(),
+            nn.Linear(hidden_size, intermediate_size, bias=bias),
+            nn.LayerNorm(intermediate_size, bias=bias),
+            nn.GELU(),
+            TransposeLayer(),
+            nn.Conv1d(
+                in_channels=intermediate_size,
+                out_channels=intermediate_size,
+                padding="same",
+                bias=bias,
+                **kwargs,
+            ),
+            TransposeLayer(),
+            nn.LayerNorm(intermediate_size, bias=bias),
+            nn.GELU(),
+            nn.Linear(intermediate_size, hidden_size, bias=bias),
+        )
+
+    def forward(self, x):
+        x = x + self.layer(x)
+        return x
+
+
 class OneHotEmbedding(nn.Module):
     def __init__(
         self,
@@ -161,6 +196,31 @@ class ConvNetEncoder(nn.Module):
                     hidden_dropout_prob=config.hidden_dropout_prob,
                     bias=config.bias,
                     intermediate_size=config.intermediate_size,
+                    groups=1 if (not config.depthwise or i == 0) else config.hidden_size,
+                )
+                for i in range(config.num_hidden_layers)
+            ]
+        )
+
+    def forward(self, hidden_states):
+        hidden_states = self.layer(hidden_states)
+        return BaseModelOutput(last_hidden_state=hidden_states)
+
+
+class ByteNetEncoder(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        dilation_schedule = get_dilation_schedule(config)
+        print(f"{dilation_schedule=}")
+        self.layer = nn.Sequential(
+            *[
+                ByteNetLayer(
+                    hidden_size=config.hidden_size,
+                    kernel_size=config.first_kernel_size if i == 0 else config.rest_kernel_size,
+                    dilation=dilation_schedule[i],
+                    bias=config.bias,
+                    groups=1 if (not config.depthwise or i == 0) else config.hidden_size,
+                    slim=config.slim,
                 )
                 for i in range(config.num_hidden_layers)
             ]
