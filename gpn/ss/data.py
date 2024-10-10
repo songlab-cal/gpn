@@ -6,6 +6,9 @@ from transformers import AutoTokenizer, set_seed
 from typing import Any, Dict, Optional, Tuple
 
 
+# TODO: should be modular since this should be used for both GPN and GPN-MSA
+# this should be moved to gpn/data.py
+# also, it could be swapped to a span masker, for example
 def create_masked_input_and_labels(
     input_ids: torch.Tensor,
     tokenizer: AutoTokenizer,  # TODO: in the future, we can use our own tokenizer class
@@ -14,8 +17,9 @@ def create_masked_input_and_labels(
     """
     Prepare masked tokens inputs/labels for masked language modeling: 80% MASK, 10% random, 10% original.
     """
-    labels = input_ids.clone()
-    # We sample a few tokens in each sequence for MLM training (with probability `self.mlm_probability`)
+    assert input_ids.dtype == torch.uint8
+    labels = input_ids.clone().to(torch.int8)  # need to handle -100
+    # We sample a few tokens in each sequence for MLM training (with probability `mlm_probability`)
     probability_matrix = torch.full(labels.shape, mlm_probability)
     masked_indices = torch.bernoulli(probability_matrix).bool()
     labels[~masked_indices] = -100  # We only compute loss on masked tokens
@@ -26,7 +30,7 @@ def create_masked_input_and_labels(
 
     # 10% of the time, we replace masked input tokens with random word
     indices_random = torch.bernoulli(torch.full(labels.shape, 0.5)).bool() & masked_indices & ~indices_replaced
-    random_words = torch.randint(tokenizer.vocab_size(), labels.shape, dtype=torch.long)
+    random_words = torch.randint(tokenizer.vocab_size(), labels.shape, dtype=torch.uint8)
     input_ids[indices_random] = random_words[indices_random]
 
     # The rest of the time (10% of the time) we keep the masked input tokens unchanged
