@@ -2,8 +2,35 @@ from Bio.Seq import Seq
 from datasets import load_dataset, IterableDatasetDict
 import numpy as np
 import torch
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, set_seed
 from typing import Any, Dict, Optional, Tuple
+
+
+def create_masked_input_and_labels(
+    input_ids: torch.Tensor,
+    tokenizer: AutoTokenizer,  # TODO: in the future, we can use our own tokenizer class
+    mlm_probability: float = 0.15,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    """
+    Prepare masked tokens inputs/labels for masked language modeling: 80% MASK, 10% random, 10% original.
+    """
+    labels = input_ids.clone()
+    # We sample a few tokens in each sequence for MLM training (with probability `self.mlm_probability`)
+    probability_matrix = torch.full(labels.shape, mlm_probability)
+    masked_indices = torch.bernoulli(probability_matrix).bool()
+    labels[~masked_indices] = -100  # We only compute loss on masked tokens
+
+    # 80% of the time, we replace masked input tokens with tokenizer.mask_token ([MASK])
+    indices_replaced = torch.bernoulli(torch.full(labels.shape, 0.8)).bool() & masked_indices
+    input_ids[indices_replaced] = tokenizer.mask_token_id()
+
+    # 10% of the time, we replace masked input tokens with random word
+    indices_random = torch.bernoulli(torch.full(labels.shape, 0.5)).bool() & masked_indices & ~indices_replaced
+    random_words = torch.randint(tokenizer.vocab_size(), labels.shape, dtype=torch.long)
+    input_ids[indices_random] = random_words[indices_random]
+
+    # The rest of the time (10% of the time) we keep the masked input tokens unchanged
+    return input_ids, labels
 
 
 def load_dataset_training(
@@ -13,12 +40,16 @@ def load_dataset_training(
     soft_masked_loss_weight_evaluation: float = 0.0,
     seed: int = 42,
     batch_size: int = 2048,  # unfortunately, needed for now, see comment below
+    mask_probability: float = 0.15,
 ) -> IterableDatasetDict:
-    np.random.seed(seed)
+    set_seed(seed)
     raw_datasets = load_dataset(path, streaming=True)
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
 
-    def tokenize_function(examples, soft_masked_weight, data_augmentation=False):
+    def tokenize_function(
+        examples, soft_masked_weight, data_augmentation=False,
+        do_create_masked_input_and_labels=True,
+    ):
         seq = examples["seq"]
         if data_augmentation:
             n = len(seq)
@@ -39,7 +70,10 @@ def load_dataset_training(
         input_ids = torch.tensor(input_ids, dtype=torch.uint8)
         loss_weight = torch.ones_like(input_ids, dtype=torch.float16)
         loss_weight[np.char.islower([list(x) for x in seq])] = soft_masked_weight
-        return dict(input_ids=input_ids, loss_weight=loss_weight)
+        input_ids, labels = create_masked_input_and_labels(
+            input_ids, tokenizer, mask_probability
+        )
+        return dict(input_ids=input_ids, labels=labels, loss_weight=loss_weight)
 
     remove_columns = list(list(raw_datasets["train"].take(1))[0].keys())
 
