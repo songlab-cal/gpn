@@ -13,6 +13,8 @@ from gpn.msa.vep_embedding import VEPEmbeddingInference
 from gpn.msa.vep_influence import VEPInfluenceInference
 from gpn.msa.vep_ref_embed import VEPRefEmbedInference
 from gpn.msa.vep_delta_embed import VEPDeltaEmbedInference
+from gpn.msa.vep_euclidean_dist import VEPEuclideanDistInference
+from gpn.msa.vep_embeddings import VEPEmbeddingsInference
 
 import torch._dynamo
 torch._dynamo.config.suppress_errors = True
@@ -29,6 +31,8 @@ class_mapping = {
     "vep_influence": VEPInfluenceInference,
     "vep_ref_embed": VEPRefEmbedInference,
     "vep_delta_embed": VEPDeltaEmbedInference,
+    "vep_euclidean_dist": VEPEuclideanDistInference,
+    "vep_embeddings": VEPEmbeddingsInference,
 }
 
 
