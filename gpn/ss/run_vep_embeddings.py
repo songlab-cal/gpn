@@ -100,6 +100,8 @@ def run_vep(
         pos = np.array(vs["pos"]) - 1
         start = pos - window_size // 2
         end = pos + window_size // 2
+        if window_size % 2 == 1:
+            end += 1
         seq_fwd, seq_rev = zip(
             *(genome.get_seq_fwd_rev(chrom[i], start[i], end[i]) for i in range(n))
         )
@@ -196,7 +198,8 @@ if __name__ == "__main__":
     )
     genome = Genome(args.genome_path)
     tokenizer = AutoTokenizer.from_pretrained(
-        args.tokenizer_path if args.tokenizer_path else args.model_path
+        args.tokenizer_path if args.tokenizer_path else args.model_path,
+        trust_remote_code=True,
     )
     model = ModelforVEPModel(args.model_path)
     pred = run_vep(
