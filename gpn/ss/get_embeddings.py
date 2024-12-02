@@ -98,13 +98,13 @@ if __name__ == "__main__":
     parser.add_argument("model_path", help="Model path (local or on HF hub)", type=str)
     parser.add_argument("output_path", help="Output path (parquet)", type=str)
     parser.add_argument(
-        "--per-device-batch-size",
+        "--per_device_batch_size",
         help="Per device batch size",
         type=int,
         default=8,
     )
     parser.add_argument(
-        "--tokenizer-path",
+        "--tokenizer_path",
         type=str,
         help="Tokenizer path (optional, else will use model_path)",
     )
@@ -115,10 +115,10 @@ if __name__ == "__main__":
         help="Dataset split",
     )
     parser.add_argument(
-        "--dataloader-num-workers", type=int, default=0, help="Dataloader num workers"
+        "--dataloader_num_workers", type=int, default=0, help="Dataloader num workers"
     )
     parser.add_argument(
-        "--is-file",
+        "--is_file",
         action="store_true",
         help="windows_PATH is a file, not directory",
     )

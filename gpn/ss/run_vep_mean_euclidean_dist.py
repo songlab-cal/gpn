@@ -24,8 +24,8 @@ class ModelforVEPModel(torch.nn.Module):
         )
 
     def get_scores(self, input_ids_ref, input_ids_alt):
-        embed_ref = self.model(input_ids=input_ids_ref).last_hidden_state.reshape(len(input_ids_ref), -1)
-        embed_alt = self.model(input_ids=input_ids_alt).last_hidden_state.reshape(len(input_ids_ref), -1)
+        embed_ref = self.model(input_ids=input_ids_ref).last_hidden_state.mean(dim=1)
+        embed_alt = self.model(input_ids=input_ids_alt).last_hidden_state.mean(dim=1)
         return F.pairwise_distance(embed_ref, embed_alt)
 
     def forward(

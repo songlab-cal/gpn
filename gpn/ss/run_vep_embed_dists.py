@@ -102,7 +102,7 @@ def run_vep(
         per_device_eval_batch_size=per_device_batch_size,
         dataloader_num_workers=dataloader_num_workers,
         remove_unused_columns=False,
-        #torch_compile=True,
+        torch_compile=True,
         fp16=True,
     )
     trainer = Trainer(model=model, args=training_args)
@@ -127,21 +127,21 @@ if __name__ == "__main__":
     parser.add_argument("model_path", help="Model path (local or on HF hub)", type=str)
     parser.add_argument("output_path", help="Output path (parquet)", type=str)
     parser.add_argument(
-        "--per-device-batch-size",
+        "--per_device_batch_size",
         help="Per device batch size",
         type=int,
         default=8,
     )
     parser.add_argument(
-        "--tokenizer-path",
+        "--tokenizer_path",
         type=str,
         help="Tokenizer path (optional, else will use model_path)",
     )
     parser.add_argument(
-        "--n-prefix", type=int, default=0, help="Number of prefix tokens (e.g. CLS)."
+        "--n_prefix", type=int, default=0, help="Number of prefix tokens (e.g. CLS)."
     )
     parser.add_argument(
-        "--dataloader-num-workers", type=int, default=0, help="Dataloader num workers"
+        "--dataloader_num_workers", type=int, default=0, help="Dataloader num workers"
     )
     parser.add_argument(
         "--split",
@@ -150,7 +150,7 @@ if __name__ == "__main__":
         help="Dataset split",
     )
     parser.add_argument(
-        "--is-file",
+        "--is_file",
         action="store_true",
         help="VARIANTS_PATH is a file, not directory",
     )
