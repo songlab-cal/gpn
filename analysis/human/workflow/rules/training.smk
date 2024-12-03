@@ -37,26 +37,36 @@ rule get_conservation_intervals:
         "results/conservation/{conservation}.bw",
     output:
         "results/intervals/{window_size}/defined.{conservation}.{operation}.parquet",
+    threads:
+        workflow.cores
     run:
         import pyBigWig
 
         intervals = pd.read_parquet(input[0])
         print(intervals)
-        bw = pyBigWig.open(input[1])
+        #bw = pyBigWig.open(input[1])
         window_size = int(wildcards["window_size"])
         step_size = window_size // 2
         intervals = make_windows(intervals, window_size, step_size)
         print(intervals)
 
         operation = wildcards["operation"]
+        if operation == "mean":
+            f = lambda v, bw: bw.stats(f"chr{v.chrom}", v.start, v.end, exact=True)[0]
+        elif operation == "percentile-75":
+            f = lambda v, bw: np.quantile(bw.values(f"chr{v.chrom}", v.start, v.end), 0.75)
 
         def run_operation(v):
-            if operation == "mean":
-                return bw.stats(f"chr{v.chrom}", v.start, v.end, exact=True)[0]
-            elif operation == "percentile-75":
-                return np.quantile(bw.values(f"chr{v.chrom}", v.start, v.end), 0.75)
+            bw = pyBigWig.open(input[1])
+            res = f(v, bw)
+            bw.close()
+            return res
 
-        intervals["conservation"] = intervals.progress_apply(
+        from pandarallel import pandarallel
+        pandarallel.initialize(progress_bar=True, nb_workers=threads)
+
+        #intervals["conservation"] = intervals.progress_apply(
+        intervals["conservation"] = intervals.parallel_apply(
             run_operation, axis=1,
         )
         print(intervals)
@@ -72,14 +82,18 @@ rule filter_conservation_intervals:
         intervals = pd.read_parquet(input[0])
         print(intervals)
         top_frac = float(wildcards["top_frac"])
-        random_frac = float(wildcards["random_frac"])
-        mask_top = intervals.conservation >= intervals.conservation.quantile(1-top_frac)
-        top_intervals = intervals[mask_top]
-        print(top_intervals)
-        assert not top_intervals.conservation.isna().any()
-        random_intervals = intervals[~mask_top].sample(frac=random_frac, random_state=42)
-        print(random_intervals)
-        res = pd.concat([top_intervals, random_intervals], ignore_index=True)
+        if top_frac == 1.0:
+            print("Using entire genome")
+            res = intervals
+        else:
+            random_frac = float(wildcards["random_frac"])
+            mask_top = intervals.conservation >= intervals.conservation.quantile(1-top_frac)
+            top_intervals = intervals[mask_top]
+            print(top_intervals)
+            assert not top_intervals.conservation.isna().any()
+            random_intervals = intervals[~mask_top].sample(frac=random_frac, random_state=42)
+            print(random_intervals)
+            res = pd.concat([top_intervals, random_intervals], ignore_index=True)
         print(res)
         #res = bf.merge(res[["chrom", "start", "end"]]).drop(columns="n_intervals")
         res = res[["chrom", "start", "end"]].drop_duplicates()
@@ -272,6 +286,34 @@ rule merge_msa:
             print(z[chrom].info)
 
 
+# this is very hacky, just for an ablation
+rule msa_ablation_subset:
+    input:
+        "results/msa/multiz100way/89/all.zarr",
+        "config/species/multiz100way/89.txt",
+        "config/species/multiz100way/{subset}/{species}.txt"
+    output:
+        directory("results/msa/multiz100way_{subset}/{species}/all.zarr"),
+    threads: workflow.cores
+    run:
+        import zarr
+
+        input_species = pd.read_csv(input[1], header=None).values.ravel().tolist()
+        output_species = pd.read_csv(input[2], header=None).values.ravel().tolist()
+        output_idx = [0] + [1 + input_species.index(s) for s in output_species]
+        print(output_idx)
+
+        z_input = zarr.open(input[0], mode="r")
+        z_output = zarr.open_group(output[0], mode='w')
+
+        for chrom in tqdm(CHROMS):
+            z_output.create_dataset(
+                chrom,
+                data=z_input[chrom][:, output_idx],
+                chunks=(512, len(output_idx))
+            )
+
+
 def model_config(wildcards):
     s = wildcards.model_size
     w = int(wildcards.dataset.split("/")[0])
@@ -281,6 +323,10 @@ def model_config(wildcards):
         conf = " --per_device_train_batch_size 512 --per_device_eval_batch_size 512 --gradient_accumulation_steps 1"
     elif s == "medium" and w == 256:
         conf = " --per_device_train_batch_size 256 --per_device_eval_batch_size 256 --gradient_accumulation_steps 2"
+    elif s == "medium" and w == 512:
+        conf = " --per_device_train_batch_size 128 --per_device_eval_batch_size 128 --gradient_accumulation_steps 4"
+    elif s == "medium" and w == 1024:
+        conf = " --per_device_train_batch_size 32 --per_device_eval_batch_size 32 --gradient_accumulation_steps 16"
     elif s == "small" and w <= 256:
         conf = ",num_hidden_layers=8,num_attention_heads=8,hidden_size=512,intermediate_size=2048 --per_device_train_batch_size 512 --per_device_eval_batch_size 512 --gradient_accumulation_steps 1"
     elif s == "tiny" and w == 128:
@@ -309,7 +355,7 @@ rule train_gpn_msa:
     priority: 100
     shell:
         """
-        WANDB_PROJECT={params.project_name} torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}') -m gpn.msa.train
+        WANDB_PROJECT={params.project_name} torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}') -m gpn.msa.train \
         --do_train --do_eval --fp16 --report_to wandb --prediction_loss_only True \
         --dataset_name results/dataset/{wildcards.dataset} \
         --msa_path {input[0]} \

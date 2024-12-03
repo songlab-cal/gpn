@@ -43,10 +43,11 @@ class VEPEmbedding(torch.nn.Module):
 
 
 class VEPEmbeddingInference(object):
-    def __init__(self, model_path, genome_msa, window_size, **kwargs):
-        self.model = VEPEmbedding(model_path)#, embedding_mean=embedding_mean, embedding_std=embedding_std)
+    def __init__(self, model_path, genome_msa, window_size, disable_aux_features=False):
+        self.model = VEPEmbedding(model_path)
         self.genome_msa = genome_msa
         self.window_size = window_size
+        self.disable_aux_features = disable_aux_features
         self.tokenizer = Tokenizer()
         self.reverse_complementer = ReverseComplementer()
 
@@ -101,6 +102,11 @@ class VEPEmbeddingInference(object):
             res["input_ids_alt_rev"],
             res["aux_features_alt_rev"],
         ) = prepare_output(msa_rev, pos_rev, ref_rev, alt_rev)
+        if self.disable_aux_features:
+            del res["aux_features_ref_fwd"]
+            del res["aux_features_alt_fwd"]
+            del res["aux_features_ref_rev"]
+            del res["aux_features_alt_rev"]
         return res
 
     def postprocess(self, pred):

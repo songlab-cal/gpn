@@ -267,7 +267,9 @@ class DataTrainingArguments:
     soft_masked_loss_weight_train: Optional[float] = field(default=1.0)
     soft_masked_loss_weight_evaluation: Optional[float] = field(default=1.0)
     soft_masked_loss_weight_test: Optional[float] = field(default=1.0)
+    total_batch_size: Optional[int] = field(default=2048)
     do_test: bool = field(default=False)
+    min_lr_rate: Optional[float] = field(default=None)
 
     def __post_init__(self):
         if (
@@ -321,6 +323,10 @@ def main():
         handlers=[logging.StreamHandler(sys.stdout)],
     )
 
+    if training_args.should_log:
+        # The default of training_args.log_level is passive, so we set log level at info here to have that default.
+        transformers.utils.logging.set_verbosity_info()
+
     log_level = training_args.get_process_log_level()
     logger.setLevel(log_level)
     datasets.utils.logging.set_verbosity(log_level)
@@ -335,6 +341,9 @@ def main():
     )
     # Set the verbosity to info of the Transformers logger (on main process only):
     logger.info(f"Training/evaluation parameters {training_args}")
+
+    if data_args.min_lr_rate is not None:
+        training_args.lr_scheduler_kwargs["min_lr_rate"] = data_args.min_lr_rate
 
     # Detecting last checkpoint.
     last_checkpoint = None
@@ -359,6 +368,7 @@ def main():
 
     # Set seed before initializing model.
     set_seed(training_args.seed)
+    np.random.seed(training_args.seed)
 
     # Downloading and loading a dataset from the hub.
     # Also works for local dataset
@@ -428,9 +438,18 @@ def main():
         logger.info("Training new model from scratch")
         model = AutoModelForMaskedLM.from_config(config)
 
-    def tokenize_function(examples, soft_masked_weight):
+    def tokenize_function(examples, soft_masked_weight, data_augmentation=False):
+        seq = examples["seq"]
+        if data_augmentation:
+            n = len(seq)
+            strand = np.random.choice(["+", "-"], n)
+            seq = [
+                seq[i] if strand[i] == "+" else str(Seq(seq[i]).reverse_complement())
+                for i in range(n)
+            ]
+
         res = tokenizer(
-            examples["seq"],
+            seq,
             return_special_tokens_mask=True,
             padding=False,
             truncation=False,
@@ -439,7 +458,7 @@ def main():
         )
         res["loss_weight"] = np.ones_like(res["input_ids"], dtype=float)
         res["loss_weight"][
-            np.char.islower([list(x) for x in examples["seq"]])
+            np.char.islower([list(x) for x in seq])
         ] = soft_masked_weight
         return res
 
@@ -448,15 +467,23 @@ def main():
         "validation": data_args.soft_masked_loss_weight_evaluation,
     }
 
-    remove_columns = ["assembly", "chrom", "start", "end", "strand", "seq"]
+    remove_columns = list(list(raw_datasets["train"].take(1))[0].keys())
 
     if training_args.do_train:
-        train_dataset = raw_datasets["train"].map(
+        train_dataset = raw_datasets["train"].shuffle(seed=training_args.seed)
+        train_dataset = train_dataset.map(
             lambda examples: tokenize_function(
-                examples, data_args.soft_masked_loss_weight_train
+                examples, data_args.soft_masked_loss_weight_train,
+                data_augmentation=True,
             ),
             batched=True,
             remove_columns=remove_columns,
+            # This takes care of some issues when using torch_compile
+            # I think it's a bug in IterableDataset in the datasets library
+            # When the last batch is smaller than the batch size
+            # Hopefully it will be fixed soon
+            drop_last_batch=True,
+            batch_size=data_args.total_batch_size,
         )
 
     if training_args.do_eval:

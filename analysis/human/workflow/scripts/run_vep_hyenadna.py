@@ -135,6 +135,7 @@ def run_vep(
         per_device_eval_batch_size=per_device_batch_size,
         dataloader_num_workers=dataloader_num_workers,
         remove_unused_columns=False,
+        torch_compile=True,
     )
     trainer = Trainer(model=model, args=training_args)
     return trainer.predict(test_dataset=variants).predictions
@@ -174,11 +175,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "--is-file", action="store_true", help="VARIANTS_PATH is a file, not directory",
     )
+    parser.add_argument("--n-shards", type=int, default=100)
+    parser.add_argument("--shard", type=int, default=0)
     args = parser.parse_args()
 
     variants = load_dataset_from_file_or_dir(
         args.variants_path, split=args.split, is_file=args.is_file,
     )
+    variants = variants.shard(args.n_shards, args.shard, contiguous=True)
     subset_chroms = np.unique(variants["chrom"])
     genome = Genome(args.genome_path, subset_chroms=subset_chroms)
 

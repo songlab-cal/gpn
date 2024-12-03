@@ -10,6 +10,14 @@ from gpn.msa.vep import VEPInference
 from gpn.msa.logits import LogitsInference
 from gpn.msa.embedding import EmbeddingInference
 from gpn.msa.vep_embedding import VEPEmbeddingInference
+from gpn.msa.vep_influence import VEPInfluenceInference
+from gpn.msa.vep_ref_embed import VEPRefEmbedInference
+from gpn.msa.vep_delta_embed import VEPDeltaEmbedInference
+from gpn.msa.vep_euclidean_dist import VEPEuclideanDistInference
+from gpn.msa.vep_embeddings import VEPEmbeddingsInference
+
+import torch._dynamo
+torch._dynamo.config.suppress_errors = True
 
 
 disable_caching()
@@ -20,6 +28,11 @@ class_mapping = {
     "logits": LogitsInference,
     "embedding": EmbeddingInference,
     "vep_embedding": VEPEmbeddingInference,
+    "vep_influence": VEPInfluenceInference,
+    "vep_ref_embed": VEPRefEmbedInference,
+    "vep_delta_embed": VEPDeltaEmbedInference,
+    "vep_euclidean_dist": VEPEuclideanDistInference,
+    "vep_embeddings": VEPEmbeddingsInference,
 }
 
 
@@ -55,7 +68,7 @@ if __name__ == "__main__":
         - logits: masked language model logits
         - embedding: averaged embedding from last layer
         """,
-        choices=["vep", "logits", "embedding", "vep_embedding"],
+        choices=class_mapping.keys(),
     )
     parser.add_argument(
         "input_path",

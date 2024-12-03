@@ -130,6 +130,7 @@ def run_vep(
         per_device_eval_batch_size=per_device_batch_size,
         dataloader_num_workers=dataloader_num_workers,
         remove_unused_columns=False,
+        torch_compile=True,
     )
     trainer = Trainer(model=model, args=training_args)
     return trainer.predict(test_dataset=variants).predictions
@@ -189,8 +190,15 @@ if __name__ == "__main__":
         #    v["source"]=="ClinVar" or
         #    (v["label"]=="Common" and "missense" in v["consequence"])
         #)
-        #return no_undefined and clinvar_subset
-        return no_undefined
+        #my_subset = (
+        #    v["source"]!="gnomAD" or
+        #    "missense" in v["consequence"] or
+        #    "synonymous" in v["consequence"] or
+        #    "UTR" in v["consequence"]
+        #)
+        my_subset = v["consequence"] != "Enhancer"
+        return no_undefined and my_subset
+        #return no_undefined
 
     df["is_valid"] = df.parallel_apply(check_valid, axis=1)
     print(df.is_valid.value_counts())

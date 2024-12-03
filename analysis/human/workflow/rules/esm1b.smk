@@ -9,11 +9,13 @@ rule download_ensembl_cache:
         """
 
 
-rule make_ensembl_vep_input:
+rule make_ensembl_vep_input_v2:
     output:
         "results/preds/{dataset}/ensembl_vep.input.tsv.gz",
     run:
         df = load_dataset(wildcards["dataset"], split="test").to_pandas()
+        if "consequence" not in df.columns:
+            df["consequence"] = "missense"
         df = df[df.consequence.str.contains("missense")]
         df["start"] = df.pos
         df["end"] = df.start
@@ -24,29 +26,19 @@ rule make_ensembl_vep_input:
             columns=["chrom", "start", "end", "allele", "strand"],
         )
 
-# additional snakemake args:
-# --use-singularity --singularity-args "--bind /scratch/users/gbenegas"
-rule install_ensembl_vep_cache:
-    output:
-        directory("results/ensembl_vep_cache"),
-    singularity:
-        "docker://ensemblorg/ensembl-vep"
-    shell:
-        "INSTALL.pl -c {output} -a cf -s homo_sapiens -y GRCh38"
 
-
-rule run_ensembl_vep:
+rule run_ensembl_vep_v2:
     input:
         "{anything}/ensembl_vep.input.tsv.gz",
         "results/ensembl_vep_cache",
     output:
         "{anything}/ensembl_vep.output.tsv.gz",  # TODO: make temp
     singularity:
-        "docker://ensemblorg/ensembl-vep"
+        "docker://ensemblorg/ensembl-vep:release_109.1"
     threads: workflow.cores
     shell:
         """
-        vep -i {input[0]} -o {output} --fork {threads} --cache \
+        vep -i {input[0]} -o {output} --fork {threads} --cache --offline \
         --dir_cache {input[1]} --format ensembl \
         --transcript_version --uniprot --coding_only --compress_output gzip --tab
         """
@@ -128,6 +120,8 @@ rule run_vep_esm1b:
     threads: workflow.cores
     run:
         variants = load_dataset(wildcards["dataset"], split="test").to_pandas()
+        if "consequence" not in variants.columns:
+            variants["consequence"] = "missense"
         variants["is_valid"] = variants.consequence.str.contains("missense")
         df = variants.copy()
         variants = variants[variants.is_valid]
@@ -184,4 +178,29 @@ rule run_vep_esm1b:
         # True      1770
         df.loc[df.is_valid, "score"] = variants.score
         print(df)
-        df.to_parquet(output[0], index=False)
+        df[["score"]].to_parquet(output[0], index=False)
+
+
+ruleorder: run_vep_esm1b_dms2 > run_vep_esm1b
+
+
+rule run_vep_esm1b_dms2:
+    input:
+        "results/dms2/snv/test.parquet",
+        "results/esm1b/scores.parquet",
+    output:
+        "results/preds/results/dms2/snv/ESM-1b.parquet",
+    run:
+        V = pl.read_parquet(input[0])
+        print(V)
+        scores = (
+            pl.read_parquet(input[1])
+            .with_columns(
+                (pl.col("ref") + pl.col("pos").cast(str) + pl.col("alt")).alias("mutant")
+            )
+            .drop(["pos", "ref", "alt"])
+        )
+        print(scores)
+        V = V.join(scores, on=["uniprot_id", "mutant"], how="left")
+        print(V)
+        V[["score"]].write_parquet(output[0])

@@ -15,6 +15,32 @@ import gpn.model
 from gpn.data import Genome, load_dataset_from_file_or_dir, token_input_id
 
 
+def euclidean_distance(embed_ref, embed_alt):
+    B = len(embed_ref)
+    return F.pairwise_distance(embed_ref.reshape(B, -1), embed_alt.reshape(B, -1))
+
+
+def euclidean_distances(embed_ref, embed_alt):
+    return torch.linalg.norm(embed_ref - embed_alt, dim=1)
+
+
+def inner_product(embed_ref, embed_alt):
+    return (embed_ref * embed_alt).sum(dim=(1, 2))
+
+
+def inner_products(embed_ref, embed_alt):
+    return (embed_ref * embed_alt).sum(dim=1)
+
+
+def cosine_distance(embed_ref, embed_alt):
+    B = len(embed_ref)
+    return 1 - F.cosine_similarity(embed_ref.reshape(B, -1), embed_alt.reshape(B, -1), dim=1)
+
+
+def cosine_distances(embed_ref, embed_alt):
+    return 1 - F.cosine_similarity(embed_ref, embed_alt, dim=1)
+
+
 class ModelforVEPModel(torch.nn.Module):
     def __init__(self, model_path):
         super().__init__()
@@ -24,13 +50,16 @@ class ModelforVEPModel(torch.nn.Module):
         )
 
     def get_scores(self, input_ids_ref, input_ids_alt):
-        embedding_ref = self.model(input_ids=input_ids_ref).last_hidden_state.reshape(len(input_ids_ref), -1)
-        embedding_alt = self.model(input_ids=input_ids_alt).last_hidden_state.reshape(len(input_ids_ref), -1)
-        return (
-            F.pairwise_distance(embedding_ref, embedding_alt),
-            (embedding_ref * embedding_alt).sum(dim=1),  # dot product
-            F.cosine_similarity(embedding_ref, embedding_alt),
-        )
+        embed_ref = self.model(input_ids=input_ids_ref).last_hidden_state
+        embed_alt = self.model(input_ids=input_ids_alt).last_hidden_state
+        return torch.cat((
+            torch.unsqueeze(euclidean_distance(embed_ref, embed_alt), 1),
+            torch.unsqueeze(inner_product(embed_ref, embed_alt), 1),
+            torch.unsqueeze(cosine_distance(embed_ref, embed_alt), 1),
+            euclidean_distances(embed_ref, embed_alt),
+            inner_products(embed_ref, embed_alt),
+            cosine_distances(embed_ref, embed_alt),
+        ), dim=1)
 
     def forward(
         self,
@@ -39,13 +68,9 @@ class ModelforVEPModel(torch.nn.Module):
         input_ids_ref_rev=None,
         input_ids_alt_rev=None,
     ):
-        fwd1, fwd2, fwd3 = self.get_scores(input_ids_ref_fwd, input_ids_alt_fwd)
-        rev1, rev2, rev3 = self.get_scores(input_ids_ref_rev, input_ids_alt_rev)
-        return torch.stack((
-            (fwd1 + rev1) / 2,
-            (fwd2 + rev2) / 2,
-            (fwd3 + rev3) / 2,
-        ), dim=1)
+        fwd = self.get_scores(input_ids_ref_fwd, input_ids_alt_fwd)
+        rev = self.get_scores(input_ids_ref_rev, input_ids_alt_rev)
+        return (fwd + rev) / 2
 
 
 def run_vep(
@@ -75,6 +100,8 @@ def run_vep(
         pos = np.array(vs["pos"]) - 1
         start = pos - window_size // 2
         end = pos + window_size // 2
+        if window_size % 2 == 1:
+            end += 1
         seq_fwd, seq_rev = zip(
             *(genome.get_seq_fwd_rev(chrom[i], start[i], end[i]) for i in range(n))
         )
@@ -135,21 +162,21 @@ if __name__ == "__main__":
     parser.add_argument("model_path", help="Model path (local or on HF hub)", type=str)
     parser.add_argument("output_path", help="Output path (parquet)", type=str)
     parser.add_argument(
-        "--per-device-batch-size",
+        "--per_device_batch_size",
         help="Per device batch size",
         type=int,
         default=8,
     )
     parser.add_argument(
-        "--tokenizer-path",
+        "--tokenizer_path",
         type=str,
         help="Tokenizer path (optional, else will use model_path)",
     )
     parser.add_argument(
-        "--n-prefix", type=int, default=0, help="Number of prefix tokens (e.g. CLS)."
+        "--n_prefix", type=int, default=0, help="Number of prefix tokens (e.g. CLS)."
     )
     parser.add_argument(
-        "--dataloader-num-workers", type=int, default=0, help="Dataloader num workers"
+        "--dataloader_num_workers", type=int, default=0, help="Dataloader num workers"
     )
     parser.add_argument(
         "--split",
@@ -158,7 +185,7 @@ if __name__ == "__main__":
         help="Dataset split",
     )
     parser.add_argument(
-        "--is-file",
+        "--is_file",
         action="store_true",
         help="VARIANTS_PATH is a file, not directory",
     )
@@ -171,7 +198,8 @@ if __name__ == "__main__":
     )
     genome = Genome(args.genome_path)
     tokenizer = AutoTokenizer.from_pretrained(
-        args.tokenizer_path if args.tokenizer_path else args.model_path
+        args.tokenizer_path if args.tokenizer_path else args.model_path,
+        trust_remote_code=True,
     )
     model = ModelforVEPModel(args.model_path)
     pred = run_vep(
@@ -183,7 +211,14 @@ if __name__ == "__main__":
         per_device_batch_size=args.per_device_batch_size,
         dataloader_num_workers=args.dataloader_num_workers,
     )
+    D = (pred.shape[1] // 3) - 1
+    cols = (
+        ["euclidean_distance", "inner_product", "cosine_distance"]
+        + [f"euclidean_distance_{i}" for i in range(D)]
+        + [f"inner_product_{i}" for i in range(D)]
+        + [f"cosine_distance_{i}" for i in range(D)]
+    )
     directory = os.path.dirname(args.output_path)
     if directory != "" and not os.path.exists(directory):
         os.makedirs(directory)
-    pd.DataFrame(pred, columns=["euclidean_distance", "inner_product", "cosine_similarity"]).to_parquet(args.output_path, index=False)
+    pd.DataFrame(pred, columns=cols).to_parquet(args.output_path, index=False)

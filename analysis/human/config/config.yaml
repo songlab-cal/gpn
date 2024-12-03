@@ -5,4 +5,12 @@ window_size: 128
 center_window_size: 100
 
 per_device_batch_size: 2048
-dataloader_num_workers: 16
+dataloader_num_workers: 32
+
+gnomad:
+  min_an: 25_000
+  enformer_consequences:
+    - upstream_gene
+    - intergenic
+    - downstream_gene
+    - intron

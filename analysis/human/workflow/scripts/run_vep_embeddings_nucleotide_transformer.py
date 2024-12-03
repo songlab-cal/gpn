@@ -109,6 +109,7 @@ def run_vep(
         per_device_eval_batch_size=per_device_batch_size,
         dataloader_num_workers=dataloader_num_workers,
         remove_unused_columns=False,
+        torch_compile=True,
     )
     trainer = Trainer(model=model, args=training_args)
     return trainer.predict(test_dataset=variants).predictions

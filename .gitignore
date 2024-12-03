@@ -1,5 +1,8 @@
 .julia
 analysis/arabidopsis/bedGraphToBigWig
+*.pdf
+*.vcf.gz
+*.vcf
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

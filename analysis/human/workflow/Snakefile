@@ -37,14 +37,26 @@ SPLIT_CHROMS = {
     "test": ["22"],
 }
 SPLITS = SPLIT_CHROMS.keys()
-CHROMS = np.concatenate(list(SPLIT_CHROMS.values()))
-
+CHROMS = np.array([str(i) for i in range(1, 23)] + ["X", "Y"])
 
 datasets = [
-    "songlab/human_variants",
-    #"results/gtex/merged",
+    #"results/clinvar/merged",
+    #"results/cosmic/merged",
+    #"results/omim/merged",
+    #"results/gnomad/merged/filt",
+    #"results/gnomad/merged/subsampled",
+    #"songlab/human_variants",
     #"results/gwas/matched",
-    #"results/mpra/processed",
+    #"results/gwas/matched/missense_variant",
+    #"results/eqtl/matched/ge",
+    #"results/eqtl/matched/leafcutter",
+    #"results/mpra/merged",
+    #"results/SGE/DDX3X/processed",
+    #"results/dms/merged",
+    #"results/variants_enformer",
+    #"results/ism_subset",
+    #"results/dms2/snv",
+    "results/clinvar/likely",
 ]
 
 model_template = "{dataset}/{model_size}/{loss_weight}/{seed}/{max_steps}/{use_aux_features}/{weight_conserved}/{flip_nonconserved}"
@@ -56,29 +68,34 @@ hparams = {
         "multiz100way/89/128/64/True/defined.phastCons.percentile-75_0.05_0.001",
 
         # changing percentage
-        #"multiz100way/89/128/64/True/defined.phastCons.percentile-75_0.50_0.001",
+        "multiz100way/89/128/64/True/defined.phastCons.percentile-75_0.50_0.001",
+        "multiz100way/89/128/64/True/defined.phastCons.percentile-75_1.00_0.00",
 
-        # using more species
-        #"multiz100way/99/128/64/True/defined.phastCons.percentile-75_0.05_0.001",
+        # using different species
+        "multiz100way/99/128/64/True/defined.phastCons.percentile-75_0.05_0.001",
+        "multiz100way_mammals/51/128/64/True/defined.phastCons.percentile-75_0.05_0.001",
+        "multiz100way_vertebrates/51/128/64/True/defined.phastCons.percentile-75_0.05_0.001",
 
         # changing window size
-        "multiz100way/89/64/32/True/defined.phastCons.percentile-75_0.05_0.001",
+        #"multiz100way/89/32/16/True/defined.phastCons.percentile-75_0.05_0.001",
+        #"multiz100way/89/64/32/True/defined.phastCons.percentile-75_0.05_0.001",
         "multiz100way/89/256/128/True/defined.phastCons.percentile-75_0.05_0.001",
+        #"multiz100way/89/512/256/True/defined.phastCons.percentile-75_0.05_0.001",
     ],
     "use_aux_features": [
         True,
-        #False,
+        False,
     ],
     "loss_weight": [
         0.1,
     ],
     "weight_conserved": [
         True,
-        #False,
+        False,
     ],
     "flip_nonconserved": [
         True,
-        #False,
+        False,
     ],
 }
 
@@ -98,8 +115,8 @@ models = sum(
             m,
             seed=[
                 42,
-                #43,
-                #44,
+                43,
+                44,
             ],
             max_steps=[
                 30_000,
@@ -112,7 +129,15 @@ models = sum(
     []
 )
 best_model = models[0]
-#models = [best_model]
+models = [best_model]
+#models = []
+
+#models += [
+#    f"{models[i]}.{window_size_ablation}"
+#    for window_size_ablation in [4, 8, 16, 32, 64]
+#    for i in range(3)
+#]
+
 
 include: "rules/common.smk"
 include: "rules/training.smk"
@@ -127,25 +152,30 @@ include: "rules/cadd.smk"
 include: "rules/spliceai.smk"
 include: "rules/hyenadna.smk"
 
-#models += nucleotide_transformer_models
-#models += hyenadna_models
+#models.append("msa_multiz100way/89")
+#models.append("conservation_combination")
+#pd.DataFrame(models).to_csv("ablation_models.txt", index=False, header=False)
+
 #models.append(nucleotide_transformer_models[-1])
 #models.append(hyenadna_models[-1])
-#models.append("ESM-1b")
-#models.append("msa_multiz100way/89")
-#models.append("phyloP")
-#models.append("phastCons")
-#models.append("phyloP-Zoonomia")
-#models = ["ESM-1b"]
-#pd.DataFrame(models).to_csv("models.txt", index=False, header=False)
+models.append("ESM-1b")
+models.append("phyloP")
+models.append("phastCons")
+models.append("phyloP-Zoonomia")
+#models.append("PrimateAI-3D")
+
 
 rule all:
     input:
         expand("results/preds/{dataset}/{model}.parquet", model=models, dataset=datasets),
+        #expand("results/preds/{dataset}/{model}.parquet", model=[nucleotide_transformer_models[-1], best_model, "phyloP", "phastCons", "phyloP-Zoonomia"], dataset=["results/omim/merged"]),
+        #expand("results/preds/{dataset}/{model}.parquet", model=[best_model, "phyloP", "phastCons", "phyloP-Zoonomia"], dataset=["results/variants_enformer"]),
         #expand("results/preds/vep_embedding/{dataset}/{model}.parquet", model=models, dataset=datasets),
+        #expand("results/preds/vep_embedding/{dataset}/{model}.{shard}.parquet", model=models, dataset=datasets, shard=range(n_shards)),
         #expand("results/dataset/{dataset}/train.parquet", dataset=hparams["dataset"]),
         #expand("results/checkpoints/{model}", model=models),
-        #f"results/positions/6/logits/{best_model}.parquet",
+        #expand("results/preds/{dataset}/{model}.{window_size_ablation}.parquet", model=models, dataset=datasets, window_size_ablation=[4, 8, 16, 32, 64]),
+        #expand("results/positions/{chrom}/processed_logits/{model}.parquet", chrom=CHROMS, model=[best_model]),
         #f"results/positions/promoter/modisco/{best_model}/report",
         #f"results/embedding/umap/{best_model}.parquet",
         #f"results/embedding/classification/{best_model}.parquet",
@@ -154,3 +184,12 @@ rule all:
         #f"results/preds/results/gnomad/all/defined/128/{best_model}.parquet",
         #f"results/add_preds/results/gnomad/all/defined/128/{best_model}.parquet",
         #f"results/add_preds/results/gnomad/all/defined/128/{best_model}.tsv.bgz.tbi",
+        #f"results/preds/results/gwas/matched/{best_model}.BestFeature.parquet",
+        #f"results/preds/results/gwas/matched/{best_model}.SumFeatures.parquet",
+        #f"results/preds/vep_embedding/results/gwas/matched/{best_model}/concat/Enformer.parquet",
+
+
+rule all2:
+    input:
+        #f"results/preds/results/gnomad/merged/all/{best_model}.parquet",
+        f"results/preds/results/gnomad/merged/all/msa_multiz100way/89.parquet",

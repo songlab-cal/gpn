@@ -1,16 +1,13 @@
+import polars as pl
 from tqdm import tqdm
-
-
-chroms_gnomad = [str(i) for i in range(1, 23)]
-# minimum allele number (autosomes)
-MIN_AN = 2 * 70_000
 
 
 rule download_gnomad:
     output:
-        temp("results/gnomad/{chrom}/all/variants.vcf.bgz")  # careful
+        #temp("results/gnomad/{chrom}/all/variants.vcf.bgz")  # careful
+        "results/gnomad/{chrom}/all/variants.vcf.bgz",  # careful
     wildcard_constraints:
-        chrom="|".join(chroms_gnomad)
+        chrom="|".join(CHROMS)
     shell:
         "wget https://storage.googleapis.com/gcp-public-data--gnomad/release/3.1.2/vcf/genomes/gnomad.genomes.v3.1.2.sites.chr{wildcards.chrom}.vcf.bgz -O {output}"
 
@@ -18,10 +15,11 @@ rule download_gnomad:
 rule process_gnomad:
     input:
         "results/gnomad/{chrom}/all/variants.vcf.bgz",
+        "results/intervals/128/defined.parquet",
     output:
         "results/gnomad/{chrom}/all/variants.parquet",
     wildcard_constraints:
-        chrom="|".join(chroms_gnomad)
+        chrom="|".join(CHROMS)
     run:
         from cyvcf2 import VCF
 
@@ -32,122 +30,28 @@ rule process_gnomad:
             if variant.FILTER is not None: continue  # this is supposed to mean PASS
             # doesn't really matter since multi-allelic are split into multiple lines
             if len(variant.ALT) > 1: continue
-            variant_type = variant.INFO.get("variant_type")
-            if variant_type not in ["snv", "multi-snv"]: continue
-            VEP = variant.INFO.get("vep").split(",")
-            consequences = []
-            for transcript_vep in VEP:
-                fields = transcript_vep.split("|")
-                if len(fields) == 1: continue
-                consequence = fields[1]
-                consequences.append(consequence)
-            consequence = ','.join(np.unique(consequences))
-            rows.append([variant.CHROM.replace("chr", ""), variant.POS, variant.REF, variant.ALT[0], variant.INFO.get("AC"), variant.INFO.get("AN"), variant.INFO.get("AF"), consequence])
+            if variant.INFO.get("variant_type") not in ["snv", "multi-snv", "mixed"]:
+                continue
+            chrom = variant.CHROM.replace("chr", "")
+            pos = variant.POS
+            ref = variant.REF
+            alt = variant.ALT[0]
+            if ref not in NUCLEOTIDES or alt not in NUCLEOTIDES:
+                continue
+            rows.append([
+                chrom, pos, ref, alt,
+                variant.INFO.get("AC"), variant.INFO.get("AN"), variant.INFO.get("AF"),
+            ])
             i += 1
             if i % 100000 == 0: print(i)
 
-        df = pd.DataFrame(rows, columns=["chrom", "pos", "ref", "alt", "AC", "AN", "AF", "consequence"])
-        print(df)
-        df.to_parquet(output[0], index=False)
-
-
-#ruleorder: merge_chroms_gnomad > filter_gnomad
-
-
-rule filter_gnomad:
-    input:
-        "results/gnomad/{chrom}/all/variants.parquet",
-    output:
-        "results/gnomad/{chrom}/filt/variants.parquet",
-    wildcard_constraints:
-        chrom="|".join(chroms_gnomad)
-    run:
-        df = pd.read_parquet(input[0])
-        # filter out multi-allelic
-        df.drop_duplicates(subset=["pos"], keep=False, inplace=True)
-        df = df[df.AN >= MIN_AN]
-        df['MAF'] = df['AF'].where(df['AF'] <= 0.5, 1 - df['AF'])
-        df['MAC'] = df['AC'].where(df['AF'] <= 0.5, df["AN"] - df['AC'])
-        df["Status"] = "Neither"
-        df.loc[df.MAC == 1, "Status"] = "Rare"
-        df.loc[df.MAF > 5/100, "Status"] = "Common"
-        df = df[df.Status!="Neither"]
-        df.to_parquet(output[0], index=False)
-
-
-rule subsample_gnomad:
-    input:
-        "results/gnomad/{chrom}/filt/variants.parquet",
-    output:
-        "results/gnomad/{chrom}/subsampled/variants.parquet",
-    wildcard_constraints:
-        chrom="|".join(chroms_gnomad)
-    run:
-        df = pd.read_parquet(input[0])
-        df = df.groupby("Status").sample(
-            n=df.Status.value_counts().min(), random_state=42
-        ).sort_values("pos")
-        df.to_parquet(output[0], index=False)
-
-
-rule merge_chroms_gnomad:
-    input:
-        expand("results/gnomad/{chrom}/{{anything}}/variants.parquet", chrom=chroms_gnomad),
-    output:
-        "results/gnomad/merged/{anything}/variants.parquet",
-    run:
-        df = pd.concat([pd.read_parquet(path) for path in input], ignore_index=True)
-        print(df)
-        df.to_parquet(output[0], index=False)
-
-
-# defining a set of variants to benchmark against Enformer precomputed scores
-rule filter_gnomad_enformer:
-    input:
-        "results/gnomad/{chrom}/all/variants.parquet",
-    output:
-        "results/gnomad/{chrom}/enformer/variants.parquet",
-    wildcard_constraints:
-        chrom="|".join(chroms_gnomad)
-    run:
-        df = pd.read_parquet(input[0])
-        df['MAF'] = df['AF'].where(df['AF'] <= 0.5, 1 - df['AF'])
-        # filter out multi-allelic
-        df.drop_duplicates(subset=["pos"], keep=False, inplace=True)
-        df = df[df.MAF > 0.5/100]
-        df = df[df.AN >= MIN_AN]
-        df = df[~df.consequence.str.contains("missense")]
-        df = df[
-            df.consequence.str.contains("upstream_gene") |
-            df.consequence.str.contains("downstream_gene") |
-            df.consequence.str.contains("intergenic")
-        ]
-        df.to_parquet(output[0], index=False)
-
-
-rule merge_chroms_all_gnomad:
-    input:
-        expand("results/gnomad/{chrom}/all/variants.parquet", chrom=[str(i) for i in range(1, 23)] + ['X', 'Y']),
-    output:
-        "results/gnomad/all/test.parquet",
-    run:
-        df = pd.concat([pd.read_parquet(path) for path in tqdm(input)], ignore_index=True)
-        print(df)
-        df.to_parquet(output[0], index=False)
-
-
-rule gnomad_filter_undefined:
-    input:
-        "results/gnomad/all/test.parquet",
-        "results/intervals/{w}/defined.parquet",
-    output:
-        "results/gnomad/all/defined/{w}/test.parquet",
-    run:
-        V = pd.read_parquet(input[0])
+        V = pd.DataFrame(rows, columns=["chrom", "pos", "ref", "alt", "AC", "AN", "AF"])
         print(V)
+        # let's remove variants within 64 bp of an undefined region
         D = pd.read_parquet(input[1])
+        D = D[D.chrom==wildcards.chrom]
 
-        w = int(wildcards.w) 
+        w = 128
         V["start"] = V.pos - 1 - w // 2
         V["end"] = V.pos - 1 + w // 2
 
@@ -158,19 +62,129 @@ rule gnomad_filter_undefined:
         V.drop(columns=["start", "end"], inplace=True)
         V = sort_chrom_pos(V)
         print(V)
-
         V.to_parquet(output[0], index=False)
 
 
-rule gnomad_all_add_preds:
+ruleorder: gnomad_filter > process_ensembl_vep
+ruleorder: filter_gnomad_enformer > process_ensembl_vep
+
+
+rule gnomad_filter:
     input:
-        "results/gnomad/all/defined/{w}/test.parquet",
-        "results/preds/results/gnomad/all/defined/{w}/{model}.parquet",
+        "results/gnomad/{chrom}/all/variants.annot.parquet",
     output:
-        "results/add_preds/results/gnomad/all/defined/{w,[0-9]+}/{model}.parquet",
+        "results/gnomad/{chrom}/filt/variants.annot.parquet",
+    wildcard_constraints:
+        chrom="|".join(CHROMS)
     run:
-        V = pd.read_parquet(input[0])
+        # filter out multi-allelic
+        # filter out AC=AN-1 (reference a singleton)
+        V = pl.read_parquet(
+            input[0]
+        ).unique(
+            subset=["pos"], keep="none"
+        ).filter(
+            pl.col("AN") >= config["gnomad"]["min_an"]
+        ).with_columns(
+            pl.when(pl.col("AF") <= 0.5)
+            .then(pl.col("AF"))
+            .otherwise(1 - pl.col("AF"))
+            .alias("MAF")
+        ).with_columns(
+            pl.when(pl.col("AC")==1).then(pl.lit("Rare"))
+            .when(pl.col("MAF") > 5/100).then(pl.lit("Common"))
+            .otherwise(pl.lit("Neither"))
+            .alias("label")
+        ).filter(
+            pl.col("label") != "Neither"
+        )
         print(V)
-        V["GPN-MSA"] = pd.read_parquet(input[1])["score"].values
+        V.write_parquet(output[0])
+
+
+# merged/all/variants.parquet takes forever too read; might need to specify a compressor
+rule gnomad_merge_chroms:
+    input:
+        expand("results/gnomad/{chrom}/{{anything}}/variants.annot.parquet", chrom=CHROMS),
+    output:
+        "results/gnomad/merged/{anything}/test.parquet",
+    run:
+        V = pl.concat([pl.read_parquet(path) for path in tqdm(input)])
+        print(V)
+        #V.write_parquet(output[0])
+        V.to_pandas().to_parquet(output[0], index=False)
+
+
+rule gnomad_subsample:
+    input:
+        "results/gnomad/merged/filt/test.parquet",
+    output:
+        "results/gnomad/merged/subsampled/test.parquet",
+    run:
+        V = (
+            pl.read_parquet(input[0])
+            .with_columns(pl.col("consequence").str.replace("_variant", ""))
+        )
+        cs = V["consequence"].unique()
+        Vs = []
+        for c in tqdm(cs):
+            V_c = V.filter(consequence=c)
+            min_counts = V_c.group_by("label").len()["len"].min()
+            for label in V_c["label"].unique():
+                df = V_c.filter(label=label)
+                if len(df) > min_counts:
+                    df = df.sample(n=min_counts, seed=42)
+                Vs.append(df)
+        V = pl.concat(Vs).to_pandas()
+        V = sort_chrom_pos(V)
         print(V)
         V.to_parquet(output[0], index=False)
+
+
+# a set of variants to benchmark against Enformer precomputed scores
+rule filter_gnomad_enformer:
+    input:
+        "results/gnomad/{chrom}/all/variants.annot.parquet",
+    output:
+        "results/gnomad/{chrom}/enformer/variants.annot.parquet",
+    wildcard_constraints:
+        chrom="|".join(CHROMS)
+    run:
+        V = (
+            pl.read_parquet(input[0])
+            .with_columns(pl.col("consequence").str.replace("_variant", ""))
+            .filter(
+                pl.col("AN") >= config["gnomad"]["min_an"],
+                pl.col("consequence").is_in(config["gnomad"]["enformer_consequences"]),
+                pl.col("AF").is_between(0.5/100, 95/100)
+            )
+            .unique(subset=["pos"], keep="none")
+            .with_columns(
+                pl.when(pl.col("AF") <= 5/100).then(pl.lit("Low-frequency"))
+                .otherwise(pl.lit("Common"))
+                .alias("label")
+            )
+        )
+        print(V)
+        V.write_parquet(output[0])
+
+
+ruleorder: gnomad_get_precomputed_scores > run_vep_gpn
+
+
+rule gnomad_get_precomputed_scores:
+    input:
+        "results/gnomad/merged/{any}/test.parquet",
+        expand("results/positions/{chrom}/llr/{{model}}.parquet", chrom=CHROMS),
+    output:
+        "results/preds/results/gnomad/merged/{any,filt|all}/{model}.parquet",
+    threads: workflow.cores
+    run:
+        V = pl.read_parquet(input[0], columns=COORDINATES)
+        preds = pl.concat([
+            pl.read_parquet(path).join(V, on=COORDINATES, how="inner")
+            for path in tqdm(input[1:])
+        ])
+        V = V.join(preds, on=COORDINATES, how="left")
+        print(V)
+        V.select("score").write_parquet(output[0])
