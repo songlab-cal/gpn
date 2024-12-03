@@ -10,7 +10,7 @@ target_intervals: "all"
 
 window_size: 512
 step_size: 256
-add_rc: True
+add_rc: False  # random rc is now done on-the-fly during training
 
 # chroms will be randomly assigned to splits
 split_proportion:

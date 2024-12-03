@@ -432,7 +432,7 @@ def get_dilation_schedule(config):
             config.dilation_base
             ** ((i % config.dilation_cycle) // config.dilation_double_every),
         )
-        for i in range(config.num_hidden_layers)
+        for i in range(config.n_layers)
     ]
 
 
@@ -447,7 +447,7 @@ class ConvNetEncoder(nn.Module):
                     kernel_size=config.kernel_size,
                     dilation=dilation_schedule[i],
                 )
-                for i in range(config.num_hidden_layers)
+                for i in range(config.n_layers)
             ]
         )
 

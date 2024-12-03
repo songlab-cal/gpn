@@ -42,6 +42,7 @@ Can also be called GPN-SS (single sequence).
     - Track metrics on [Weights & Biases](https://wandb.ai/)
     - Implemented encoders: `convnet` (default), `roformer` (Transformer), `bytenet`
     - Specify config overrides: e.g. `--config_overrides encoder=bytenet,num_hidden_layers=30`
+    - The number of steps that you can train without overfitting will be a function of the size and diversity of your dataset
     - Example:
 ```bash
 WANDB_PROJECT=your_project torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{print NF}') -m gpn.ss.run_mlm --do_train --do_eval \
