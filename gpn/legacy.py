@@ -135,6 +135,7 @@ class ConvNetConfig(PretrainedConfig):
         # for classification head:
         hidden_dropout_prob=0.1,
         hidden_act="gelu",
+        regression_softplus=False,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -151,6 +152,7 @@ class ConvNetConfig(PretrainedConfig):
         self.aux_features_vocab_size = aux_features_vocab_size
         self.hidden_dropout_prob = hidden_dropout_prob
         self.hidden_act = hidden_act
+        self.regression_softplus = regression_softplus
 
 
 class ConvNetPreTrainedModel(PreTrainedModel):
@@ -237,6 +239,7 @@ class ConvNetForSequenceClassification(ConvNetPreTrainedModel):
         self.num_labels = config.num_labels
         self.model = ConvNetModel(config)
         self.classifier = ClassificationHead(config)
+        self.regression_softplus = config.regression_softplus
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -254,6 +257,8 @@ class ConvNetForSequenceClassification(ConvNetPreTrainedModel):
         """
         hidden_state = self.model(input_ids=input_ids).last_hidden_state
         logits = self.classifier(hidden_state)
+        if self.regression_softplus:
+            logits = F.softplus(logits)
 
         loss = None
         if labels is not None:

@@ -186,6 +186,7 @@ class DataTrainingArguments:
     classification_head: Optional[str] = field(
         default="standard",
     )
+    regression_softplus: bool = field(default=False)
     label_column_name: Optional[str] = field(
         default=None,
         metadata={
@@ -334,6 +335,7 @@ def main():
         "problem_type": data_args.problem_type,
         "pos_weight": data_args.pos_weight,
         "classification_head": data_args.classification_head,
+        "regression_softplus": data_args.regression_softplus,
     }
     if model_args.config_name:
         config = AutoConfig.from_pretrained(model_args.config_name, **config_kwargs)
@@ -389,6 +391,7 @@ def main():
 
     n_unfreeze = data_args.freeze_all_layers_except_last_n
     if n_unfreeze is not None:
+        print("Freezing all layers except the last ", n_unfreeze)
         for param in model.model.parameters():
             param.requires_grad = False
         if n_unfreeze > 0:

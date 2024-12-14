@@ -248,9 +248,10 @@ class GPNConfig(RoFormerConfig):
         dilation_cycle=8,
         dilation_base=2,
         depthwise=False,
-        # classification-specific
+        # specific to head for downstream classification/regression task
         classification_head="standard",
         pos_weight=None,
+        regression_softplus=False,
         **kwargs
     ):
         super().__init__(**kwargs)
@@ -276,6 +277,7 @@ class GPNConfig(RoFormerConfig):
         self.depthwise = depthwise
         self.classification_head = classification_head
         self.pos_weight = pos_weight
+        self.regression_softplus = regression_softplus
 
 
 class GPNPreTrainedModel(PreTrainedModel):
@@ -375,6 +377,7 @@ class GPNForSequenceClassification(GPNPreTrainedModel):
         self.num_labels = config.num_labels
         self.model = GPNModel(config)
         self.classifier = CLASSIFICATION_HEAD_CLASS[config.classification_head](config)
+        self.regression_softplus = config.regression_softplus
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -395,6 +398,8 @@ class GPNForSequenceClassification(GPNPreTrainedModel):
             input_ids=input_ids, aux_features=aux_features
         ).last_hidden_state
         logits = self.classifier(hidden_state)
+        if self.regression_softplus:
+            logits = F.softplus(logits)
 
         loss = None
         if labels is not None:
@@ -479,10 +484,11 @@ AutoModelForMaskedLM.register(GPNConfig, GPNForMaskedLM)
 AutoModelForSequenceClassification.register(GPNConfig, GPNForSequenceClassification)
 AutoModelForTokenClassification.register(GPNConfig, GPNForTokenClassification)
 
-from .legacy import ConvNetConfig, ConvNetModel, ConvNetForMaskedLM
+from .legacy import ConvNetConfig, ConvNetModel, ConvNetForMaskedLM, ConvNetForSequenceClassification
 AutoConfig.register("ConvNet", ConvNetConfig)
 AutoModel.register(ConvNetConfig, ConvNetModel)
 AutoModelForMaskedLM.register(ConvNetConfig, ConvNetForMaskedLM)
+AutoModelForSequenceClassification.register(ConvNetConfig, ConvNetForSequenceClassification)
 
 from .legacy import GPNRoFormerConfig, GPNRoFormerModel, GPNRoFormerForMaskedLM
 AutoConfig.register("GPNRoFormer", GPNRoFormerConfig)
