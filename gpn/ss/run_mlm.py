@@ -76,6 +76,8 @@ class DataCollatorForLanguageModelingSimplified(DataCollatorForLanguageModeling)
         # If special token mask has been preprocessed, pop it from the dict.
         special_tokens_mask = batch.pop("special_tokens_mask", None)
         if self.mlm:
+            # temporary for distil loss - should avoid redundant data transfer
+            batch["unmasked_input_ids"] = batch["input_ids"].clone()
             batch["input_ids"], batch["labels"] = self.torch_mask_tokens(
                 batch["input_ids"], special_tokens_mask=special_tokens_mask
             )

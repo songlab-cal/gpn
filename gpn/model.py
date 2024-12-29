@@ -21,7 +21,10 @@ from transformers.modeling_outputs import (
 )
 from typing import Optional, Tuple, Union
 
-from .modules import ByteNetEncoder, ConvNetEncoder, MLP, CNN
+from .modules import (
+    ByteNetEncoder, ConvNetEncoder, MLP, CNN, EnformerConvTower, set_requires_grad,
+    TransposeLayer,
+)
 from transformers import RoFormerConfig
 from transformers.models.roformer.modeling_roformer import (
     RoFormerEncoder,
@@ -113,6 +116,10 @@ def compute_loss(logits, labels, output_probs, loss_weight, vocab_size):
     return loss
 
 
+def distil_loss_fn(preds, targets):
+    return F.mse_loss(preds, targets)
+
+
 class MLMHead(nn.Module):
     def __init__(
         self,
@@ -134,6 +141,23 @@ class MLMHead(nn.Module):
         hidden_states = self.transform(hidden_states)
         hidden_states = self.decoder(hidden_states)
         return hidden_states
+
+
+class DistilDecoder(nn.Module):
+    def __init__(
+        self,
+        config,
+    ):
+        super().__init__()
+        self.layer = nn.Sequential(
+            TransposeLayer(),
+            nn.AvgPool1d(config.distil_w),
+            TransposeLayer(),
+            MLP(config.hidden_size, config.hidden_size, config.distil_d, bias=True),
+        )
+
+    def forward(self, hidden_states):
+        return self.layer(hidden_states)
 
 
 class StandardClassificationHead(nn.Module):
@@ -252,6 +276,10 @@ class GPNConfig(RoFormerConfig):
         classification_head="standard",
         pos_weight=None,
         regression_softplus=False,
+        # specific to distillation
+        distil_loss_weight=0.0,
+        distil_w=128,
+        distil_d=1536,
         **kwargs
     ):
         super().__init__(**kwargs)
@@ -278,6 +306,9 @@ class GPNConfig(RoFormerConfig):
         self.classification_head = classification_head
         self.pos_weight = pos_weight
         self.regression_softplus = regression_softplus
+        self.distil_loss_weight = distil_loss_weight
+        self.distil_w = distil_w
+        self.distil_d = distil_d
 
 
 class GPNPreTrainedModel(PreTrainedModel):
@@ -345,18 +376,32 @@ class GPNModel(GPNPreTrainedModel):
 class GPNForMaskedLM(GPNPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
+        self.config = config
         self.model = GPNModel(config)
         self.cls = MLMHead(config)
+
+        if config.distil_loss_weight != 0.0:
+            self.distil_target_model = EnformerConvTower()
+            set_requires_grad(self.distil_target_model, False)
+            self.distil_decoder = DistilDecoder(config)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def forward(self, labels=None, output_probs=None, loss_weight=None, **kwargs):
+    def forward(self, labels=None, output_probs=None, loss_weight=None, unmasked_input_ids=None, **kwargs):
         hidden_state = self.model(**kwargs).last_hidden_state
         logits = self.cls(hidden_state)
         loss = compute_loss(
             logits, labels, output_probs, loss_weight, self.config.vocab_size
         )
+
+        if self.config.distil_loss_weight != 0.0 and unmasked_input_ids is not None:
+            with torch.no_grad():
+                distil_true = self.distil_target_model(unmasked_input_ids)
+            distil_pred = self.distil_decoder(hidden_state)
+            distil_loss = distil_loss_fn(distil_pred, distil_true.detach())
+            loss += distil_loss * self.config.distil_loss_weight
+
         return MaskedLMOutput(
             loss=loss,
             logits=logits,

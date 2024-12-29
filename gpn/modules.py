@@ -9,6 +9,11 @@ from transformers.modeling_outputs import (
 )
 
 
+def set_requires_grad(model, val):
+    for p in model.parameters():
+        p.requires_grad = val
+
+
 class TransposeLayer(nn.Module):
     def __init__(
         self,
@@ -232,16 +237,16 @@ class ByteNetEncoder(nn.Module):
 
 
 class MLP(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size):
+    def __init__(self, input_size, hidden_size, output_size, bias=False):
         super().__init__()
         self.layer = nn.Sequential(
-            nn.LayerNorm(input_size, bias=False),
-            nn.Linear(input_size, hidden_size, bias=False),
+            nn.LayerNorm(input_size, bias=bias),
+            nn.Linear(input_size, hidden_size, bias=bias),
             nn.GELU(),
-            nn.Linear(hidden_size, output_size, bias=False),
+            nn.Linear(hidden_size, output_size, bias=bias),
         )
         if input_size != output_size:
-            self.shortcut = nn.Linear(input_size, output_size, bias=False)
+            self.shortcut = nn.Linear(input_size, output_size, bias=bias)
         else:
             self.shortcut = nn.Identity()
 
@@ -267,3 +272,24 @@ class CNN(nn.Module):
 
     def forward(self, x):
         return self.shortcut(x) + self.layer(x)
+
+
+class EnformerConvTower(nn.Module):
+    def __init__(
+        self,
+        # https://huggingface.co/songlab/tokenizer-dna-mlm starts "ACGT" at 3
+        tokenizer_offset: int = 3,
+    ):
+        super().__init__()
+        self.tokenizer_offset = tokenizer_offset
+        import grelu.resources
+        self.conv_tower = (
+            grelu.resources.load_model(project="enformer", model_name="human")
+            .model.embedding.conv_tower
+        )
+
+    def forward(self, input_ids: torch.Tensor) -> torch.Tensor:
+        # align with Enformer tokenizer
+        # for now not handling N/PAD
+        x = F.one_hot(input_ids - self.tokenizer_offset, num_classes=4).float()
+        return self.conv_tower(x.transpose(1, 2)).transpose(1, 2)
