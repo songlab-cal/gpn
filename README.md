@@ -1,7 +1,7 @@
 # GPN (Genomic Pre-trained Network)
 [![hgt_genome_392c4_a47ce0](https://user-images.githubusercontent.com/5766420/228109137-85d48559-d1ae-4c9a-94b5-c79fc06ad45d.png)](  https://genome.ucsc.edu/s/gbenegas/gpn-arabidopsis)
 
-Code and resources from [GPN paper](https://doi.org/10.1073/pnas.2311219120) and [GPN-MSA paper](https://doi.org/10.1101/2023.10.10.561776).
+Code and resources from [GPN paper](https://doi.org/10.1073/pnas.2311219120) and [GPN-MSA paper](https://www.nature.com/articles/s41587-024-02511-w).
 
 ## Table of contents
 - [Installation](#installation)
@@ -93,30 +93,25 @@ torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{print NF}')
 GPN:
 ```bibtex
 @article{benegas2023dna,
-    author = {Gonzalo Benegas  and Sanjit Singh Batra  and Yun S. Song },
-    title = {DNA language models are powerful predictors of genome-wide variant effects},
-    journal = {Proceedings of the National Academy of Sciences},
-    volume = {120},
-    number = {44},
-    pages = {e2311219120},
-    year = {2023},
-    doi = {10.1073/pnas.2311219120},
-    URL = {https://www.pnas.org/doi/abs/10.1073/pnas.2311219120},
-    eprint = {https://www.pnas.org/doi/pdf/10.1073/pnas.2311219120},
+  title={DNA language models are powerful predictors of genome-wide variant effects},
+  author={Benegas, Gonzalo and Batra, Sanjit Singh and Song, Yun S},
+  journal={Proceedings of the National Academy of Sciences},
+  volume={120},
+  number={44},
+  pages={e2311219120},
+  year={2023},
+  publisher={National Acad Sciences}
 }
 ```
 
 GPN-MSA:
 ```bibtex
-@article{benegas2023gpnmsa,
-	author = {Gonzalo Benegas and Carlos Albors and Alan J. Aw and Chengzhong Ye and Yun S. Song},
-	title = {GPN-MSA: an alignment-based DNA language model for genome-wide variant effect prediction},
-	elocation-id = {2023.10.10.561776},
-	year = {2023},
-	doi = {10.1101/2023.10.10.561776},
-	publisher = {Cold Spring Harbor Laboratory},
-	URL = {https://www.biorxiv.org/content/early/2023/10/11/2023.10.10.561776},
-	eprint = {https://www.biorxiv.org/content/early/2023/10/11/2023.10.10.561776.full.pdf},
-	journal = {bioRxiv}
+@article{benegas2025dna,
+  title={A DNA language model based on multispecies alignment predicts the effects of genome-wide variants},
+  author={Benegas, Gonzalo and Albors, Carlos and Aw, Alan J and Ye, Chengzhong and Song, Yun S},
+  journal={Nature Biotechnology},
+  pages={1--6},
+  year={2025},
+  publisher={Nature Publishing Group US New York}
 }
 ```
