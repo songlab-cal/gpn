@@ -59,6 +59,14 @@ import numpy as np
 import pandas as pd
 
 
+def standardize(x):
+    return (x - x.mean(axis=0, dtype=np.float64)) / x.std(axis=0, dtype=np.float64)
+
+
+def batched_pearsonr(x, y):
+    return np.mean(standardize(x) * standardize(y), axis=0, dtype=np.float64)
+
+
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
 # check_min_version("4.26.0.dev0")
 
@@ -187,6 +195,9 @@ class DataTrainingArguments:
         default="standard",
     )
     regression_softplus: bool = field(default=False)
+    seq_column_name: Optional[str] = field(
+        default=None,
+    )
     label_column_name: Optional[str] = field(
         default=None,
         metadata={
@@ -307,6 +318,10 @@ def main():
         streaming=data_args.streaming,
     )
     print(raw_datasets)
+
+    if data_args.seq_column_name is not None and data_args.seq_column_name != "seq":
+        for key in raw_datasets.keys():
+            raw_datasets[key] = raw_datasets[key].rename_column(data_args.seq_column_name, "seq")
 
     if data_args.label_column_name is not None and data_args.label_column_name != "labels":
         for key in raw_datasets.keys():
@@ -434,6 +449,8 @@ def main():
             **extra_kwargs,
         )
 
+    print(processed_datasets)
+
     if training_args.do_train:
         train_dataset = processed_datasets["train"].shuffle(seed=42)
         if data_args.subsample_train is not None:
@@ -449,12 +466,22 @@ def main():
     if data_args.do_test:
         test_dataset = processed_datasets["test"]
 
+
+    def compute_metrics(eval_pred):
+        y_pred = eval_pred.predictions
+        y_true = eval_pred.label_ids
+        if num_labels == 1:
+            y_true = np.expand_dims(y_true, axis=1)
+        mean_pearson = batched_pearsonr(y_pred, y_true).mean()
+        return {"mean_pearson": mean_pearson}
+
     # Initialize our Trainer
     trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=train_dataset if training_args.do_train else None,
         eval_dataset=eval_dataset if training_args.do_eval else None,
+        compute_metrics=compute_metrics,
     )
 
     # Training

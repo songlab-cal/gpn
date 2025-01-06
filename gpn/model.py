@@ -325,7 +325,7 @@ class GPNModel(GPNPreTrainedModel):
         x = self.embeddings(
             input_ids=input_ids, input_probs=input_probs, aux_features=aux_features
         )
-        x = self.encoder(x, **kwargs)
+        x = self.encoder(x)
 
 
         # should be optional
