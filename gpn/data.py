@@ -409,7 +409,7 @@ class GenomeMSA(object):
         print("Loading MSA... Done")
 
     def get_msa(self, chrom, start, end, strand="+", tokenize=False):
-        msa = self.data[chrom][start:end]
+        msa = self.data[chrom][start:end].view("S1")
         if strand == "-":
             msa = self.reverse_complementer(msa, position_axis=0)
         if tokenize:
@@ -475,7 +475,7 @@ class GenomeMSA(object):
         return msa_batch_fwd, msa_batch_rev
 
     def run_vep(self, chrom, pos, ref, alt, pseudocounts=1):
-        msa = np.char.upper(self.data[chrom][pos - 1])
+        msa = np.char.upper(self.data[chrom][pos - 1].view("S1"))
         assert msa[0] == ref.encode("ascii"), f"{ref=} does not match {msa[0]=}"
         msa = msa[1:]  # exclude target species
         ref_count = (msa == ref.encode("ascii")).sum() + pseudocounts
