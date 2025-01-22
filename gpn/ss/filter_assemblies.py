@@ -26,10 +26,17 @@ parser.add_argument(
     type=int,
     help="Number of accessions to keep",
 )
+parser.add_argument(
+    "--max_size",
+    type=int,
+    help="Filter out assemblies larger than this size (in bp)",
+)
 args = parser.parse_args()
 
 assemblies = pd.read_csv(args.input_path, sep="\t", index_col=0)
 assemblies = assemblies[assemblies.index.str.startswith("GCF")]
+if args.max_size is not None:
+    assemblies = assemblies[assemblies["Assembly Stats Total Sequence Length"] <= args.max_size]
 assemblies["genus"] = assemblies["Organism Name"].str.split(" ").str[0]
 assemblies["Assembly Level"] = pd.Categorical(
     assemblies["Assembly Level"],
