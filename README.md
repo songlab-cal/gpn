@@ -85,8 +85,8 @@ torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{print NF}')
 ### Code and resources from specific papers
 * [Human](analysis/human)
 
-### Training on other species (e.g. plants)
-* See https://github.com/songlab-cal/gpn/issues/28
+### Training on other species (e.g. other vertebrates, plants)
+* See https://github.com/songlab-cal/gpn/issues/28, https://github.com/songlab-cal/gpn/discussions/40
 * Another source for plant alignments: https://plantregmap.gao-lab.org/download.php#alignment-conservation
 
 ## Citation
