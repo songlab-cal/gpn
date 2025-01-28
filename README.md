@@ -1,5 +1,5 @@
 # GPN (Genomic Pre-trained Network)
-[![hgt_genome_392c4_a47ce0](https://user-images.githubusercontent.com/5766420/228109137-85d48559-d1ae-4c9a-94b5-c79fc06ad45d.png)](https://genome.ucsc.edu/s/gbenegas/gpn-arabidopsis)
+[![hgt_genome_392c4_a47ce0](https://github.com/user-attachments/assets/282b6204-156b-4b6d-83ff-2f4a53a9bb2e)](https://genome.ucsc.edu/s/gbenegas/gpn-arabidopsis)
  
 Code and resources from [GPN](https://doi.org/10.1073/pnas.2311219120) and related genomic language models.
 
