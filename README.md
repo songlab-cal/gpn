@@ -1,11 +1,13 @@
 # GPN (Genomic Pre-trained Network)
-[![hgt_genome_392c4_a47ce0](https://user-images.githubusercontent.com/5766420/228109137-85d48559-d1ae-4c9a-94b5-c79fc06ad45d.png)](  https://genome.ucsc.edu/s/gbenegas/gpn-arabidopsis)
-
-Code and resources from [GPN paper](https://doi.org/10.1073/pnas.2311219120) and [GPN-MSA paper](https://www.nature.com/articles/s41587-024-02511-w).
+[![hgt_genome_392c4_a47ce0](https://user-images.githubusercontent.com/5766420/228109137-85d48559-d1ae-4c9a-94b5-c79fc06ad45d.png)](https://genome.ucsc.edu/s/gbenegas/gpn-arabidopsis)
+ 
+Code and resources from [GPN](https://doi.org/10.1073/pnas.2311219120) and related genomic language models.
 
 ## Table of contents
 - [Installation](#installation)
-- [Minimal usage](#minimal-usage)
+- [Quick start](#quick-start)
+- [Modeling frameworks](#modeling-frameworks)
+- [Applications of the models](#applications-of-the-models)
 - [GPN](#gpn)
 - [GPN-MSA](#gpn-msa)
 - [Citation](#citation)
@@ -15,7 +17,7 @@ Code and resources from [GPN paper](https://doi.org/10.1073/pnas.2311219120) and
 pip install git+https://github.com/songlab-cal/gpn.git
 ```
 
-## Minimal usage
+## Quick start
 ```python
 import gpn.model
 from transformers import AutoModelForMaskedLM
@@ -25,14 +27,24 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-brassicales")
 model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-msa-sapiens")
 ```
 
+## Modeling frameworks
+| Model | Paper | Notes |
+| --------- | --- | ----------- |
+| GPN | [Benegas et al. 2023](https://doi.org/10.1073/pnas.2311219120) | Requires unaligned genomes | 
+| GPN-MSA | [Benegas et al. 2025](https://www.nature.com/articles/s41587-024-02511-w) | Requires aligned genomes for both training and inference |
+
+## Applications of the models
+| Paper |  Model | Dataset | Code | HuggingFace 🤗 |
+|  -- | --- | ------- | ---- | -------------- |
+| [Benegas et al. 2023](https://doi.org/10.1073/pnas.2311219120) | GPN | Arabidopsis and other Brassicale plants | [analysis/gpn_arabidopsis](analysis/gpn_arabidopsis) |  [Model, dataset](https://huggingface.co/collections/songlab/gpn-653191edcb0270ed05ad2c3e) |
+| [Benegas et al. 2025](https://www.nature.com/articles/s41587-024-02511-w) | GPN-MSA | Human and other vertebrates | [analysis/gpn-msa_human](analysis/gpn-msa_human) | [Model, dataset, benchmarks](https://huggingface.co/collections/songlab/gpn-msa-65319280c93c85e11c803887) |
+| Upcoming | GPN | Animal promoters | [analysis/gpn_animal_promoter](analysis/gpn_animal_promoter) | [Model, dataset, benchmarks](https://huggingface.co/collections/songlab/traitgym-6796d4fbb825d5b94e65d30f) |
+ 
 ## GPN
 Can also be called GPN-SS (single sequence).
 
 ### Examples
 * Play with the model: `examples/ss/basic_example.ipynb` [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/songlab-cal/gpn/blob/main/examples/ss/basic_example.ipynb)
-
-### Code and resources from specific papers
-* [*Arabidopsis thaliana*](analysis/arabidopsis)
 
 ### Training on your own data
 1. [Snakemake workflow to create a dataset](workflow/make_dataset)
@@ -82,15 +94,12 @@ torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{print NF}')
 * Variant effect prediction: `examples/msa/vep.ipynb`
 * Training (human): `examples/msa/training.ipynb`
 
-### Code and resources from specific papers
-* [Human](analysis/human)
-
 ### Training on other species (e.g. other vertebrates, plants)
 * See https://github.com/songlab-cal/gpn/issues/28, https://github.com/songlab-cal/gpn/discussions/40
 * Another source for plant alignments: https://plantregmap.gao-lab.org/download.php#alignment-conservation
 
 ## Citation
-GPN:
+[GPN](https://doi.org/10.1073/pnas.2311219120):
 ```bibtex
 @article{benegas2023dna,
   title={DNA language models are powerful predictors of genome-wide variant effects},
@@ -104,7 +113,7 @@ GPN:
 }
 ```
 
-GPN-MSA:
+[GPN-MSA](https://www.nature.com/articles/s41587-024-02511-w):
 ```bibtex
 @article{benegas2025dna,
   title={A DNA language model based on multispecies alignment predicts the effects of genome-wide variants},
