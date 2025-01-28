@@ -1,0 +1,106 @@
+import pandas as pd
+
+
+# downloaded from https://www.ncbi.nlm.nih.gov/datasets/genome/?taxon=33208&reference_only=true&annotated_only=true&refseq_annotation=true&typical_only=true
+# make sure to "Select columns" -> Size (Mb)
+genomes = pd.read_csv(
+    "all.tsv", sep="\t", index_col=0,
+    usecols=["Assembly Accession", "Assembly Name", "Organism Name", "Assembly Level", "Assembly Stats Total Sequence Length"]
+)
+print(genomes)
+
+priority_genomes = [
+    "GCF_000002985.6", # WBcel235	Caenorhabditis elegans
+    "GCF_000001405.40",  # GRCh38.p14	Homo sapiens
+    "GCF_000001635.27",  # GRCm39	Mus musculus
+    "GCF_000001215.4",  # Release 6 plus ISO1 MT	Drosophila melanogaster
+    "GCF_000002035.6",  # GRCz11	Danio rerio
+]
+
+# some processing errors (I think file naming pattern is odd)
+exclude_genomes = [
+    "GCF_004010195.1",
+    "GCF_015706575.1",
+    "GCF_028564815.1",
+]
+
+subsample_taxonomic_level = "family"
+
+
+rule get_names:
+    output:
+        "names.csv",
+    run:
+        genomes[["Organism Name"]].drop_duplicates().to_csv(output[0], index=False, header=False)
+
+
+rule download_taxonomy:
+    input:
+        "names.csv",
+    output:
+        "taxonomy.jsonl",
+    shell:
+        "datasets summary taxonomy taxon --inputfile {input} --as-json-lines > {output}"
+
+
+rule process_taxonomy:
+    input:
+        "taxonomy.jsonl",
+    output:
+        "taxonomy.tsv",
+    run:
+        df = pd.read_json(input[0], lines=True)
+        df["Organism Name"] = df["query"].apply(lambda x: x[0])
+        df["classification"] = df["taxonomy"].apply(lambda x: x["classification"])
+        levels = ["genus", "family", "order"]
+
+        def get_level(x, level):
+            try:
+                return x[level]["name"]
+            except:
+                print(f"Missing level {x} {level}")
+                return None
+
+        for level in levels:
+            df[level] = df.classification.apply(lambda x: get_level(x, level))
+        df = df[["Organism Name"] + levels]
+        df.to_csv(output[0], sep="\t", index=False)
+
+
+rule add_taxonomy:
+    input:
+        "taxonomy.tsv",
+    output:
+        "all.annot.tsv",
+    run:
+        taxonomy = pd.read_csv(input[0], sep="\t")
+        res = genomes.reset_index().merge(taxonomy, on="Organism Name", how="left") 
+        res.to_csv(output[0], sep="\t", index=False)
+
+
+rule filter_genomes:
+    input:
+        "all.annot.tsv",
+    output:
+        "filt.tsv",
+    run:
+        df = pd.read_csv(input[0], sep="\t", index_col=0)
+        df = df[~df.index.isin(exclude_genomes)]
+        print(df)
+        df = df.dropna(subset=[subsample_taxonomic_level])
+        df["Assembly Level"] = pd.Categorical(
+            df["Assembly Level"],
+            ["Complete Genome", "Chromosome", "Scaffold", "Contig"],  # preference order
+            ordered=True,
+        )
+        df = df[df["Assembly Level"] <= "Scaffold"]
+        # so it works out of the box with faToTwoBit
+        df = df[df["Assembly Stats Total Sequence Length"] < 4e9]
+        df.loc[:, "Priority"] = "1_Low"
+        df.loc[priority_genomes, "Priority"] = "0_High"
+        df = (
+            df.sort_values(["Priority", "Assembly Level", "Assembly Stats Total Sequence Length", "Organism Name"])
+            .drop_duplicates(subsample_taxonomic_level)
+        )
+        print(df)
+        df.to_csv(output[0], sep="\t")

@@ -1,0 +1,6 @@
+.snakemake
+all.annot.tsv
+all.tsv
+names.csv
+taxonomy.jsonl
+taxonomy.tsv

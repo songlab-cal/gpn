@@ -1,0 +1,435 @@
+Assembly Accession	Assembly Name	Organism Name	Assembly Stats Total Sequence Length	Assembly Level	genus	family	order	Priority
+GCF_000002985.6	WBcel235	Caenorhabditis elegans	100272607	Complete Genome	Caenorhabditis	Rhabditidae	Rhabditida	0_High
+GCF_000001215.4	Release 6 plus ISO1 MT	Drosophila melanogaster	143706478	Chromosome	Drosophila	Drosophilidae	Diptera	0_High
+GCF_000002035.6	GRCz11	Danio rerio	1373454788	Chromosome	Danio	Danionidae	Cypriniformes	0_High
+GCF_000001635.27	GRCm39	Mus musculus	2728206152	Chromosome	Mus	Muridae	Rodentia	0_High
+GCF_000001405.40	GRCh38.p14	Homo sapiens	3099441038	Chromosome	Homo	Hominidae	Primates	0_High
+GCF_024364675.1	icAetTumi1.1	Aethina tumida	259967705	Complete Genome	Aethina	Nitidulidae	Coleoptera	1_Low
+GCF_032362555.1	ilAmyTran1.1	Amyelois transitella	327376598	Complete Genome	Amyelois	Pyralidae	Lepidoptera	1_Low
+GCF_030705265.1	ASM3070526v1	Helicoverpa armigera	355232002	Complete Genome	Helicoverpa	Noctuidae	Lepidoptera	1_Low
+GCF_022458985.1	CIBA_Mcephalus_1.1	Mugil cephalus	634849760	Complete Genome	Mugil	Mugilidae	Mugiliformes	1_Low
+GCF_002022765.2	C_virginica-3.0	Crassostrea virginica	684723884	Complete Genome	Crassostrea	Ostreidae	Ostreida	1_Low
+GCF_038396675.1	HydraT2T_AEP	Hydra vulgaris	911675201	Complete Genome	Hydra	Hydridae	Anthoathecata	1_Low
+GCF_023724105.1	carGib1.2-hapl.c	Carassius gibelio	1583334954	Complete Genome	Carassius	Cyprinidae	Cypriniformes	1_Low
+GCF_019923935.1	NDDB_SH_1	Bubalus bubalis	2622444281	Complete Genome	Bubalus	Bovidae	Artiodactyla	1_Low
+GCF_037993035.1	T2T-MFA8v1.0	Macaca fascicularis	3042914375	Complete Genome	Macaca	Cercopithecidae	Primates	1_Low
+GCF_028878055.3	NHGRI_mSymSyn1-v2.1_pri	Symphalangus syndactylus	3262887708	Complete Genome	Symphalangus	Hylobatidae	Primates	1_Low
+GCF_001040885.1	S_ratti_ED321	Strongyloides ratti	43150242	Chromosome	Strongyloides	Strongyloididae	Rhabditida	1_Low
+GCF_947507565.1	ooOscLobu1.1	Oscarella lobularis	65248392	Chromosome	Oscarella	Oscarellidae	Homosclerophorida	1_Low
+GCF_022539665.2	CSIRO_AGI_Dcar_HiC_V3	Daphnia carinata	108144665	Chromosome	Daphnia	Daphniidae	Diplostraca	1_Low
+GCF_000224145.3	KH	Ciona intestinalis	115212710	Chromosome	Ciona	Cionidae	Phlebobranchia	1_Low
+GCF_036172545.1	AGI_CSIRO_Cbre_v1	Culicoides brevitarsis	129492607	Chromosome	Culicoides	Ceratopogonidae	Diptera	1_Low
+GCF_963675165.1	odHalPani1.1	Halichondria panicea	131456761	Chromosome	Halichondria	Halichondriidae	Suberitida	1_Low
+GCF_024334085.1	ASM2433408v1	Lutzomyia longipalpis	147838017	Chromosome	Lutzomyia	Psychodidae	Diptera	1_Low
+GCF_014905175.1	ASM1490517v1	Aphidius gifuensis	156944493	Chromosome	Aphidius	Braconidae	Hymenoptera	1_Low
+GCF_943735745.2	idAnoBellAS_SP24_06.2	Anopheles bellator	169575294	Chromosome	Anopheles	Culicidae	Diptera	1_Low
+GCF_917208135.1	iyAthRosa1.1	Athalia rosae	171955050	Chromosome	Athalia	Athaliidae	Hymenoptera	1_Low
+GCF_039881205.1	ESF131.1	Euwallacea similis	177600458	Chromosome	Euwallacea	Curculionidae	Coleoptera	1_Low
+GCF_014466175.1	ASM1446617v1	Vespula pensylvanica	179370016	Chromosome	Vespula	Vespidae	Hymenoptera	1_Low
+GCF_963422355.1	ooCorCand1.1	Corticium candelabrum	185491545	Chromosome	Corticium	Plakinidae	Homosclerophorida	1_Low
+GCF_949628265.1	ieCloDipt1.1	Cloeon dipterum	190111064	Chromosome	Cloeon	Baetidae	Ephemeroptera	1_Low
+GCF_007210705.1	Tcal_SD_v2.1	Tigriopus californicus	191142546	Chromosome	Tigriopus	Harpacticidae	Harpacticoida	1_Low
+GCF_021464435.1	ULB_Chis1_1.0	Cataglyphis hispanica	206388925	Chromosome	Cataglyphis	Formicidae	Hymenoptera	1_Low
+GCF_907164935.1	iOsmBic2.1	Osmia bicornis bicornis	222969496	Chromosome	Osmia	Megachilidae	Hymenoptera	1_Low
+GCF_029169275.1	AcerK_1.0	Apis cerana	223040589	Chromosome	Apis	Apidae	Hymenoptera	1_Low
+GCF_031761385.1	Nec_am_Ar_1.0	Necator americanus	234457255	Chromosome	Necator	Ancylostomatidae	Rhabditida	1_Low
+GCF_031307605.1	icTriCast1.1	Tribolium castaneum	241845558	Chromosome	Tribolium	Tenebrionidae	Coleoptera	1_Low
+GCF_018135715.1	MEX_DaPlex	Danaus plexippus	245173502	Chromosome	Danaus	Nymphalidae	Lepidoptera	1_Low
+GCF_912999745.1	ilPapMach1.1	Papilio machaon	252114018	Chromosome	Papilio	Papilionidae	Lepidoptera	1_Low
+GCF_026283585.1	UHH_iyHylVolc1.0_haploid	Hylaeus volcanicus	252651163	Chromosome	Hylaeus	Colletidae	Hymenoptera	1_Low
+GCF_905147795.1	ilPieRapa1.1	Pieris rapae	256355036	Chromosome	Pieris	Pieridae	Lepidoptera	1_Low
+GCF_021155785.1	iyNeoFabr1.1	Neodiprion fabricii	260422217	Chromosome	Neodiprion	Diprionidae	Hymenoptera	1_Low
+GCF_026151205.1	MBARI_Bmic_1.0	Bolinopsis microptera	265435384	Chromosome	Bolinopsis	Bolinopsidae	Lobata	1_Low
+GCF_932526225.1	jaNemVect1.1	Nematostella vectensis	269418438	Chromosome	Nematostella	Edwardsiidae	Actiniaria	1_Low
+GCF_954871325.1	tfGorSpeb1-WG-v2	Gordionus sp. m RMFG-2023	287640266	Chromosome	Gordionus	Parachordodidae	Chordodea	1_Low
+GCF_019457755.1	ASM1945775v1	Venturia canescens	290760430	Chromosome	Venturia	Ichneumonidae	Hymenoptera	1_Low
+GCF_009193385.2	Nvit_psr_1.1	Nasonia vitripennis	297309692	Chromosome	Nasonia	Pteromalidae	Hymenoptera	1_Low
+GCF_014529535.1	BU_Bcop_v1	Bradysia coprophila	309728657	Chromosome	Bradysia	Sciaridae	Diptera	1_Low
+GCF_932276165.1	ilPluXylo3.1	Plutella xylostella	323302761	Chromosome	Plutella	Plutellidae	Lepidoptera	1_Low
+GCF_901709675.1	fSynAcu1.2	Syngnathus acus	324331233	Chromosome	Syngnathus	Syngnathidae	Syngnathiformes	1_Low
+GCF_003676215.2	ASM367621v3	Rhopalosiphum maidis	326023155	Chromosome	Rhopalosiphum	Aphididae	Hemiptera	1_Low
+GCF_036669915.1	ASM3666991v2	Pocillopora verrucosa	353416094	Chromosome	Pocillopora	Pocilloporidae	Scleractinia	1_Low
+GCF_000237925.1	ASM23792v2	Schistosoma mansoni	364518427	Chromosome	Schistosoma	Schistosomatidae	Strigeidida	1_Low
+GCF_003711565.1	ASM371156v2	Takifugu flavidus	366286831	Chromosome	Takifugu	Tetraodontidae	Tetraodontiformes	1_Low
+GCF_910592395.1	tnLinLong1.2	Lineus longissimus	391165532	Chromosome	Lineus	Lineidae	Heteronemertea	1_Low
+GCF_907165205.1	icCocSept1.1	Coccinella septempunctata	398849173	Chromosome	Coccinella	Coccinellidae	Coleoptera	1_Low
+GCF_950023065.1	ihPlaCitr1.1	Planococcus citri	403646906	Chromosome	Planococcus	Pseudococcidae	Hemiptera	1_Low
+GCF_022045245.1	ASM2204524v1	Lucilia cuprina	409159265	Chromosome	Lucilia	Calliphoridae	Diptera	1_Low
+GCF_026250575.1	icDioCari1.1	Diorhabda carinulata	415369604	Chromosome	Diorhabda	Chrysomelidae	Coleoptera	1_Low
+GCF_902459465.1	eAstRub1.3	Asterias rubens	417601740	Chromosome	Asterias	Asteriidae	Forcipulatida	1_Low
+GCF_900634795.4	fBetSpl5.4	Betta splendens	426984265	Chromosome	Betta	Osphronemidae	Anabantiformes	1_Low
+GCF_905147365.1	ilAriAges1.1	Aricia agestis	435265205	Chromosome	Aricia	Lycaenidae	Lepidoptera	1_Low
+GCF_021917145.1	fHypTra1	Hypomesus transpacificus	437273953	Chromosome	Hypomesus	Osmeridae	Osmeriformes	1_Low
+GCF_028554725.1	idZeuCucr1.2	Zeugodacus cucurbitae	439243742	Chromosome	Zeugodacus	Tephritidae	Diptera	1_Low
+GCF_003073045.1	ASM307304v1	Pomacea canaliculata	440143917	Chromosome	Pomacea	Ampullariidae	Architaenioglossa	1_Low
+GCF_035083965.1	klBraLanc5.hap2	Branchiostoma lanceolatum	458287516	Chromosome	Branchiostoma	Branchiostomatidae	Amphioxiformes	1_Low
+GCF_030269925.1	ASM3026992v2	Bombyx mori	461688958	Chromosome	Bombyx	Bombycidae	Lepidoptera	1_Low
+GCF_014839805.1	JHU_Msex_v1.0	Manduca sexta	470021481	Chromosome	Manduca	Sphingidae	Lepidoptera	1_Low
+GCF_000523025.1	Cse_v1.0	Cynoglossus semilaevis	470182763	Chromosome	Cynoglossus	Cynoglossidae	Pleuronectiformes	1_Low
+GCF_016920845.1	GAculeatus_UGA_version5	Gasterosteus aculeatus aculeatus	471877818	Chromosome	Gasterosteus	Gasterosteidae	Perciformes	1_Low
+GCF_013753865.1	Amil_v2.1	Acropora millepora	475381253	Chromosome	Acropora	Acroporidae	Scleractinia	1_Low
+GCF_024362695.1	ilPecGoss1.1	Pectinophora gossypiella	476494545	Chromosome	Pectinophora	Gelechiidae	Lepidoptera	1_Low
+GCF_029227915.1	HSymV2.1	Hydractinia symbiolongicarpus	480922349	Chromosome	Hydractinia	Hydractiniidae	Anthoathecata	1_Low
+GCF_963855985.1	ilOstNubi1.1	Ostrinia nubilalis	495500553	Chromosome	Ostrinia	Crambidae	Lepidoptera	1_Low
+GCF_948474715.1	ilCydAmpl1.1	Cydia amplana	504318984	Chromosome	Cydia	Tortricidae	Lepidoptera	1_Low
+GCF_945859705.1	idEpiBalt1.1	Episyrphus balteatus	535345329	Chromosome	Episyrphus	Syrphidae	Diptera	1_Low
+GCF_022379125.1	ASM2237912v1	Scophthalmus maximus	538217135	Chromosome	Scophthalmus	Scophthalmidae	Pleuronectiformes	1_Low
+GCF_964019385.1	ocSycCili1.1	Sycon ciliatum	539574681	Chromosome	Sycon	Sycettidae	Leucosolenida	1_Low
+GCF_900963305.1	fEcheNa1.1	Echeneis naucrates	544212633	Chromosome	Echeneis	Echeneidae	Carangiformes	1_Low
+GCF_963678975.1	odDysAvar1.4	Dysidea avara	550830897	Chromosome	Dysidea	Dysideidae	Dictyoceratida	1_Low
+GCF_900634625.1	fParRan2.1	Parambassis ranga	551012959	Chromosome	Parambassis	Ambassidae		1_Low
+GCF_900324465.2	fAnaTes1.2	Anabas testudineus	555641398	Chromosome	Anabas	Anabantidae	Anabantiformes	1_Low
+GCF_031168955.1	ASM3116895v1	Gadus macrocephalus	555681083	Chromosome	Gadus	Gadidae	Gadiformes	1_Low
+GCF_905475395.1	inChrCarn1.1	Chrysoperla carnea	560232532	Chromosome	Chrysoperla	Chrysopidae	Neuroptera	1_Low
+GCF_900700375.1	fDenClu1.1	Denticeps clupeoides	567401054	Chromosome	Denticeps	Denticipitidae	Clupeiformes	1_Low
+GCF_020382885.2	fScaArg1.pri	Scatophagus argus	570785501	Chromosome	Scatophagus	Scatophagidae		1_Low
+GCF_009769545.1	fCycLum1.pri	Cyclopterus lumpus	572885595	Chromosome	Cyclopterus	Cyclopteridae	Perciformes	1_Low
+GCF_027744825.2	RoL_Sspl_1.0	Synchiropus splendidus	582881826	Chromosome	Synchiropus	Callionymidae	Syngnathiformes	1_Low
+GCF_013358815.1	fEleEle1.pri	Electrophorus electricus	589358956	Chromosome	Electrophorus	Gymnotidae	Gymnotiformes	1_Low
+GCF_900324485.2	fMasArm1.2	Mastacembelus armatus	591935101	Chromosome	Mastacembelus	Mastacembelidae	Synbranchiformes	1_Low
+GCF_009819705.1	fHipHip1.pri	Hippoglossus hippoglossus	596775069	Chromosome	Hippoglossus	Pleuronectidae	Pleuronectiformes	1_Low
+GCF_019176455.1	IFAPA_SoseM_1	Solea senegalensis	603518608	Chromosome	Solea	Soleidae	Pleuronectiformes	1_Low
+GCF_036324505.1	JC_Emac_rtc_rv5	Eleginops maclovinus	606289673	Chromosome	Eleginops	Eleginopidae	Perciformes	1_Low
+GCF_015846415.1	ASM1584641v1	Triplophysa dalaica	607923607	Chromosome	Triplophysa	Nemacheilidae	Cypriniformes	1_Low
+GCF_900634415.1	fCotGob3.1	Cottoperca gobio	609391784	Chromosome	Cottoperca	Bovichtidae	Perciformes	1_Low
+GCF_032854445.1	CUHK_Ljap_v2	Liolophura japonica	609495693	Chromosome	Liolophura	Chitonidae	Chitonida	1_Low
+GCF_017976425.1	fToxJac2.pri	Toxotes jaculatrix	621503431	Chromosome	Toxotes	Toxotidae		1_Low
+GCF_002237135.1	ASM223713v2	Teleopsis dalmanni	623660103	Chromosome	Teleopsis	Diopsidae	Diptera	1_Low
+GCF_029220125.1	NWPU_hadal_v1	Pseudoliparis swirei	626438928	Chromosome	Pseudoliparis	Liparidae	Perciformes	1_Low
+GCF_013103735.1	CSU_Ecrag_1.0	Etheostoma cragini	643078674	Chromosome	Etheostoma	Percidae	Perciformes	1_Low
+GCF_017976325.1	fCheRos1.pri	Chelmon rostratus	644191893	Chromosome	Chelmon	Chaetodontidae	Chaetodontiformes	1_Low
+GCF_021018895.1	ASM2101889v1	Seriola aureovittata	647095223	Chromosome	Seriola	Carangidae	Carangiformes	1_Low
+GCF_016086655.3	UVic_Lsal_1.2	Lepeophtheirus salmonis	647176227	Chromosome	Lepeophtheirus	Caligidae	Siphonostomatoida	1_Low
+GCF_027596085.1	Afim_UVic_2022	Anoplopoma fimbria	653543715	Chromosome	Anoplopoma	Anoplopomatidae	Perciformes	1_Low
+GCF_902362185.1	fChaCha1.1	Chanos chanos	656912816	Chromosome	Chanos	Chanidae	Gonorynchiformes	1_Low
+GCF_000972845.2	L_crocea_2.0	Larimichthys crocea	657923191	Chromosome	Larimichthys	Sciaenidae		1_Low
+GCF_001640805.2	TLL_Latcal_v3	Lates calcarifer	673797687	Chromosome	Lates	Centropomidae		1_Low
+GCF_019740435.1	SWU_Gaff_1.0	Gambusia affinis	680149392	Chromosome	Gambusia	Poeciliidae	Cyprinodontiformes	1_Low
+GCF_001649575.2	ASM164957v2	Kryptolebias marmoratus	680638340	Chromosome	Kryptolebias	Rivulidae	Cyprinodontiformes	1_Low
+GCF_904848185.1	fAcaLat1.1	Acanthopagrus latus	685127588	Chromosome	Acanthopagrus	Sparidae	Spariformes	1_Low
+GCF_016859285.1	ASM1685928v1	Xiphias gladius	691763775	Chromosome	Xiphias	Xiphiidae	Istiophoriformes	1_Low
+GCF_030014155.1	HZAU_Pvac_v1	Tachysurus vachellii	692104899	Chromosome	Tachysurus	Bagridae	Siluriformes	1_Low
+GCF_932274485.2	xgPatVulg1.2	Patella vulgata	695367781	Chromosome	Patella	Patellidae		1_Low
+GCF_020085105.1	ASM2008510v1	Siniperca chuatsi	718804017	Chromosome	Siniperca	Sinipercidae	Centrarchiformes	1_Low
+GCF_963930695.1	fLabBer1.1	Labrus bergylta	720210020	Chromosome	Labrus	Labridae	Labriformes	1_Low
+GCF_002234675.1	ASM223467v1	Oryzias latipes	734040372	Chromosome	Oryzias	Adrianichthyidae	Beloniformes	1_Low
+GCF_014805685.1	ASM1480568v1	Silurus meridionalis	742579920	Chromosome	Silurus	Siluridae	Siluriformes	1_Low
+GCF_009829125.3	fPerMag1.2.pri	Periophthalmus magnuspinnatus	752605561	Chromosome	Periophthalmus	Gobiidae	Gobiiformes	1_Low
+GCF_963678635.1	txSymRosc1.1	Symsagittifera roscoffensis	753507827	Chromosome	Symsagittifera	Sagittiferidae	Acoela	1_Low
+GCF_963691925.1	fScoSco1.1	Scomber scombrus	764141294	Chromosome	Scomber	Scombridae	Scombriformes	1_Low
+GCF_027358585.1	fPanHyp1.pri	Pangasianodon hypophthalmus	764974446	Chromosome	Pangasianodon	Pangasiidae	Siluriformes	1_Low
+GCF_900964775.1	fSclFor1.1	Scleropages formosus	784546363	Chromosome	Scleropages	Osteoglossidae	Osteoglossiformes	1_Low
+GCF_900700415.2	Ch_v2.0.2	Clupea harengus	786308905	Chromosome	Clupea	Clupeidae	Clupeiformes	1_Low
+GCF_902148845.1	fSalaFa1.1	Salarias fasciatus	797490645	Chromosome	Salarias	Blenniidae	Blenniiformes	1_Low
+GCF_015220745.1	fSebUmb1.pri	Sebastes umbrosus	800904020	Chromosome	Sebastes	Sebastidae	Perciformes	1_Low
+GCF_037042905.1	Lp3.0	Lytechinus pictus	811721768	Chromosome	Lytechinus	Toxopneustidae	Temnopleuroida	1_Low
+GCF_023375685.1	Billie_1.0	Ictalurus furcatus	825459183	Chromosome	Ictalurus	Ictaluridae	Siluriformes	1_Low
+GCF_021292245.1	ASM2129224v1	Micropterus dolomieu	829570727	Chromosome	Micropterus	Centrarchidae	Centrarchiformes	1_Low
+GCF_902150065.1	fMyrMur1.1	Myripristis murdjan	835254674	Chromosome	Myripristis	Holocentridae	Holocentriformes	1_Low
+GCF_947242115.1	xgBioGlab47.1	Biomphalaria glabrata	850620091	Chromosome	Biomphalaria	Planorbidae		1_Low
+GCF_022539595.1	ASM2253959v1	Amphiprion ocellaris	863468154	Chromosome	Amphiprion	Pomacentridae		1_Low
+GCF_017639745.1	fMelBoe1.pri	Melanotaenia boesemani	865575964	Chromosome	Melanotaenia	Melanotaeniidae	Atheriniformes	1_Low
+GCF_900246225.1	fAstCal1.2	Astatotilapia calliptera	880428986	Chromosome	Astatotilapia	Cichlidae	Cichliformes	1_Low
+GCF_019924925.1	HZGC01	Ctenopharyngodon idella	893198495	Chromosome	Ctenopharyngodon	Xenocyprididae	Cypriniformes	1_Low
+GCF_008729295.1	YSFRI_Pleo_2.0	Plectropomus leopardus	895688574	Chromosome	Plectropomus	Serranidae	Perciformes	1_Low
+GCF_902652985.1	xPecMax1.1	Pecten maximus	918306378	Chromosome	Pecten	Pectinidae	Pectinida	1_Low
+GCF_011004845.1	fEsoLuc1.pri	Esox lucius	918731919	Chromosome	Esox	Esocidae	Esociformes	1_Low
+GCF_001577835.2	Coturnix japonica 2.1	Coturnix japonica	927640260	Chromosome	Coturnix	Phasianidae	Galliformes	1_Low
+GCF_900634775.1	fGouWil2.1	Gouania willdenowi	937150793	Chromosome	Gouania	Gobiesocidae	Blenniiformes	1_Low
+GCF_000242695.1	LepOcu1	Lepisosteus oculatus	945861706	Chromosome	Lepisosteus	Lepisosteidae	Semionotiformes	1_Low
+GCF_013368585.1	fMegCyp1.pri	Megalops cyprinoides	959241634	Chromosome	Megalops	Megalopidae	Elopiformes	1_Low
+GCF_024256425.1	CGAR_prim_01v2	Clarias gariepinus	969604269	Chromosome	Clarias	Clariidae	Siluriformes	1_Low
+GCF_018555375.3	ASM1855537v3	Anguilla rostrata	976090453	Chromosome	Anguilla	Anguillidae	Anguilliformes	1_Low
+GCF_027358695.1	aSpeBom1.2.pri	Spea bombifrons	987655159	Chromosome	Spea	Pelobatidae	Anura	1_Low
+GCF_023856365.1	BBRACH_0.4	Brienomyrus brachyistius	988088817	Chromosome	Brienomyrus	Mormyridae	Osteoglossiformes	1_Low
+GCF_036373705.1	fAmiCal2.hap1	Amia calva	989103751	Chromosome	Amia	Amiidae	Amiiformes	1_Low
+GCF_905115235.1	iHerIll2.2.curated.20191125	Hermetia illucens	1004932590	Chromosome	Hermetia	Stratiomyidae	Diptera	1_Low
+GCF_017591435.1	ASM1759143v1	Portunus trituberculatus	1005046021	Chromosome	Portunus	Portunidae	Decapoda	1_Low
+GCF_001522545.3	Parus_major1.1	Parus major	1020293992	Chromosome	Parus	Paridae	Passeriformes	1_Low
+GCF_902827115.1	fPseGeo1.1	Pseudochaenichthys georgianus	1026101545	Chromosome	Pseudochaenichthys	Channichthyidae	Perciformes	1_Low
+GCF_000738735.6	ASM73873v6	Corvus cornix cornix	1030864775	Chromosome	Corvus	Corvidae	Passeriformes	1_Low
+GCF_029582105.1	OMel1.0	Oenanthe melanoleuca	1036256795	Chromosome	Oenanthe	Muscicapidae	Passeriformes	1_Low
+GCF_002078875.1	NumMel1.0	Numida meleagris	1043247365	Chromosome	Numida	Numididae	Galliformes	1_Low
+GCF_030014385.1	fTriRos1.hap1	Trichomycterus rosablanca	1045025885	Chromosome	Trichomycterus	Trichomycteridae	Siluriformes	1_Low
+GCF_022539315.1	serCan2020	Serinus canaria	1050336073	Chromosome	Serinus	Fringillidae	Passeriformes	1_Low
+GCF_901933205.1	STF_HiC	Camarhynchus parvulus	1051609828	Chromosome	Camarhynchus	Thraupidae	Passeriformes	1_Low
+GCF_003957565.2	bTaeGut1.4.pri	Taeniopygia guttata	1056254409	Chromosome	Taeniopygia	Estrildidae	Passeriformes	1_Low
+GCF_003957555.1	bCalAnn1_v1.p	Calypte anna	1059687259	Chromosome	Calypte	Trochilidae	Apodiformes	1_Low
+GCF_015708825.1	ASM1570882v1	Lethenteron reissneri	1063012140	Chromosome	Lethenteron	Petromyzontidae	Petromyzontiformes	1_Low
+GCF_009819655.1	bSylAtr1.pri	Sylvia atricapilla	1066786587	Chromosome	Sylvia	Sylviidae	Passeriformes	1_Low
+GCF_963082655.1	idStoCalc2.1	Stomoxys calcitrans	1070934565	Chromosome	Stomoxys	Muscidae	Diptera	1_Low
+GCF_037126465.1	ASM3712646v1	Ornithodoros turicata	1071349989	Chromosome	Ornithodoros	Argasidae	Ixodida	1_Low
+GCF_015832195.1	Motacilla_alba_V1.0_pri	Motacilla alba alba	1072653902	Chromosome	Motacilla	Motacillidae	Passeriformes	1_Low
+GCF_014356525.2	ASM1435652v1	Nilaparvata lugens	1085539448	Chromosome	Nilaparvata	Delphacidae	Hemiptera	1_Low
+GCF_012460135.2	BPBGC_Mater_1.1	Molothrus ater	1087219985	Chromosome	Molothrus	Icteridae	Passeriformes	1_Low
+GCF_009829145.1	bChiLan1.pri	Chiroxiphia lanceolata	1089631598	Chromosome	Chiroxiphia	Pipridae	Passeriformes	1_Low
+GCF_020740795.1	bApuApu2.pri.cur	Apus apus	1100361224	Chromosome	Apus	Apodidae	Apodiformes	1_Low
+GCF_027580225.1	HAU_Mang_1.0	Misgurnus anguillicaudatus	1104569478	Chromosome	Misgurnus	Cobitidae	Cypriniformes	1_Low
+GCF_015227805.2	bHirRus1.pri.v3	Hirundo rustica	1105955550	Chromosome	Hirundo	Hirundinidae	Passeriformes	1_Low
+GCF_021018805.1	Cam_Psub_1.2	Prinia subflava	1119947663	Chromosome	Prinia	Cisticolidae	Passeriformes	1_Low
+GCF_028769735.1	RI_Zleu_2.0	Zonotrichia leucophrys gambelii	1123996003	Chromosome	Zonotrichia	Passerellidae	Passeriformes	1_Low
+GCF_013377495.2	CAtr_DNAZoo_HiC_assembly	Cygnus atratus	1124217020	Chromosome	Cygnus	Anatidae	Anseriformes	1_Low
+GCF_009819885.2	bCatUst1.pri.v2	Catharus ustulatus	1131616530	Chromosome	Catharus	Turdidae	Passeriformes	1_Low
+GCF_963514075.1	fConCon1.1	Conger conger	1136402888	Chromosome	Conger	Congridae	Anguilliformes	1_Low
+GCF_033807715.1	fColSai1.1	Cololabis saira	1146345828	Chromosome	Cololabis	Belonidae	Beloniformes	1_Low
+GCF_027791375.1	UM_Iind_1.1	Indicator indicator	1147325966	Chromosome	Indicator	Indicatoridae	Piciformes	1_Low
+GCF_004027225.2	bStrHab1.2.pri	Strigops habroptila	1148597545	Chromosome	Strigops	Psittacidae	Psittaciformes	1_Low
+GCF_016097555.1	Gae_host_genome	Gigantopelta aegis	1149605642	Chromosome	Gigantopelta	Peltospiridae	Neomphalida	1_Low
+GCF_021462225.1	DD_fGirMul_XY1	Girardinichthys multiradiatus	1150004004	Chromosome	Girardinichthys	Goodeidae	Cyprinodontiformes	1_Low
+GCF_963662255.1	bCinCin1.1	Cinclus cinclus	1170837027	Chromosome	Cinclus	Cinclidae	Passeriformes	1_Low
+GCF_012275295.1	bMelUnd1.mat.Z	Melopsittacus undulatus	1171617451	Chromosome	Melopsittacus	Psittaculidae	Psittaciformes	1_Low
+GCF_017976375.1	bCucCan1.pri	Cuculus canorus	1180136575	Chromosome	Cuculus	Cuculidae	Cuculiformes	1_Low
+GCF_029633855.1	fHopMal1.hap1	Hoplias malabaricus	1186354877	Chromosome	Hoplias	Erythrinidae	Characiformes	1_Low
+GCF_014839835.1	bDryPub1.pri	Dryobates pubescens	1187939694	Chromosome	Dryobates	Picidae	Piciformes	1_Low
+GCF_015220075.1	bFalRus1.pri	Falco rusticolus	1195829278	Chromosome	Falco	Falconidae	Falconiformes	1_Low
+GCF_011125445.2	MU-UCD_Fhet_4.1	Fundulus heteroclitus	1203489213	Chromosome	Fundulus	Fundulidae	Cyprinodontiformes	1_Low
+GCF_028858725.1	bColStr4.1.hap1	Colius striatus	1212464869	Chromosome	Colius	Coliidae	Coliiformes	1_Low
+GCF_026914265.1	ASM2691426v1	Mya arenaria	1216068291	Chromosome	Mya	Myidae	Myida	1_Low
+GCF_015220715.1	fPygNat1.pri	Pygocentrus nattereri	1222050449	Chromosome	Pygocentrus	Serrasalmidae	Characiformes	1_Low
+GCF_900496995.4	bAquChr1.4	Aquila chrysaetos chrysaetos	1233704830	Chromosome	Aquila	Accipitridae	Accipitriformes	1_Low
+GCF_018139145.2	ASM1813914v2	Gymnogyps californianus	1240248578	Chromosome	Gymnogyps	Cathartidae	Accipitriformes	1_Low
+GCF_028858705.1	bGruAme1.mat	Grus americana	1257821324	Chromosome	Grus	Gruidae	Gruiformes	1_Low
+GCF_028389875.1	bPtePen1.pri	Rhea pennata	1269000025	Chromosome	Rhea	Rheidae	Rheiformes	1_Low
+GCF_032884065.1	ASM3288406v1	Artemia franciscana	1270721945	Chromosome	Artemia	Artemiidae	Anostraca	1_Low
+GCF_015220805.1	bPogPus1.pri	Pogoniulus pusillus	1272338968	Chromosome	Pogoniulus	Lybiidae	Piciformes	1_Low
+GCF_963921805.1	bPhaCar2.1	Phalacrocorax carbo	1283623959	Chromosome	Phalacrocorax	Phalacrocoracidae	Suliformes	1_Low
+GCF_036013445.1	bCalNic1.hap1	Caloenas nicobarica	1285834579	Chromosome	Caloenas	Columbidae	Columbiformes	1_Low
+GCF_036588685.1	PNRI_Mtr1.1.1.hap1	Mytilus trossulus	1298571991	Chromosome	Mytilus	Mytilidae	Mytilida	1_Low
+GCF_036417665.1	bPasDom1.hap1	Passer domesticus	1310114252	Chromosome	Passer	Passeridae	Passeriformes	1_Low
+GCF_030936135.1	bGavSte3.hap2	Gavia stellata	1321270170	Chromosome	Gavia	Gaviidae	Gaviiformes	1_Low
+GCF_902148855.1	fSphaOr1.1	Sphaeramia orbicularis	1342662642	Chromosome	Sphaeramia	Apogonidae	Kurtiformes	1_Low
+GCF_028500815.1	bRisTri1.patW.cur.20221130	Rissa tridactyla	1353621101	Chromosome	Rissa	Laridae	Charadriiformes	1_Low
+GCF_023375975.1	AstMex3_surface	Astyanax mexicanus	1373169186	Chromosome	Astyanax	Characidae	Characiformes	1_Low
+GCF_009819535.1	rLacAgi1.pri	Lacerta agilis	1391387079	Chromosome	Lacerta	Lacertidae	Squamata	1_Low
+GCF_034702125.1	IST_EnEncr_1.0	Engraulis encrasicolus	1435183673	Chromosome	Engraulis	Engraulidae	Clupeiformes	1_Low
+GCF_000004195.4	UCB_Xtro_10.0	Xenopus tropicalis	1451283599	Chromosome	Xenopus	Pipidae	Anura	1_Low
+GCF_019202785.1	ASM1920278v2	Penaeus chinensis	1466063637	Chromosome	Penaeus	Penaeidae	Decapoda	1_Low
+GCF_036370855.1	bDroNov1.hap1	Dromaius novaehollandiae	1468706110	Chromosome	Dromaius	Dromaiidae	Casuariiformes	1_Low
+GCF_029633865.1	fLamInc1.hap2	Lampris incognitus	1482357630	Chromosome	Lampris	Lampridae	Lampriformes	1_Low
+GCF_035149785.1	rCanAsp1.hap2	Candoia aspera	1530810380	Chromosome	Candoia	Boidae	Squamata	1_Low
+GCF_010883055.1	B_treatae_v1	Belonocnema kinseyi	1538686255	Chromosome	Belonocnema	Cynipidae	Hymenoptera	1_Low
+GCF_017654505.1	ASM1765450v1	Polyodon spathula	1542066908	Chromosome	Polyodon	Polyodontidae	Acipenseriformes	1_Low
+GCF_032445375.1	Brsri_v3	Bacillus rossius redtenbacheri	1605073380	Chromosome	Bacillus	Bacillidae	Phasmatodea	1_Low
+GCF_035046505.1	rTilSci1.hap2	Tiliqua scincoides	1623332312	Chromosome	Tiliqua	Scincidae	Squamata	1_Low
+GCF_009769535.1	rThaEle1.pri	Thamnophis elegans	1672190305	Chromosome	Thamnophis	Colubridae	Squamata	1_Low
+GCF_921293095.1	ioIscEleg1.1	Ischnura elegans	1722738530	Chromosome	Ischnura	Coenagrionidae	Odonata	1_Low
+GCF_024679095.1	ASM2467909v1	Eriocheir sinensis	1765827443	Chromosome	Eriocheir	Varunidae	Decapoda	1_Low
+GCF_947563725.1	qqArgBrue1.1	Argiope bruennichi	1778384155	Chromosome	Argiope	Araneidae	Araneae	1_Low
+GCF_029931775.1	rEulEur1.hap1	Euleptes europaea	1781916107	Chromosome	Euleptes	Sphaerodactylidae	Squamata	1_Low
+GCF_023053635.1	rElgMul1.1.pri	Elgaria multicarinata webbii	1790500004	Chromosome	Elgaria	Anguidae	Squamata	1_Low
+GCF_020536995.1	UMN_Dpol_1.0	Dreissena polymorpha	1797942340	Chromosome	Dreissena	Dreissenidae	Myida	1_Low
+GCF_035594765.1	rAnoCar3.1.pri	Anolis carolinensis	1850740401	Chromosome	Anolis	Dactyloidae	Squamata	1_Low
+GCF_021730395.1	MADL_Memer_1	Mercenaria mercenaria	1858199728	Chromosome	Mercenaria	Veneridae	Venerida	1_Low
+GCF_004115215.2	mOrnAna1.pri.v4	Ornithorhynchus anatinus	1859264908	Chromosome	Ornithorhynchus	Ornithorhynchidae	Monotremata	1_Low
+GCF_902713425.1	fAciRut3.2 maternal haplotype	Acipenser ruthenus	1899794300	Chromosome	Acipenser	Acipenseridae	Acipenseriformes	1_Low
+GCF_019175285.1	SceUnd_v1.1	Sceloporus undulatus	1905484175	Chromosome	Sceloporus	Phrynosomatidae	Squamata	1_Low
+GCF_027574615.1	DD_ASM_mEF_20220401	Eptesicus fuscus	2008057866	Chromosome	Eptesicus	Vespertilionidae	Chiroptera	1_Low
+GCF_004115265.2	mRhiFer1_v1.p	Rhinolophus ferrumequinum	2075768562	Chromosome	Rhinolophus	Rhinolophidae	Chiroptera	1_Low
+GCF_009834535.1	BCGSAC_Cfer_1.0	Camelus ferus	2087077296	Chromosome	Camelus	Camelidae	Artiodactyla	1_Low
+GCF_004126475.2	mPhyDis1.pri.v3	Phyllostomus discolor	2108832841	Chromosome	Phyllostomus	Phyllostomidae	Chiroptera	1_Low
+GCF_013100865.1	CAS_Tse_1.0	Trachemys scripta elegans	2126182493	Chromosome	Trachemys	Emydidae	Testudines	1_Low
+GCF_023653815.1	GSC_CCare_1.0	Caretta caretta	2133995980	Chromosome	Caretta	Cheloniidae	Testudines	1_Low
+GCF_026930045.1	Udiv.v.3.1	Uloborus diversus	2151890133	Chromosome	Uloborus	Uloboridae	Araneae	1_Low
+GCF_009764565.3	rDerCor1.pri.v4	Dermochelys coriacea	2164762090	Chromosome	Dermochelys	Dermochelyidae	Testudines	1_Low
+GCF_002910315.2	ASM291031v2	Salvelinus sp. IW2-2015	2169536488	Chromosome	Salvelinus	Salmonidae	Salmoniformes	1_Low
+GCF_025860055.1	RBS_HiC_50CHRs	Xyrauchen texanus	2186806939	Chromosome	Xyrauchen	Catostomidae	Cypriniformes	1_Low
+GCF_028641065.1	Leri_hhj_1	Leucoraja erinacea	2190844947	Chromosome	Leucoraja	Rajidae	Rajiformes	1_Low
+GCF_023159225.1	ASM2315922v1	Perognathus longimembris pacificus	2212099196	Chromosome	Perognathus	Heteromyidae	Rodentia	1_Low
+GCF_015852505.1	mTacAcu1.pri	Tachyglossus aculeatus	2213004214	Chromosome	Tachyglossus	Tachyglossidae	Monotremata	1_Low
+GCF_028583425.1	MPM_Emac_v1.0	Eublepharis macularius	2237379946	Chromosome	Eublepharis	Eublepharidae	Squamata	1_Low
+GCF_020740605.2	mLemCat1.pri	Lemur catta	2245584463	Chromosome	Lemur	Lemuridae	Primates	1_Low
+GCF_009764475.1	sPriPec2.1.pri	Pristis pectinata	2267840987	Chromosome	Pristis	Pristidae	Rhinopristiformes	1_Low
+GCF_000317375.1	MicOch1.0	Microtus ochrogaster	2287340943	Chromosome	Microtus	Cricetidae	Rodentia	1_Low
+GCF_027244095.1	rHemCap1.1.pri	Hemicordylus capensis	2294751221	Chromosome	Hemicordylus	Cordylidae	Squamata	1_Low
+GCF_018350215.1	P.leo_Ple1_pat1.1	Panthera leo	2297552363	Chromosome	Panthera	Felidae	Carnivora	1_Low
+GCF_007399415.2	rGopEvg1_v1.p	Gopherus evgoodei	2298547364	Chromosome	Gopherus	Testudinidae	Testudines	1_Low
+GCF_021130785.1	UT_GWSS_2.1	Homalodisca vitripennis	2304988238	Chromosome	Homalodisca	Cicadellidae	Hemiptera	1_Low
+GCF_030035675.1	rRhiFlo1.hap2	Rhineura floridana	2307419594	Chromosome	Rhineura	Rhineuridae	Squamata	1_Low
+GCF_027579695.1	fNeoGra1.pri	Neoarius graeffei	2341916362	Chromosome	Neoarius	Ariidae	Siluriformes	1_Low
+GCF_001194135.2	ASM119413v2	Octopus bimaculoides	2342518435	Chromosome	Octopus	Octopodidae	Octopoda	1_Low
+GCF_018345385.1	ASM1834538v1	Vulpes lagopus	2345533697	Chromosome	Vulpes	Canidae	Carnivora	1_Low
+GCF_030867095.1	rAllMis1	Alligator mississippiensis	2346779227	Chromosome	Alligator	Alligatoridae	Crocodylia	1_Low
+GCF_006229205.1	meerkat_22Aug2017_6uvM2_HiC	Suricata suricatta	2353578744	Chromosome	Suricata	Herpestidae	Carnivora	1_Low
+GCF_013339695.2	BIME_Rsan_1.4	Rhipicephalus sanguineus	2365502231	Chromosome	Rhipicephalus	Ixodidae	Ixodida	1_Low
+GCF_016161935.1	ASM1616193v1	Mauremys reevesii	2367590653	Chromosome	Mauremys	Geoemydidae	Testudines	1_Low
+GCF_008692025.1	mPhoSin1.pri	Phocoena sinus	2371524154	Chromosome	Phocoena	Phocoenidae	Artiodactyla	1_Low
+GCF_009873245.2	mBalMus1.pri.v3	Balaenoptera musculus	2374852541	Chromosome	Balaenoptera	Balaenopteridae	Artiodactyla	1_Low
+GCF_011762595.1	mTurTru1.mat.Y	Tursiops truncatus	2378505825	Chromosome	Tursiops	Delphinidae	Artiodactyla	1_Low
+GCF_027595985.1	mSorAra2.pri	Sorex araneus	2405993548	Chromosome	Sorex	Soricidae	Eulipotyphla	1_Low
+GCF_009762305.2	mZalCal1.pri.v2	Zalophus californianus	2409668595	Chromosome	Zalophus	Otariidae	Carnivora	1_Low
+GCF_002201575.2	ASM220157v2	Neomonachus schauinslandi	2419443398	Chromosome	Neomonachus	Phocidae	Carnivora	1_Low
+GCF_023065955.2	UrsArc2.0	Ursus arctos	2423401459	Chromosome	Ursus	Ursidae	Carnivora	1_Low
+GCF_016077325.2	ASM1607732v2	Equus asinus	2431907375	Chromosome	Equus	Equidae	Perissodactyla	1_Low
+GCF_016906955.1	ROS_Pafr_v1	Phacochoerus africanus	2435083091	Chromosome	Phacochoerus	Suidae	Artiodactyla	1_Low
+GCF_902655055.1	mLutLut1.2	Lutra lutra	2438442342	Chromosome	Lutra	Mustelidae	Carnivora	1_Low
+GCF_902500255.1	fThaAma1.1	Thalassophryne amazonica	2446592878	Chromosome	Thalassophryne	Batrachoididae	Batrachoidiformes	1_Low
+GCF_016881025.1	HiC_Itri_2	Ictidomys tridecemlineatus	2478949113	Chromosome	Ictidomys	Sciuridae	Rodentia	1_Low
+GCF_000165445.2	Mmur_3.0	Microcebus murinus	2487392024	Chromosome	Microcebus	Cheirogaleidae	Primates	1_Low
+GCF_002837175.3	ASM283717v5	Physeter catodon	2496209109	Chromosome	Physeter	Physeteridae	Artiodactyla	1_Low
+GCF_019320065.1	ASM1932006v1	Cervus canadensis	2526613007	Chromosome	Cervus	Cervidae	Artiodactyla	1_Low
+GCF_030028045.1	mHipAmp2.hap2	Hippopotamus amphibius kiboko	2538242855	Chromosome	Hippopotamus	Hippopotamidae	Artiodactyla	1_Low
+GCF_030435755.1	mOchPri1.hap1	Ochotona princeps	2555444530	Chromosome	Ochotona	Ochotonidae	Lagomorpha	1_Low
+GCF_036850995.1	mSacLep1_pri_phased_curated	Saccopteryx leptura	2576497192	Chromosome	Saccopteryx	Emballonuridae	Chiroptera	1_Low
+GCF_032191835.1	APGP_CSIRO_Hbin_v1	Heteronotia binoei	2633446684	Chromosome	Heteronotia	Gekkonidae	Squamata	1_Low
+GCF_025265405.1	mMesDen1 primary haplotype	Mesoplodon densirostris	2683375131	Chromosome	Mesoplodon	Ziphiidae	Artiodactyla	1_Low
+GCF_950295315.1	mEriEur2.1	Erinaceus europaeus	2720683831	Chromosome	Erinaceus	Erinaceidae	Eulipotyphla	1_Low
+GCF_020424385.1	ASM2042438v2	Procambarus clarkii	2735345304	Chromosome	Procambarus	Cambaridae	Decapoda	1_Low
+GCF_027409185.1	mCynVol1.pri	Cynocephalus volans	2814418120	Chromosome	Cynocephalus	Cynocephalidae	Dermoptera	1_Low
+GCF_030020395.1	mManPen7.hap1	Manis pentadactyla	2840164579	Chromosome	Manis	Manidae	Pholidota	1_Low
+GCF_009806435.1	UM_NZW_1.0	Oryctolagus cuniculus	2841489785	Chromosome	Oryctolagus	Leporidae	Lagomorpha	1_Low
+GCF_020740685.1	mJacJac1.mat.Y.cur	Jaculus jaculus	2863848715	Chromosome	Jaculus	Dipodidae	Rodentia	1_Low
+GCF_011100555.1	mCalJa1.2.pat.X	Callithrix jacchus	2874864526	Chromosome	Callithrix	Cebidae	Primates	1_Low
+GCF_021869965.1	sRhiTyp1.1	Rhincodon typus	2881325413	Chromosome	Rhincodon	Rhincodontidae	Orectolobiformes	1_Low
+GCF_027406575.1	mNycCou1.pri	Nycticebus coucang	2917154053	Chromosome	Nycticebus	Lorisidae	Primates	1_Low
+GCF_037176945.1	fLatCha1.pri	Latimeria chalumnae	2947609019	Chromosome	Latimeria	Coelacanthidae	Coelacanthiformes	1_Low
+GCF_020826845.1	mDicBic1.mat.cur	Diceros bicornis minor	3005519209	Chromosome	Diceros	Rhinocerotidae	Perissodactyla	1_Low
+GCF_902635505.1	mSarHar1.11	Sarcophilus harrisii	3086657325	Chromosome	Sarcophilus	Dasyuridae	Dasyuromorphia	1_Low
+GCF_030684315.1	sSteTig4.hap1	Stegostoma tigrinum	3198515386	Chromosome	Stegostoma	Stegostomatidae	Orectolobiformes	1_Low
+GCF_015220235.1	mChoDid1.pri	Choloepus didactylus	3214686105	Chromosome	Choloepus	Megalonychidae	Pilosa	1_Low
+GCF_019393635.1	mDroGli1.pri	Dromiciops gliroides	3303199800	Chromosome	Dromiciops	Microbiotheriidae	Microbiotheria	1_Low
+GCF_011100635.1	mTriVul1.pri	Trichosurus vulpecula	3359330516	Chromosome	Trichosurus	Phalangeridae	Diprotodontia	1_Low
+GCF_035609145.1	aEleCoq1.hap1	Eleutherodactylus coqui	3371297528	Chromosome	Eleutherodactylus	Eleutherodactylidae	Anura	1_Low
+GCF_024166365.1	mEleMax1 primary haplotype	Elephas maximus indicus	3401247148	Chromosome	Elephas	Elephantidae	Proboscidea	1_Low
+GCF_963921235.1	sMobHyp1.1	Mobula hypostoma	3475679493	Chromosome	Mobula	Myliobatidae	Myliobatiformes	1_Low
+GCF_030445035.1	mDasNov1.hap2	Dasypus novemcinctus	3570966115	Chromosome	Dasypus	Dasypodidae	Cingulata	1_Low
+GCF_027887165.1	mMonDom1.pri	Monodelphis domestica	3586166573	Chromosome	Monodelphis	Didelphidae	Didelphimorphia	1_Low
+GCF_900747795.2	fErpCal1.3	Erpetoichthys calabaricus	3613534470	Chromosome	Erpetoichthys	Polypteridae	Polypteriformes	1_Low
+GCF_902459505.1	aGeoSer1.1	Geotrypetes seraphini	3779413726	Chromosome	Geotrypetes	Dermophiidae	Gymnophiona	1_Low
+GCF_020745735.1	sHemOce1.pat.X.cur.	Hemiscyllium ocellatum	3983466396	Chromosome	Hemiscyllium	Hemiscylliidae	Orectolobiformes	1_Low
+GCF_000181795.1	Trichinella spiralis-3.7.1	Trichinella spiralis	63525422	Scaffold	Trichinella	Trichinellidae	Trichinellida	1_Low
+GCF_001901225.1	ASM190122v2	Dermatophagoides pteronyssinus	70764025	Scaffold	Dermatophagoides	Pyroglyphidae	Sarcoptiformes	1_Low
+GCF_000002995.4	B_malayi-4.0	Brugia malayi	87155713	Scaffold	Brugia	Onchocercidae	Rhabditida	1_Low
+GCF_000239435.1	ASM23943v1	Tetranychus urticae	90815494	Scaffold	Tetranychus	Tetranychidae	Trombidiformes	1_Low
+GCF_000150275.1	v1.0	Trichoplax adhaerens	105631681	Scaffold	Trichoplax	Trichoplacidae	Trichoplacea	1_Low
+GCF_000006295.1	JCVI_LOUSE_1.0	Pediculus humanus corporis	110781312	Scaffold	Pediculus	Pediculidae	Phthiraptera	1_Low
+GCF_000524195.1	ASM52419v1	Echinococcus granulosus	110837706	Scaffold	Echinococcus	Taeniidae	Cyclophyllidea	1_Low
+GCF_028296485.1	nextdenovo-longstitch-racon4-pilon3	Oppia nitens	126096124	Scaffold	Oppia	Oppiidae	Sarcoptiformes	1_Low
+GCF_000255335.2	Mocc_1.1	Galendromus occidentalis	151460383	Scaffold	Galendromus	Phytoseiidae	Mesostigmata	1_Low
+GCF_000341935.2	Ccin1v2	Cephus cinctus	160731354	Scaffold	Cephus	Cephidae	Hymenoptera	1_Low
+GCF_000090795.2	v1.1	Amphimedon queenslandica	164242647	Scaffold	Amphimedon	Niphatidae	Haplosclerida	1_Low
+GCF_019649055.1	Prichtersi_v1.0	Paramacrobiotus metropolitanus	170509133	Scaffold	Paramacrobiotus	Macrobiotidae	Parachela	1_Low
+GCF_009176525.2	AAFC_CNas_1.1	Contarinia nasturtii	185885008	Scaffold	Contarinia	Cecidomyiidae	Diptera	1_Low
+GCF_000612105.2	Oabi_2.0	Orussus abietinus	186398216	Scaffold	Orussus	Orussidae	Hymenoptera	1_Low
+GCF_000599845.2	Tpre_2.0	Trichogramma pretiosum	187641947	Scaffold	Trichogramma	Trichogrammatidae	Hymenoptera	1_Low
+GCF_025399875.1	Caltech_Dcor_3.1	Dalotia coriaria	193876233	Scaffold	Dalotia	Staphylinidae	Coleoptera	1_Low
+GCF_001412225.1	Nicve_v1.0	Nicrophorus vespilloides	195273382	Scaffold	Nicrophorus	Silphidae	Coleoptera	1_Low
+GCF_002217175.1	ASM221717v1	Folsomia candida	221702752	Scaffold	Folsomia	Isotomidae	Entomobryomorpha	1_Low
+GCF_021976095.1	XeniaSp_v1	Xenia sp. Carnegie-2017	222699550	Scaffold	Xenia	Xeniidae	Malacalcyonacea	1_Low
+GCF_000326865.2	Helobdella robusta v1.0	Helobdella robusta	235049875	Scaffold	Helobdella	Glossiphoniidae	Rhynchobdellida	1_Low
+GCF_012932325.1	TpBJ-2018v1	Thrips palmi	237830083	Scaffold	Thrips	Thripidae	Thysanoptera	1_Low
+GCF_009602425.1	ASM960242v1	Actinia tenebrosa	238179736	Scaffold	Actinia	Actiniidae	Actiniaria	1_Low
+GCF_001417965.1	Aiptasia genome 1.1	Exaiptasia diaphana	256132296	Scaffold	Exaiptasia	Aiptasiidae	Actiniaria	1_Low
+GCF_013076305.1	ASM1307630v1	Rhopilema esculentum	256689583	Scaffold	Rhopilema	Rhizostomatidae	Rhizostomeae	1_Low
+GCF_000648695.1	Otau_2.0	Onthophagus taurus	267079363	Scaffold	Onthophagus	Scarabaeidae	Coleoptera	1_Low
+GCF_023614345.1	UGA_ACOO_1.1	Adelges cooleyi	270197466	Scaffold	Adelges	Adelgidae	Hemiptera	1_Low
+GCF_000503995.2	CerSol_1.0	Ceratosolen solmsi marchali	276157622	Scaffold	Ceratosolen	Agaonidae	Hymenoptera	1_Low
+GCF_001272555.1	ASM127255v1	Dufourea novaeangliae	279505983	Scaffold	Dufourea	Halictidae	Hymenoptera	1_Low
+GCF_025091365.1	ASM2509136v1	Daktulosphaira vitifoliae	282588554	Scaffold	Daktulosphaira	Phylloxeridae	Hemiptera	1_Low
+GCF_013122585.1	ASM1312258v2	Styela clava	340475108	Scaffold	Styela	Styelidae	Stolidobranchia	1_Low
+GCF_000699045.2	Apla_2.0	Agrilus planipennis	353056831	Scaffold	Agrilus	Buprestidae	Coleoptera	1_Low
+GCF_019393585.1	ZJU_Lbou_2.1	Leptopilina boulardi	354804354	Scaffold	Leptopilina	Figitidae	Hymenoptera	1_Low
+GCF_000327385.1	Helro1	Lottia gigantea	359505668	Scaffold	Lottia	Lottiidae		1_Low
+GCF_002532875.2	vjacob_1.0	Varroa jacobsoni	364328871	Scaffold	Varroa	Varroidae	Mesostigmata	1_Low
+GCF_001949145.1	OKI-Apl_1.0	Acanthaster planci	383843944	Scaffold	Acanthaster	Acanthasteridae	Valvatida	1_Low
+GCF_000591075.1	Eaff_2.0	Eurytemora carolleeae	389032277	Scaffold	Eurytemora	Temoridae	Calanoida	1_Low
+GCF_014805625.2	Yale_Gfus_2	Glossina fuscipes	389358103	Scaffold	Glossina	Glossinidae	Diptera	1_Low
+GCF_029955315.1	icCylForm1.1	Cylas formicarius	391099484	Scaffold	Cylas	Brentidae	Coleoptera	1_Low
+GCF_001039355.2	LinAna2.0	Lingula anatina	406282338	Scaffold	Lingula	Lingulidae	Lingulida	1_Low
+GCF_008802855.1	Ppyr1.3	Photinus pyralis	471511253	Scaffold	Photinus	Lampyridae	Coleoptera	1_Low
+GCF_000696155.1	ZooNev1.0	Zootermopsis nevadensis	485009472	Scaffold	Zootermopsis	Termopsidae	Blattodea	1_Low
+GCF_002042975.1	ofav_dov_v1	Orbicella faveolata	485532801	Scaffold	Orbicella	Merulinidae	Scleractinia	1_Low
+GCF_000648675.2	Clec_2.1	Cimex lectularius	510833625	Scaffold	Cimex	Cimicidae	Hemiptera	1_Low
+GCF_000485595.1	Priapulus_caudatus-5.0.1	Priapulus caudatus	511723334	Scaffold	Priapulus	Priapulidae	Priapulimorphida	1_Low
+GCF_000764305.2	Hazt_2.0.2	Hyalella azteca	542348180	Scaffold	Hyalella	Hyalellidae	Amphipoda	1_Low
+GCF_000648655.2	Cflo_2.0	Copidosoma floridanum	553956141	Scaffold	Copidosoma	Encyrtidae	Hymenoptera	1_Low
+GCF_011630105.1	ASM1163010v1	Anneissia japonica	589628371	Scaffold	Anneissia	Comatulidae	Comatulida	1_Low
+GCF_004916995.1	NCSU_SB_2.0	Morone saxatilis	598109547	Scaffold	Morone	Moronidae		1_Low
+GCF_004355925.1	GSC_Weel_1.0	Anarrhichthys ocellatus	612774492	Scaffold	Anarrhichthys	Anarhichadidae	Perciformes	1_Low
+GCF_001854935.1	ASM185493v1	Bemisia tabaci	615001830	Scaffold	Bemisia	Aleyrodidae	Hemiptera	1_Low
+GCF_000715545.1	OpiViv1.0	Opisthorchis viverrini	620452578	Scaffold	Opisthorchis	Opisthorchiidae	Opisthorchiida	1_Low
+GCF_000735185.1	NC01	Notothenia coriiceps	636595335	Scaffold	Notothenia	Nototheniidae	Perciformes	1_Low
+GCF_001970005.1	Flounder_ref_guided_V1.0	Paralichthys olivaceus	643894737	Scaffold	Paralichthys	Paralichthyidae	Pleuronectiformes	1_Low
+GCF_001952655.1	M_albus_1.0	Monopterus albus	684127526	Scaffold	Monopterus	Synbranchidae	Synbranchiformes	1_Low
+GCF_000390285.2	Agla_2.0	Anoplophora glabripennis	706952781	Scaffold	Anoplophora	Cerambycidae	Coleoptera	1_Low
+GCF_003589595.1	ASM358959v1	Hyposmocoma kahamanoa	731440758	Scaffold	Hyposmocoma	Cosmopterigidae	Lepidoptera	1_Low
+GCF_011947565.3	Ppol_2.1	Pollicipes pollicipes	769714693	Scaffold	Pollicipes	Pollicipedidae	Pollicipedomorpha	1_Low
+GCF_003426905.1	ASM342690v1	Ctenocephalides felis	775452550	Scaffold	Ctenocephalides	Pulicidae	Siphonaptera	1_Low
+GCF_000003605.2	Skow_1.1	Saccoglossus kowalevskii	775823358	Scaffold	Saccoglossus	Harrimaniidae		1_Low
+GCF_000002235.5	Spur_5.0	Strongylocentrotus purpuratus	921840143	Scaffold	Strongylocentrotus	Strongylocentrotidae	Camarodonta	1_Low
+GCF_000671375.1	Cexi_2.0	Centruroides sculpturatus	925474958	Scaffold	Centruroides	Buthidae	Scorpiones	1_Low
+GCF_000002075.1	AplCal3.0	Aplysia californica	927296314	Scaffold	Aplysia	Aplysiidae	Aplysiida	1_Low
+GCF_003342845.1	notPer1	Nothoprocta perdicaria	965904370	Scaffold	Nothoprocta	Tinamidae	Tinamiformes	1_Low
+GCF_018977255.1	IMCB_Cmil_1.0	Callorhinchus milii	991519186	Scaffold	Callorhinchus	Callorhinchidae	Chimaeriformes	1_Low
+GCF_902827175.1	fGymAcu1.1	Gymnodraco acuticeps	996888495	Scaffold	Gymnodraco	Bathydraconidae	Perciformes	1_Low
+GCF_000696795.2	Hhal_2.0	Halyomorpha halys	998224378	Scaffold	Halyomorpha	Pentatomidae	Hemiptera	1_Low
+GCF_038088225.1	pur_monq_1.0	Cyrtonyx montezumae	1011858581	Scaffold	Cyrtonyx	Odontophoridae	Galliformes	1_Low
+GCF_002891405.2	Csec_1.0	Cryptotermes secundus	1018932804	Scaffold	Cryptotermes	Kalotermitidae	Blattodea	1_Low
+GCF_030028575.1	MMel_1.1	Malurus melanocephalus	1020668800	Scaffold	Malurus	Maluridae	Passeriformes	1_Low
+GCF_000732505.1	C_variegatus-1.0	Cyprinodon variegatus	1035167975	Scaffold	Cyprinodon	Cyprinodontidae	Cyprinodontiformes	1_Low
+GCF_000695815.1	ASM69581v1	Acanthisitta chloris	1035876403	Scaffold	Acanthisitta	Acanthisittidae	Passeriformes	1_Low
+GCF_001447265.1	Sturnus_vulgaris-1.0	Sturnus vulgaris	1036755994	Scaffold	Sturnus	Sturnidae	Passeriformes	1_Low
+GCF_000691845.1	ASM69184v1	Merops nubicus	1062961556	Scaffold	Merops	Meropidae	Coraciiformes	1_Low
+GCF_000710305.1	ASM71030v1	Buceros rhinoceros silvestris	1065782791	Scaffold	Buceros	Bucerotidae	Bucerotiformes	1_Low
+GCF_016745375.1	EPA_FHM_2.0	Pimephales promelas	1066412313	Scaffold	Pimephales	Leuciscidae	Cypriniformes	1_Low
+GCF_000699245.1	ASM69924v1	Pterocles gutturalis	1069324295	Scaffold	Pterocles	Pteroclidae	Pterocliformes	1_Low
+GCF_000703405.1	ASM70340v1	Apaloderma vittatum	1070836417	Scaffold	Apaloderma	Trogonidae	Trogoniformes	1_Low
+GCF_022539395.1	myiCay2020	Myiozetetes cayanensis	1075628138	Scaffold	Myiozetetes	Tyrannidae	Passeriformes	1_Low
+GCF_000695195.1	ASM69519v1	Chlamydotis macqueenii	1086566339	Scaffold	Chlamydotis	Otididae	Otidiformes	1_Low
+GCF_000695765.1	ASM69576v1	Mesitornis unicolor	1087290853	Scaffold	Mesitornis	Mesitornithidae	Mesitornithiformes	1_Low
+GCF_000690775.1	ASM69077v1	Eurypyga helias	1088019637	Scaffold	Eurypyga	Eurypygidae	Eurypygiformes	1_Low
+GCF_000700745.2	ASM70074v2	Antrostomus carolinensis	1118829799	Scaffold	Antrostomus	Caprimulgidae	Caprimulgiformes	1_Low
+GCF_000690535.1	ASM69053v1	Cariama cristata	1132245425	Scaffold	Cariama	Cariamidae	Cariamiformes	1_Low
+GCF_000691785.1	ASM69178v1	Leptosomus discolor	1136244952	Scaffold	Leptosomus	Leptosomidae	Coraciiformes	1_Low
+GCF_000690835.1	ASM69083v1	Fulmarus glacialis	1141395646	Scaffold	Fulmarus	Procellariidae	Procellariiformes	1_Low
+GCF_000687285.1	ASM68728v1	Phaethon lepturus	1152958507	Scaffold	Phaethon	Phaethontidae	Phaethontiformes	1_Low
+GCF_000709365.1	ASM70936v1	Tauraco erythrolophus	1155540733	Scaffold	Tauraco	Musophagidae	Musophagiformes	1_Low
+GCF_003259725.1	athCun1	Athene cunicularia	1157069330	Scaffold	Athene	Strigidae	Strigiformes	1_Low
+GCF_000687375.1	ASM68737v1	Pelecanus crispus	1160924693	Scaffold	Pelecanus	Pelecanidae	Pelecaniformes	1_Low
+GCF_000692075.1	ASM69207v1	Opisthocomus hoazin	1203712246	Scaffold	Opisthocomus	Opisthocomidae	Opisthocomiformes	1_Low
+GCF_000687185.1	ASM68718v1	Egretta garzetta	1206484573	Scaffold	Egretta	Ardeidae	Pelecaniformes	1_Low
+GCF_000699105.1	ASM69910v1	Pygoscelis adeliae	1216600033	Scaffold	Pygoscelis	Spheniscidae	Sphenisciformes	1_Low
+GCF_000708025.1	ASM70802v2	Charadrius vociferus	1219859583	Scaffold	Charadrius	Charadriidae	Charadriiformes	1_Low
+GCF_000708225.1	ASM70822v1	Nipponia nippon	1223846297	Scaffold	Nipponia	Threskiornithidae	Pelecaniformes	1_Low
+GCF_000698965.1	ASM69896v1	Struthio camelus australis	1225025301	Scaffold	Struthio	Struthionidae	Struthioniformes	1_Low
+GCF_003343035.1	aptRow1	Apteryx rowi	1228902913	Scaffold	Apteryx	Apterygidae	Apterygiformes	1_Low
+GCF_000365465.3	Ptep_3.0	Parasteatoda tepidariorum	1228972128	Scaffold	Parasteatoda	Theridiidae	Araneae	1_Low
+GCF_001431845.1	ASM143184v1	Calidris pugnax	1229094286	Scaffold	Calidris	Scolopacidae	Charadriiformes	1_Low
+GCF_018691265.1	T.alba_DEE_v4.0	Tyto alba	1249867532	Scaffold	Tyto	Tytonidae	Strigiformes	1_Low
+GCF_023055435.1	xgHalRufe1.0.p	Haliotis rufescens	1334454214	Scaffold	Haliotis	Haliotidae	Lepetellida	1_Low
+GCF_000186305.1	Python_molurus_bivittatus-5.0.2	Python bivittatus	1435034535	Scaffold	Python	Pythonidae	Squamata	1_Low
+GCF_004798865.1	ASM479886v1	Varanus komodoensis	1507945839	Scaffold	Varanus	Varanidae	Squamata	1_Low
+GCF_027789165.1	UI_Nfuz_MZM_1.0	Nothobranchius furzeri	1513022400	Scaffold	Nothobranchius	Nothobranchiidae	Cyprinodontiformes	1_Low
+GCF_900518735.1	EBS10Xv2-PRI	Pseudonaja textilis	1590035073	Scaffold	Pseudonaja	Elapidae	Squamata	1_Low
+GCF_001527695.2	P.Mucros_1.0	Protobothrops mucrosquamatus	1673859098	Scaffold	Protobothrops	Viperidae	Squamata	1_Low
+GCF_900067755.1	pvi1.1	Pogona vitticeps	1716675060	Scaffold	Pogona	Agamidae	Squamata	1_Low
+GCF_000260355.1	ConCri1.0	Condylura cristata	1769662895	Scaffold	Condylura	Talpidae	Eulipotyphla	1_Low
+GCF_001595765.1	Mnat.v1	Miniopterus natalensis	1803099001	Scaffold	Miniopterus	Miniopteridae	Chiroptera	1_Low
+GCF_000517525.1	Limulus_polyphemus-2.1.2	Limulus polyphemus	1828256766	Scaffold	Limulus	Limulidae	Xiphosura	1_Low
+GCF_014176215.1	mRouAeg1.p	Rousettus aegyptiacus	1893602072	Scaffold	Rousettus	Pteropodidae	Chiroptera	1_Low
+GCF_001723895.1	CroPor_comp1	Crocodylus porosus	2049519336	Scaffold	Crocodylus	Crocodylidae	Crocodylia	1_Low
+GCF_000935625.1	ASM93562v1	Nanorana parkeri	2053849526	Scaffold	Nanorana	Dicroglossidae	Anura	1_Low
+GCF_021234165.1	CSHL_Meso_final	Pteronotus mesoamericanus	2074649091	Scaffold	Pteronotus	Mormoopidae	Chiroptera	1_Low
+GCF_000230535.1	PelSin_1.0	Pelodiscus sinensis	2202466388	Scaffold	Pelodiscus	Trionychidae	Testudines	1_Low
+GCF_001890085.2	ASM189008v1	Hipposideros armiger	2236309530	Scaffold	Hipposideros	Hipposideridae	Chiroptera	1_Low
+GCF_018991925.1	GMGI_Hamer_2.0	Homarus americanus	2292059586	Scaffold	Homarus	Nephropidae	Decapoda	1_Low
+GCF_014108415.1	mMolMol1.p	Molossus molossus	2315568481	Scaffold	Molossus	Molossidae	Chiroptera	1_Low
+GCF_012274545.1	DMR_v1.0_HiC	Fukomys damarensis	2334358650	Scaffold	Fukomys	Bathyergidae	Rodentia	1_Low
+GCF_005190385.1	NGI_Narwhal_1	Monodon monoceros	2355574979	Scaffold	Monodon	Monodontidae	Artiodactyla	1_Low
+GCF_003009895.1	ASM300989v1	Hyaena hyaena	2374716107	Scaffold	Hyaena	Hyaenidae	Carnivora	1_Low
+GCF_000276665.1	ChiLan1.0	Chinchilla lanigera	2390852391	Scaffold	Chinchilla	Chinchillidae	Rodentia	1_Low
+GCF_000321225.1	Oros_1.0	Odobenus rosmarus divergens	2400133628	Scaffold	Odobenus	Odobenidae	Carnivora	1_Low
+GCF_000442215.2	Lipotes_vexillifer_v1.1	Lipotes vexillifer	2419479385	Scaffold	Lipotes	Lipotidae	Artiodactyla	1_Low
+GCF_001984765.1	C.can genome v1.0	Castor canadensis	2518306565	Scaffold	Castor	Castoridae	Rodentia	1_Low
+GCF_000181295.1	OtoGar3	Otolemur garnettii	2519724550	Scaffold	Otolemur	Galagidae	Primates	1_Low
+GCF_010614865.2	ASM1061486v2	Stegodyphus dumicola	2551176228	Scaffold	Stegodyphus	Eresidae	Araneae	1_Low
+GCF_001723915.1	GavGan_comp1	Gavialis gangeticus	2640775248	Scaffold	Gavialis	Gavialidae	Crocodylia	1_Low
+GCF_000956105.1	Pcoq_1.0	Propithecus coquereli	2798135037	Scaffold	Propithecus	Indriidae	Primates	1_Low
+GCF_022376915.1	ASM2237691v1	Moschus berezovskii	2813355390	Scaffold	Moschus	Moschidae	Artiodactyla	1_Low
+GCF_000334495.1	TupChi_1.0	Tupaia chinensis	2846580235	Scaffold	Tupaia	Tupaiidae	Scandentia	1_Low
+GCF_000313985.2	ASM31398v2	Echinops telfairi	2947103070	Scaffold	Echinops	Tenrecidae		1_Low
+GCF_000260255.1	OctDeg1.0	Octodon degus	2995872505	Scaffold	Octodon	Octodontidae	Rodentia	1_Low
+GCF_000243295.1	TriManLat1.0	Trichechus manatus latirostris	3103791524	Scaffold	Trichechus	Trichechidae	Sirenia	1_Low
+GCF_034190915.1	mCavPor4.1	Cavia porcellus	3145520116	Scaffold	Cavia	Caviidae	Rodentia	1_Low
+GCF_000164805.1	Tarsius_syrichta-2.0.1	Carlito syrichta	3453847770	Scaffold	Carlito	Tarsiidae	Primates	1_Low
+GCF_900497805.2	bare-nosed wombat genome assembly	Vombatus ursinus	3486580222	Scaffold	Vombatus	Vombatidae	Diprotodontia	1_Low
+GCF_000299155.1	EleEdw1.0	Elephantulus edwardii	3843982861	Scaffold	Elephantulus	Macroscelididae	Macroscelidea	1_Low
