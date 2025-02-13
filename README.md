@@ -38,7 +38,7 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-msa-sapiens")
 |  -- | --- | ------- | ---- | -------------- |
 | [Benegas et al. 2023](https://doi.org/10.1073/pnas.2311219120) | GPN | Arabidopsis and other Brassicale plants | [analysis/gpn_arabidopsis](analysis/gpn_arabidopsis) |  [Model, dataset, intermediate results](https://huggingface.co/collections/songlab/gpn-653191edcb0270ed05ad2c3e) |
 | [Benegas et al. 2025](https://www.nature.com/articles/s41587-024-02511-w) | GPN-MSA | Human and other vertebrates | [analysis/gpn-msa_human](analysis/gpn-msa_human) | [Model, dataset, benchmarks, predictions](https://huggingface.co/collections/songlab/gpn-msa-65319280c93c85e11c803887) |
-| Upcoming | GPN | Animal promoters | [analysis/gpn_animal_promoter](analysis/gpn_animal_promoter) | [Model, dataset, benchmarks](https://huggingface.co/collections/songlab/traitgym-6796d4fbb825d5b94e65d30f) |
+| [Benegas et al. 2025b](https://www.biorxiv.org/content/10.1101/2025.02.11.637758v1) | GPN | Animal promoters | [analysis/gpn_animal_promoter](analysis/gpn_animal_promoter) | [Model, dataset, benchmarks](https://huggingface.co/collections/songlab/traitgym-6796d4fbb825d5b94e65d30f) |
  
 ## GPN
 Can also be called GPN-SS (single sequence).
