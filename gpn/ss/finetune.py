@@ -207,7 +207,6 @@ class DataTrainingArguments:
             )
         },
     )
-    total_batch_size: Optional[int] = field(default=512)
     pos_weight: Optional[float] = field(
         default=1.0,
         metadata={"help": "Positive weight for binary token classification"}
@@ -431,23 +430,12 @@ def main():
         if col not in ["input_ids", "labels"]
     ]
 
-    processed_datasets = DatasetDict()
-    for split in raw_datasets.keys():
-        extra_kwargs = {} if split != "train" else dict(
-            # This takes care of some issues when using torch_compile
-            # I think it's a bug in IterableDataset in the datasets library
-            # When the last batch is smaller than the batch size
-            # Hopefully it will be fixed soon
-            drop_last_batch=True,
-            batch_size=data_args.total_batch_size,
-        )
-        processed_datasets[split] = raw_datasets[split].map(
-            tokenize_function,
-            batched=True,
-            num_proc=data_args.preprocessing_num_workers,
-            remove_columns=remove_columns,
-            **extra_kwargs,
-        )
+    processed_datasets = raw_datasets.map(
+        tokenize_function,
+        batched=True,
+        num_proc=data_args.preprocessing_num_workers,
+        remove_columns=remove_columns,
+    )
 
     print(processed_datasets)
 
@@ -466,14 +454,17 @@ def main():
     if data_args.do_test:
         test_dataset = processed_datasets["test"]
 
-
     def compute_metrics(eval_pred):
         y_pred = eval_pred.predictions
         y_true = eval_pred.label_ids
         if num_labels == 1:
             y_true = np.expand_dims(y_true, axis=1)
-        mean_pearson = batched_pearsonr(y_pred, y_true).mean()
-        return {"mean_pearson": mean_pearson}
+        mean_pearson_across_rows = np.mean(batched_pearsonr(y_pred, y_true))
+        res = {"mean_pearson_across_rows": mean_pearson_across_rows}
+        if num_labels > 1:
+            mean_pearson_across_cols = np.nanmean(batched_pearsonr(y_pred.T, y_true.T))
+            res["mean_pearson_across_cols"] = mean_pearson_across_cols
+        return res
 
     # Initialize our Trainer
     trainer = Trainer(
@@ -511,6 +502,8 @@ def main():
     if data_args.do_test:
         logger.info("*** Test ***")
 
+        # Set drop_last to False to ensure all examples go through the model
+        trainer.args.dataloader_drop_last = False
         test_output = trainer.predict(test_dataset=test_dataset)
         metrics = test_output.metrics
         print(metrics)
