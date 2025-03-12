@@ -99,7 +99,7 @@ torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{print NF}')
 * Training (human): `examples/msa/training.ipynb`
 
 ### Training on other species (e.g. other vertebrates, plants)
-* See https://github.com/songlab-cal/gpn/issues/28, https://github.com/songlab-cal/gpn/discussions/40
+* See https://github.com/songlab-cal/gpn/issues/28, https://github.com/songlab-cal/gpn/discussions/40, https://github.com/songlab-cal/gpn/issues/44
 * Another source for plant alignments: https://plantregmap.gao-lab.org/download.php#alignment-conservation
 
 ## PhyloGPN
