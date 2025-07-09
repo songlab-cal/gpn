@@ -1,0 +1,12 @@
+configfile: "config/config.yaml"
+
+include: "rules/common.smk"
+include: "rules/dataset.smk"
+include: "rules/ensembl.smk"
+include: "rules/gxa.smk"
+
+
+rule all:
+    input:
+        expand("results/dataset/{split}.parquet", split=SPLITS),
+        "results/dataset/labels.txt",

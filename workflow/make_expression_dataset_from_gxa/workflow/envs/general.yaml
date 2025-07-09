@@ -1,0 +1,14 @@
+name: gxa
+channels:
+  - defaults
+  - conda-forge
+  - bioconda
+dependencies:
+  - snakemake
+  - pandas
+  - tqdm
+  - pyranges
+  - pyarrow
+  - biopython
+  - huggingface_hub
+  - plac>=1.4.5

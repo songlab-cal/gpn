@@ -1,0 +1,45 @@
+# the goal is to try to use the same genome (crucial) and annotation (perhaps less important)
+# as the chosen GXA studies
+# (different Ensembl versions often share the same genome, need to check)
+ensembl:
+  genome: https://ftp.ensemblgenomes.ebi.ac.uk/pub/plants/release-51/fasta/sorghum_bicolor/dna/Sorghum_bicolor.Sorghum_bicolor_NCBIv3.dna.toplevel.fa.gz
+  annotation: https://ftp.ensemblgenomes.ebi.ac.uk/pub/plants/release-51/gff3/sorghum_bicolor/Sorghum_bicolor.Sorghum_bicolor_NCBIv3.51.gff3.gz
+
+gxa:
+  studies:
+    - E-MTAB-4021
+    - E-GEOD-98817
+    - E-MTAB-4203
+    - E-MTAB-4273
+    - E-MTAB-4400
+    - E-CURD-25
+    - E-MTAB-5956
+#    - E-MTAB-3839  # has some weird metadata format
+
+# will bin tss, e.g. [0, 100) -> 50, [100, 200) -> 150
+tss_pos_bin_size: 100
+# min pearson correlation between biological replicates for an assay_group to be included
+# this will of course also remove assay_groups without replicates
+min_correlation: 0.8
+min_variance: 1.0
+
+n_upstream: 1024
+n_downstream: 1024
+
+split_chroms:
+  train:
+    - "1"
+    - "2"
+    - "3"
+    - "4"
+    - "5"
+    - "6"
+    - "7"
+    - "8"
+  validation:
+    - "9"
+  test:
+    - "10"
+
+assay_skip_renaming:
+  - ERR233274
