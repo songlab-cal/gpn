@@ -2,8 +2,8 @@
 # as the chosen GXA studies
 # (different Ensembl versions often share the same genome, need to check)
 ensembl:
-  genome: https://ftp.ensemblgenomes.ebi.ac.uk/pub/plants/release-51/fasta/sorghum_bicolor/dna/Sorghum_bicolor.Sorghum_bicolor_NCBIv3.dna.toplevel.fa.gz
-  annotation: https://ftp.ensemblgenomes.ebi.ac.uk/pub/plants/release-51/gff3/sorghum_bicolor/Sorghum_bicolor.Sorghum_bicolor_NCBIv3.51.gff3.gz
+  genome: https://ftp.ensemblgenomes.ebi.ac.uk/pub/plants/release-43/fasta/sorghum_bicolor/dna/Sorghum_bicolor.Sorghum_bicolor_NCBIv3.dna.toplevel.fa.gz
+  annotation: https://ftp.ensemblgenomes.ebi.ac.uk/pub/plants/release-43/gff3/sorghum_bicolor/Sorghum_bicolor.Sorghum_bicolor_NCBIv3.43.gff3.gz
 
 gxa:
   studies:
@@ -23,8 +23,8 @@ tss_pos_bin_size: 100
 min_correlation: 0.8
 min_variance: 1.0
 
-n_upstream: 1024
-n_downstream: 1024
+n_upstream: 256
+n_downstream: 256
 
 split_chroms:
   train:
