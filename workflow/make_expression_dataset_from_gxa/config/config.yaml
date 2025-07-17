@@ -17,7 +17,11 @@ gxa:
 #    - E-MTAB-3839  # has some weird metadata format
 
 # will bin tss, e.g. [0, 100) -> 50, [100, 200) -> 150
-tss_pos_bin_size: 100
+# tss_pos_bin_size: 100
+
+# no binning
+tss_pos_bin_size: 1
+
 # min pearson correlation between biological replicates for an assay_group to be included
 # this will of course also remove assay_groups without replicates
 min_correlation: 0.8
