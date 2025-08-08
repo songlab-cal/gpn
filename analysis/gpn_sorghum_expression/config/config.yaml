@@ -1,0 +1,55 @@
+finetuning:
+  project_name: gxa-sorghum-v1
+  dataset_name: gonzalobenegas/gxa-sorghum-v1
+  hparams:
+    default:
+      optim: adamw_torch
+      learning_rate: 1e-3
+      lr_scheduler_type: cosine_with_min_lr
+      min_lr_rate: 0.1
+      warmup_ratio: 0.01
+      num_train_epochs: 10
+      weight_decay: 0.01
+      batch_size: 128
+      warmup_ratio: 0.01
+    debug:
+      num_train_epochs: 2
+    30_epochs:
+      num_train_epochs: 30
+
+# this are at the top-level so they are easy to override in the command line
+finetuning_per_device_batch_size: 128
+finetuning_n_gpu: 1
+
+models:
+  GPN_Brassicales: "songlab/gpn-brassicales"
+  RandomInit_GPN_Brassicales: "results/checkpoints_pretraining/random_gpn_brassicales"
+  GPN_Plant_Promoter_v1: gonzalobenegas/gpn-plant-promoter-v1
+
+experimental_data_gene_annotation:
+  PsbS:
+    genome: results/experimental_data/genome/Phytozome/PhytozomeV13/SbicolorRTx430/v2.1/assembly/SbicolorRTx430_552_v2.0.fa
+    chrom: chromosome_3
+    tss: 68535130
+    strand: +
+    center_seq: AGA
+  SBPase:
+    # https://phytozome-next.jgi.doe.gov/report/gene/SbicolorRTx430_v2_1/SbiRTX430.03G387300
+    genome: results/experimental_data/genome/Phytozome/PhytozomeV13/SbicolorRTx430/v2.1/assembly/SbicolorRTx430_552_v2.0.fa
+    chrom: chromosome_3
+    tss: 67588161
+    strand: +
+    center_seq: GTC
+  Raf1:
+    # https://phytozome-next.jgi.doe.gov/report/gene/SbicolorRTx430_v2_1/SbiRTX430.06G286900
+    genome: results/experimental_data/genome/Phytozome/PhytozomeV13/SbicolorRTx430/v2.1/assembly/SbicolorRTx430_552_v2.0.fa
+    chrom: chromosome_6
+    tss: 59365441
+    strand: "-"
+    center_seq: AGA
+
+
+experimental_data_predict_track:
+  PsbS: "E-MTAB-4021_leaf mesophyll"
+  SBPase: "E-MTAB-4021_leaf mesophyll"
+  Raf1: "E-MTAB-4021_leaf mesophyll"

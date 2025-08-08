@@ -1,0 +1,86 @@
+configfile: "config/config.yaml"
+
+
+pretraining_models = [
+    "GPN_Brassicales",
+#    "RandomInit_GPN_Brassicales",
+#    "GPN_Plant_Promoter_v1",
+]
+#finetuning_hparams = config["finetuning"]["hparams"].keys()
+finetuning_hparams = [
+#    "debug",
+#    "default",
+    "30_epochs",
+]
+finetuning_seeds = [
+    42,
+    43,
+    44,
+    45,
+    46,
+]
+
+finetuning_models = [
+    f"{m}/{ft_hparams}/{seed}"
+    for m in pretraining_models
+    for ft_hparams in finetuning_hparams
+    for seed in finetuning_seeds
+]
+
+experimental_data_genes = list(config["experimental_data_gene_annotation"].keys())
+extended_experimental_data_genes = experimental_data_genes + [f"{gene}_ISM" for gene in experimental_data_genes]
+
+
+include: "rules/common.smk"
+include: "rules/finetuning.smk"
+include: "rules/experimental_data.smk"
+
+
+rule all:
+    input:
+        ## checkpoints:
+        expand("results/checkpoints_epoch/{model}", model=finetuning_models),
+
+
+steps_per_epoch = 265
+
+
+rule all_metrics:
+    input:
+        expand(
+            "results/experimental_data/metrics/{gene}/{checkpoint}.csv",
+            gene=[
+                "PsbS",
+                "SBPase",
+                "Raf1",
+            ],
+            checkpoint=[
+                f"checkpoints_epoch/GPN_Brassicales/30_epochs/{seed}/checkpoint-{steps_per_epoch * i}"
+                for i in range(1, 31)
+                for seed in [42, 43, 44, 45, 46]
+            ]
+        )
+
+
+rule all_ISM:
+    input:
+        expand(
+            "results/experimental_data/preds/PsbS_ISM/{checkpoint}.parquet",
+            checkpoint=[
+                f"checkpoints_epoch/GPN_Brassicales/30_epochs/{seed}/checkpoint-{steps_per_epoch * i}"
+                for i in range(1, 31)
+                for seed in [42, 43, 44, 45, 46]
+            ]
+        )
+
+
+rule all_RNAseq:
+    input:
+        expand(
+            "results/RNAseq/metrics/{checkpoint}.csv",
+            checkpoint=[
+                f"checkpoints_epoch/GPN_Brassicales/30_epochs/{seed}/checkpoint-{steps_per_epoch * i}"
+                for i in range(1, 31)
+                for seed in [42, 43, 44, 45, 46]
+            ]
+        )
