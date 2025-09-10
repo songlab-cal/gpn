@@ -1,0 +1,199 @@
+from Bio import SeqIO
+from Bio.Seq import Seq
+import bioframe as bf
+from datasets import load_dataset, disable_caching
+from gpn.data import load_fasta, load_table, Genome, load_dataset_from_file_or_dir
+from gpn.data import (
+    filter_defined, filter_length, load_table, add_flank, get_annotation_features,
+    add_jitter, get_promoters, get_random_intervals, union_intervals,
+    intersect_intervals, intervals_size, get_balanced_intervals,
+    
+)
+from gpn.data import make_windows, get_seq
+from gpn.data import GenomeMSA
+import gzip
+from joblib import Parallel, delayed
+import numpy as np
+import os
+import pandas as pd
+from pathlib import Path
+import scipy.sparse as sp_sparse
+from scipy.special import softmax
+from scipy.stats import combine_pvalues, entropy
+from tqdm import tqdm
+tqdm.pandas()
+
+
+#configfile: "../config/config.yaml"
+
+
+# TODO: move into config/common.smk
+NUCLEOTIDES = list("ACGT")
+WINDOW_SIZE = 128
+FASTA_URLS = {"hg38": "http://ftp.ensembl.org/pub/release-107/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna_sm.primary_assembly.fa.gz"}
+
+CALIBRATION_CONFIGS = {
+    "use_ancestral_repeats": True,
+    "target_repeats": "ftp://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/rmsk.txt.gz",
+    "outgroup_repeats": "ftp://hgdownload.cse.ucsc.edu/goldenPath/mm39/database/rmsk.txt.gz",
+    "chain_file": "https://hgdownload.soe.ucsc.edu/goldenPath/mm39/vsHg38/reciprocalBest/mm39.hg38.rbest.chain.gz",
+    "phylop": "phyloP100way",
+    "phastcons": "phastCons100way",
+}
+
+SEX_CHROMS = ['X', 'Y']
+
+SPLIT_CHROMS = {
+    "train": [str(i) for i in range(1, 21)] + SEX_CHROMS,
+    "validation": ["21"],
+    "test": ["22"],
+}
+
+SPLITS = SPLIT_CHROMS.keys()
+
+CHROMS = np.concatenate(list(SPLIT_CHROMS.values()))
+
+AUTOSOMES = [str(i) for i in range(1, 23)]
+
+PHYLOP_PHASTCONS_GROUP = {'phastCons100way': 'phyloP100way',
+                          'phastCons470way': 'phyloP447way',
+                          'phastCons43way': 'phyloP243way',
+                          }
+
+vep_datasets = [
+    'results/clinvar/vs_benign_v2',
+    'results/cosmic',
+    'results/dms',
+    'results/finemapped_coding',
+    'results/TraitGym/mendelian_traits_matched_9',
+    'results/TraitGym/complex_traits_matched_9',
+    'results/hgmd/matched_9',
+
+    #'results/gnomad/balanced',
+    #'results/gnomad/gnocchi/z_bins',
+    #'results/gnomad/chrom/22',
+]
+
+heritability_datasets = [
+    'results/ldsc'
+]
+
+model_template = "{genome}/{time_enc}/{clade_thres}/{dataset}/{model_size}/{loss_weight}/{seed}/{max_steps}/{use_aux_features}/{weight_conserved}/{flip_nonconserved}"
+
+# default is first
+hparams = {
+    "dataset": [
+        # vertebrate
+        #"multiz100way/100/128/64/True/defined.phastCons100way.percentile-75_0.05_0.001",
+        #"multiz100way/100/256/128/True/defined.phastCons100way.percentile-75_0.05_0.001",
+        #"multiz100way/100/512/256/True/defined.phastCons100way.percentile-75_0.05_0.001",
+
+        # mammal
+        "cactus447way/447/128/64/True/defined.phastCons470way.percentile-75_0.05_0.001",
+        "cactus447way/447/256/128/True/defined.phastCons470way.percentile-75_0.05_0.001",
+        "cactus447way/447/512/256/True/defined.phastCons470way.percentile-75_0.05_0.001",
+
+        # primate
+        #"cactus447way/243/128/64/True/defined.phastCons43way.percentile-75_0.05_0.001",
+        #"cactus447way/243/256/128/True/defined.phastCons43way.percentile-75_0.05_0.001",
+        #"cactus447way/243/512/256/True/defined.phastCons43way.percentile-75_0.05_0.001",
+
+        # primate subset
+        #"cactus447way/36/256/128/True/defined.phastCons43way.percentile-75_0.05_0.001",
+    ],
+    
+    "genome": [
+        "hg38",
+    ],
+
+    "time_enc": [
+        "fire_1",
+    ],
+
+    "clade_thres": [
+        #"0.2",
+        "0.05",
+    ],
+
+    "use_aux_features": [
+        True,
+    ],
+    "loss_weight": [
+        0.1,
+    ],
+    "weight_conserved": [
+        True,
+        #False,
+    ],
+    "flip_nonconserved": [
+        "0.1",
+        #"0.2",
+        #"0",
+    ],
+}
+
+default_d = {k: v[0] for k, v in hparams.items()}
+hparam_models = [expand(model_template, **default_d, allow_missing=True)[0]]
+
+# one ablation at a time
+for k, v in hparams.items():
+    for vv in v[1:]:
+        new_d = default_d.copy()
+        new_d[k] = vv
+        hparam_models.append(expand(model_template, **new_d, allow_missing=True)[0])
+
+models = sum(
+    [
+        expand(
+            m,
+            seed=[
+                42,
+            ],
+            max_steps=[
+                150_000,
+                #150_001,
+                #200_000,
+            ],
+            model_size=[
+                "small",
+                #"medium",
+                #"large",
+            ],
+        ) for m in hparam_models
+    ],
+    []
+)
+
+include: "rules/common.smk"
+include: "rules/training.smk"
+include: "rules/vep.smk"
+include: "rules/logits.smk"
+include: "rules/calibration.smk"
+#include: "rules/embeddings.smk"
+
+include: "rules/gpnmsa.smk"
+include: "rules/conservation.smk"
+include: "rules/cadd.smk"
+include: "rules/nucleotide_transformer.smk"
+include: "rules/specieslm.smk"
+
+include: "rules/esm1b.smk"
+
+#models = []
+#models += ['hg38/GPN-MSA']
+#models += ['hg38/phastCons100way', 'hg38/phyloP100way', 'hg38/phastCons470way', 'hg38/phyloP447way', 'hg38/phastCons43way', 'hg38/phyloP243way']
+#models += ['hg38/CADD.RawScore']
+# models += ['hg38/NucleotideTransformer_LLR']
+# models += ['hg38/SpeciesLM_LLR']
+
+#models.append("hg38/ESM-1b")
+
+#pd.DataFrame(models).to_csv("models.txt", index=False, header=False)
+print(models)
+print(eval_datasets)
+
+rule all:
+    input:
+        expand("results/checkpoints/{model}", model=models),
+        #expand("results/preds/llr/{dataset}/{model}.parquet", model=models, dataset=vep_datasets),
+        #expand("results/preds/entropy/{dataset}/{model}.parquet", model=models, dataset=vep_datasets),
