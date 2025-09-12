@@ -1,4 +1,4 @@
-name: gpn-mouse
+name: wga_processing
 channels:
 - anaconda
 - conda-forge
