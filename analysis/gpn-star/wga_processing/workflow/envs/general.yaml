@@ -1,0 +1,11 @@
+name: gpn-mouse
+channels:
+- anaconda
+- conda-forge
+- bioconda
+dependencies:
+- snakemake
+- zarr>=3.0.0
+- pip
+- pip:
+  - git+https://github.com/songlab-cal/gpn.git
