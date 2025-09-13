@@ -1,0 +1,106 @@
+models:
+  human:
+    - V_small
+    - V_medium
+    - V_large
+    - M_small
+    - M_medium
+    - M_large
+    - P_small
+    - P_medium
+    - P_large
+  human_M_P:
+    - M_small
+    - M_medium
+    - M_large
+    - P_small
+    - P_medium
+    - P_large
+
+gpn_star:
+  V_small:
+    model_path: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results/checkpoints/hg38/fire_1/0.2/multiz100way/100/128/64/True/defined.phastCons100way.percentile-75_0.05_0.001/small/0.1/42/150000/True/True/0.1
+    msa_path: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results/msa/hg38/multiz100way/100
+    phylo_info_path: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results/phylo_info/hg38/multiz100way/100/phylo_dist/0.2
+    window_size: 128
+
+  V_medium:
+    model_path: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results/checkpoints/hg38/fire_1/0.2/multiz100way/100/128/64/True/defined.phastCons100way.percentile-75_0.05_0.001/medium/0.1/42/150000/True/True/0.1
+    msa_path: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results/msa/hg38/multiz100way/100
+    phylo_info_path: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results/phylo_info/hg38/multiz100way/100/phylo_dist/0.2
+    window_size: 128
+
+  V_large:
+    model_path: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results/checkpoints/hg38/fire_1/0.2/multiz100way/100/128/64/True/defined.phastCons100way.percentile-75_0.05_0.001/large/0.1/42/200000/True/True/0.1
+    msa_path: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results/msa/hg38/multiz100way/100
+    phylo_info_path: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results/phylo_info/hg38/multiz100way/100/phylo_dist/0.2
+    window_size: 128
+
+  M_small:
+    model_path: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results/checkpoints/hg38/fire_1/0.05/cactus447way/447/256/128/True/defined.phastCons470way.percentile-75_0.05_0.001/small/0.1/42/150000/True/True/0.1
+    msa_path: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results/msa/hg38/cactus447way/447
+    phylo_info_path: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results/phylo_info/hg38/cactus447way/447/phylo_dist/0.05
+    window_size: 256
+
+  M_medium:
+    model_path: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results/checkpoints/hg38/fire_1/0.05/cactus447way/447/256/128/True/defined.phastCons470way.percentile-75_0.05_0.001/medium/0.1/42/150000/True/True/0.1
+    msa_path: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results/msa/hg38/cactus447way/447
+    phylo_info_path: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results/phylo_info/hg38/cactus447way/447/phylo_dist/0.05
+    window_size: 256
+
+  M_large:
+    model_path: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results/checkpoints/hg38/fire_1/0.05/cactus447way/447/256/128/True/defined.phastCons470way.percentile-75_0.05_0.001/large/0.1/42/200000/True/True/0.1
+    msa_path: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results/msa/hg38/cactus447way/447
+    phylo_info_path: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results/phylo_info/hg38/cactus447way/447/phylo_dist/0.05
+    window_size: 256
+
+  P_small:
+    model_path: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results/checkpoints/hg38/fire_1/0.05/cactus447way/243/256/128/True/defined.phastCons43way.percentile-75_0.05_0.001/small/0.1/42/150000/True/True/0.2
+    msa_path: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results/msa/hg38/cactus447way/243
+    phylo_info_path: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results/phylo_info/hg38/cactus447way/243/phylo_dist/0.05
+    window_size: 256
+
+  P_medium:
+    model_path: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results/checkpoints/hg38/fire_1/0.05/cactus447way/243/256/128/True/defined.phastCons43way.percentile-75_0.05_0.001/medium/0.1/42/150000/True/True/0.2
+    msa_path: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results/msa/hg38/cactus447way/243
+    phylo_info_path: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results/phylo_info/hg38/cactus447way/243/phylo_dist/0.05
+    window_size: 256
+
+  P_large:
+    model_path: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results/checkpoints/hg38/fire_1/0.05/cactus447way/243/256/128/True/defined.phastCons43way.percentile-75_0.05_0.001/large/0.1/42/200000/True/True/0.2
+    msa_path: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results/msa/hg38/cactus447way/243
+    phylo_info_path: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results/phylo_info/hg38/cactus447way/243/phylo_dist/0.05
+    window_size: 256
+
+  dm6:
+    model_path: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results/checkpoints/dm6/fire_1/0.2/multiz124way/124/128/64/True/defined.phastCons124way.percentile-75_0.05_0.001/medium/0.1/42/50000/True/True/0.1
+    msa_path: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results/msa/dm6/multiz124way/124
+    phylo_info_path: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results/phylo_info/dm6/multiz124way/124/phylo_dist/0.2
+    window_size: 128
+
+nuc_dep:
+  TH:
+    chrom: "11"
+    start: 2171682
+    end: 2171868
+    strand: "-"
+  LDLR:
+    chrom: "19"
+    start: 11089299
+    end: 11089425
+    strand: "+"
+  HBA1:
+    chrom: "16"
+    start: 176699
+    end: 176955
+    strand: "+"
+  GRIA4:
+    chrom: "11"
+    start: 105609444
+    end: 105609472
+    strand: "+"
+  drosophila_MSE:
+    chrom: "2R"
+    start: 9977838
+    end: 9977966
+    strand: "+"
