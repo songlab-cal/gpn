@@ -1,12 +1,14 @@
 configfile: "config/config.yaml"
 
-include: "rules/common.smk"
 
+include: "rules/common.smk"
 include: "rules/nuc_dep.smk"
 include: "rules/umap.smk"
 
+
 models_human = config["models"]["human"]
 models_human_M_P = config["models"]["human_M_P"]
+
 
 rule all:
     input:

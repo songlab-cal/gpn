@@ -19,10 +19,10 @@ rule conservation_score:
         V = pd.read_parquet(input[0])
         bw = pyBigWig.open(input[1])
         V["score"] = V.progress_apply(
-            lambda v: bw.values(chr_prefix + v.chrom, v.pos-1, v.pos)[0], axis=1
+            lambda v: bw.values(chr_prefix + v.chrom, v.pos - 1, v.pos)[0], axis=1
         )
         V.score = -V.score
-        #V.score = V.score.fillna(0)
+        # V.score = V.score.fillna(0)
         V[["score"]].to_parquet(output[0], index=False)
 
 
@@ -31,7 +31,11 @@ rule conservation_download_plantregmap:
         temp("results/conservation/{ref}/{model}.bedGraph"),
     params:
         url=lambda wc: config["plantregmap"][wc.ref][wc.model],
-        chroms=lambda wc: "|".join(pd.read_csv(f"config/chrom_sizes/{wc.ref}.tsv", sep="\t", header=None)[0].tolist()),
+        chroms=lambda wc: "|".join(
+            pd.read_csv(f"config/chrom_sizes/{wc.ref}.tsv", sep="\t", header=None)[
+                0
+            ].tolist()
+        ),
     shell:
         r"""
         wget -O - {params.url} | \
@@ -42,6 +46,7 @@ rule conservation_download_plantregmap:
           awk 'BEGIN {{ OFS="\t" }} {{ $4 = sprintf("%.3f", $4); print }}' \
         > {output}
         """
+
 
 #        """
 #        wget -O - {params} | \

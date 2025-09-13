@@ -15,7 +15,8 @@ rule chicken_process_snp:
 
         V = (
             pl.read_csv(
-                input[0], separator="\t",
+                input[0],
+                separator="\t",
                 columns=["Chrom", "Pos", "Alleles", "minAllele", "MAF"],
                 schema_overrides={"Chrom": str},
             )
@@ -46,5 +47,5 @@ rule chicken_conservation:
             model=[
                 "phastCons77way",
                 "phyloP77way",
-            ]
+            ],
         ),

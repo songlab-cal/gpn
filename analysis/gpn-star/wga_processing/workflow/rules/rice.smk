@@ -28,8 +28,10 @@ rule rice_process_variants_2:
 
         V = (
             pl.read_csv(
-                input[0], has_header=False, separator="\t",
-                new_columns=COORDINATES + ["AC", "AN", "AF"]
+                input[0],
+                has_header=False,
+                separator="\t",
+                new_columns=COORDINATES + ["AC", "AN", "AF"],
             )
             .filter(pl.col("AF") != 0, pl.col("AF") != 1)
             .with_columns(
@@ -42,29 +44,29 @@ rule rice_process_variants_2:
 
 # 4,726 accessions
 # max possible AN: 2x4726 = 9452
-#In [5]: V["AN"].describe()
-#Out[5]: 
-#shape: (9, 2)
-#┌────────────┬─────────────┐
-#│ statistic  ┆ value       │
-#│ ---        ┆ ---         │
-#│ str        ┆ f64         │
-#╞════════════╪═════════════╡
-#│ count      ┆ 1.302961e7  │
-#│ null_count ┆ 0.0         │
-#│ mean       ┆ 8219.509975 │
-#│ std        ┆ 1980.559461 │
-#│ min        ┆ 6.0         │
-#│ 25%        ┆ 7772.0      │
-#│ 50%        ┆ 9328.0      │
-#│ 75%        ┆ 9448.0      │
-#│ max        ┆ 9452.0      │
-#└────────────┴─────────────┘
+# In [5]: V["AN"].describe()
+# Out[5]:
+# shape: (9, 2)
+# ┌────────────┬─────────────┐
+# │ statistic  ┆ value       │
+# │ ---        ┆ ---         │
+# │ str        ┆ f64         │
+# ╞════════════╪═════════════╡
+# │ count      ┆ 1.302961e7  │
+# │ null_count ┆ 0.0         │
+# │ mean       ┆ 8219.509975 │
+# │ std        ┆ 1980.559461 │
+# │ min        ┆ 6.0         │
+# │ 25%        ┆ 7772.0      │
+# │ 50%        ┆ 9328.0      │
+# │ 75%        ┆ 9448.0      │
+# │ max        ┆ 9452.0      │
+# └────────────┴─────────────┘
 
 
 # rice also seems to be selfing
 # In [4]: V["AC"].describe()
-# Out[4]: 
+# Out[4]:
 # shape: (9, 2)
 # ┌────────────┬─────────────┐
 # │ statistic  ┆ value       │
@@ -98,11 +100,13 @@ rule rice_filter_variants:
             pl.read_parquet(input[0])
             .filter(pl.col("AN") > min_AN_threshold)
             .with_columns(
-                pl.when(pl.col("AC") == 2).then(True)
-                .when(pl.col("AF") > 20/100).then(False)
+                pl.when(pl.col("AC") == 2)
+                .then(True)
+                .when(pl.col("AF") > 20 / 100)
+                .then(False)
                 .otherwise(None)
                 .alias("label")
-            ) 
+            )
             .drop_nulls(subset="label")
         )
         print(V["label"].value_counts())
@@ -116,5 +120,5 @@ rule rice_conservation:
             model=[
                 "phastCons9way",
                 "phyloP9way",
-            ]
+            ],
         ),

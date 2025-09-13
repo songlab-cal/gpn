@@ -33,7 +33,10 @@ rule interpretation_intervals_cre_process:
     run:
         (
             pl.read_csv(
-                input[0], separator="\t", has_header=False, columns=[0, 1, 2, 5],
+                input[0],
+                separator="\t",
+                has_header=False,
+                columns=[0, 1, 2, 5],
                 new_columns=["chrom", "start", "end", "label"],
             )
             .with_columns(pl.col("chrom").str.replace("chr", ""))
@@ -87,10 +90,20 @@ rule interpretation_intervals_feature:
     run:
         df = (
             pl.read_csv(
-                input[0], has_header=False, separator="\t", comment_prefix="#",
+                input[0],
+                has_header=False,
+                separator="\t",
+                comment_prefix="#",
                 new_columns=[
-                    "chrom", "source", "feature", "start", "end", "score", "strand",
-                    "frame", "attribute",
+                    "chrom",
+                    "source",
+                    "feature",
+                    "start",
+                    "end",
+                    "score",
+                    "strand",
+                    "frame",
+                    "attribute",
                 ],
                 schema_overrides={"chrom": str},
             )
@@ -100,7 +113,11 @@ rule interpretation_intervals_feature:
             .select(["chrom", "start", "end"])
             .to_pandas()
         )
-        df = bf.merge(df).drop(columns="n_intervals").sort_values(["chrom", "start", "end"])
+        df = (
+            bf.merge(df)
+            .drop(columns="n_intervals")
+            .sort_values(["chrom", "start", "end"])
+        )
         print(df)
         df.to_parquet(output[0], index=False)
 
@@ -112,20 +129,29 @@ rule interpretation_intervals_lnc_RNA:
         "results/interpretation/intervals/lnc_RNA.parquet",
     run:
         import pyranges as pr
+
         gr = pr.read_gff3(input[0])
 
         # ── 2. Collect transcript IDs whose feature type == "lnc_RNA" ────────────────
         lnc_tx_ids = set(
-            gr[(gr.Feature == "lnc_RNA")].df["ID"]        # e.g. "transcript:ENST00000832824"
+            gr[(gr.Feature == "lnc_RNA")].df["ID"]  # e.g. "transcript:ENST00000832824"
         )
 
         # ── 3. Filter exon rows whose Parent attribute matches one of those IDs ─────
-        exon_df   = gr[gr.Feature == "exon"].df
+        exon_df = gr[gr.Feature == "exon"].df
         df = exon_df[exon_df["Parent"].isin(lnc_tx_ids)]
-        df = df.rename(columns={
-            "Chromosome": "chrom", "Start": "start", "End": "end",
-        })[["chrom", "start", "end"]]
-        df = bf.merge(df).drop(columns="n_intervals").sort_values(["chrom", "start", "end"])
+        df = df.rename(
+            columns={
+                "Chromosome": "chrom",
+                "Start": "start",
+                "End": "end",
+            }
+        )[["chrom", "start", "end"]]
+        df = (
+            bf.merge(df)
+            .drop(columns="n_intervals")
+            .sort_values(["chrom", "start", "end"])
+        )
         df = df[df.chrom.isin(CHROMS)]
         print(df)
         df.to_parquet(output[0], index=False)
@@ -140,18 +166,19 @@ rule interpretation_intervals_background:
     output:
         "results/interpretation/intervals/background.parquet",
     run:
-
         all_intervals = pd.read_parquet(input[0])
         # make sure you are far enough from undefined regions
         all_intervals = bf.expand(all_intervals, pad=-1024)
-        all_intervals = all_intervals[(all_intervals.end - all_intervals.start) >= CENTER_WINDOW_SIZE]
+        all_intervals = all_intervals[
+            (all_intervals.end - all_intervals.start) >= CENTER_WINDOW_SIZE
+        ]
         exon = pd.read_parquet(input[1])
         cre = pd.read_parquet(input[2])
         repeats = pd.read_parquet(input[3])
         exclude = bf.merge(
             bf.expand(
                 pd.concat([exon, cre, repeats]),
-                pad=100 # pad to make sure you are far enough from the intervals
+                pad=100,  # pad to make sure you are far enough from the intervals
             )
         ).drop(columns="n_intervals")
         background = bf.subtract(all_intervals, exclude)
@@ -170,7 +197,7 @@ rule interpretation_make_windows:
         df.to_parquet(output[0], index=False)
 
 
-#rule interpretation_intervals_genic:
+# rule interpretation_intervals_genic:
 #    input:
 #        "results/interpretation/annotation_select.gff.gz",
 #    output:
@@ -231,7 +258,7 @@ rule interpretation_intervals_genic_nonoverlapping_v2:
             df2.to_parquet(output_path, index=False)
 
 
-#rule interpretation_intervals_v1:
+# rule interpretation_intervals_v1:
 #    input:
 #        "results/interpretation/windows/background.parquet",
 #        "results/interpretation/windows/repeat.parquet",
@@ -333,7 +360,9 @@ rule interpretation_intervals_v6:
         cre = cre[cre.label.isin(["PLS", "dELS"])]
         background = pd.read_parquet(input[5]).assign(label="background")
         repeat = pd.read_parquet(input[6]).assign(label="repeat")
-        df = pd.concat([CDS, five_prime_UTR, three_prime_UTR, lnc_RNA, cre, background, repeat])
+        df = pd.concat(
+            [CDS, five_prime_UTR, three_prime_UTR, lnc_RNA, cre, background, repeat]
+        )
         assert ((df.end - df.start) == CENTER_WINDOW_SIZE).all()
         df = df[~df.chrom.isin(SEX_CHROMS)]
         df = df.sort_values(["chrom", "start", "end"])
@@ -393,7 +422,7 @@ rule interpretation_intervals_v8:
         df.to_parquet(output[0], index=False)
 
 
-#rule interpretation_intervals_v3:
+# rule interpretation_intervals_v3:
 #    input:
 #        "results/interpretation/windows/genic_cons.parquet",
 #        "results/interpretation/windows/cre_nonexonic_cons.parquet",
@@ -424,7 +453,7 @@ rule interpretation_intervals_cre_cell_type_download:
         #temp("results/interpretation/intervals/cre_{cell_type}.bed"),
         "results/interpretation/intervals/cre_{cell_type}.bed",
     params:
-        lambda wc: cre_cell_type[wc.cell_type]
+        lambda wc: cre_cell_type[wc.cell_type],
     shell:
         "wget -O {output} {params}"
 
@@ -439,7 +468,10 @@ rule interpretation_intervals_enhancer_cell_type:
     run:
         df = (
             pl.read_csv(
-                input[0], separator="\t", has_header=False, columns=[0, 1, 2, 9],
+                input[0],
+                separator="\t",
+                has_header=False,
+                columns=[0, 1, 2, 9],
                 new_columns=["chrom", "start", "end", "label"],
             )
             .filter(label="dELS")
@@ -459,15 +491,16 @@ rule interpretation_enhancer_merge:
     output:
         "results/interpretation/intervals/enhancer_merged.parquet",
     run:
-        df = pl.concat([
-            pl.read_parquet(path).with_columns(pl.lit(cell_type).alias("label"))
-            for cell_type, path in zip(cre_cell_types, input)
-        ])
+        df = pl.concat(
+            [
+                pl.read_parquet(path).with_columns(pl.lit(cell_type).alias("label"))
+                for cell_type, path in zip(cre_cell_types, input)
+            ]
+        )
         # some samples are male and some are female, we want to ignore such differences
         df = df.filter(~pl.col("chrom").is_in(SEX_CHROMS))
         df = (
-            df
-            .group_by(["chrom", "start", "end"])
+            df.group_by(["chrom", "start", "end"])
             .agg(pl.col("label").unique().sort().str.join(","))
             .sort(["chrom", "start", "end"])
         )
@@ -509,9 +542,12 @@ rule interpretation_subsample:
     run:
         n = int(wildcards.n)
         df = pd.read_parquet(input[0])
-        df = df.groupby("label").apply(
-            lambda x: x.sample(n=min(len(x), n), random_state=42)
-        ).reset_index(drop=True).sort_values(["chrom", "start", "end"])  # Changed "center" to "start"
+        df = (
+            df.groupby("label")
+            .apply(lambda x: x.sample(n=min(len(x), n), random_state=42))
+            .reset_index(drop=True)
+            .sort_values(["chrom", "start", "end"])
+        )  # Changed "center" to "start"
         print(df.label.value_counts())
         df.to_parquet(output[0], index=False)
 
@@ -528,14 +564,21 @@ rule interpretation_subsample_stratified:
         df_background = df[background_mask]
         df_foreground = df[~background_mask]
 
-        res_background = df_background.sample(n=min(len(df_background), n), random_state=42)
+        res_background = df_background.sample(
+            n=min(len(df_background), n), random_state=42
+        )
 
         df_foreground["conserved"] = df_foreground.cons >= 1
-        res_foreground = df_foreground.groupby(["label", "conserved"]).apply(
-            lambda x: x.sample(n=min(len(x), n//2), random_state=42)
-        ).reset_index(drop=True).drop(columns="conserved")
+        res_foreground = (
+            df_foreground.groupby(["label", "conserved"])
+            .apply(lambda x: x.sample(n=min(len(x), n // 2), random_state=42))
+            .reset_index(drop=True)
+            .drop(columns="conserved")
+        )
 
-        res = pd.concat([res_background, res_foreground]).sort_values(["chrom", "start", "end"])
+        res = pd.concat([res_background, res_foreground]).sort_values(
+            ["chrom", "start", "end"]
+        )
         print(res.label.value_counts())
         res.to_parquet(output[0], index=False)
 
@@ -551,8 +594,7 @@ rule interpretation_embed:
         phylo_info_path=lambda wc: config["gpn_star"][wc.model]["phylo_info_path"],
         window_size=lambda wc: config["gpn_star"][wc.model]["window_size"],
         center_window_size=CENTER_WINDOW_SIZE,
-    threads:
-        workflow.cores
+    threads: workflow.cores
     shell:
         "python workflow/scripts/window_embed.py {input} {params.model_path} {params.msa_path} {params.phylo_info_path} {params.window_size} {params.center_window_size} {output}"
 
@@ -568,10 +610,12 @@ rule interpretation_umap:
         from umap import UMAP
 
         embed = pd.read_parquet(input[0])
-        proj = Pipeline([
-            ("scaler", StandardScaler()),
-            ("umap", UMAP(random_state=42, verbose=True)),
-        ]).fit_transform(embed)
+        proj = Pipeline(
+            [
+                ("scaler", StandardScaler()),
+                ("umap", UMAP(random_state=42, verbose=True)),
+            ]
+        ).fit_transform(embed)
         proj = pd.DataFrame(proj, columns=["UMAP1", "UMAP2"])
         proj.to_parquet(output[0], index=False)
 
@@ -592,14 +636,16 @@ rule interpretation_umap_plot:
         proj_cols = proj.columns
         assert len(windows) == len(proj)
         df = pd.concat([windows, proj], axis=1)
-        df.label = df.label.replace({
-            "five_prime_UTR": "5' UTR",
-            "three_prime_UTR": "3' UTR",
-            "PLS": "Promoter",
-            "dELS": "Enhancer",
-            "lnc_RNA": "lncRNA",
-            "background": "Background",
-        })
+        df.label = df.label.replace(
+            {
+                "five_prime_UTR": "5' UTR",
+                "three_prime_UTR": "3' UTR",
+                "PLS": "Promoter",
+                "dELS": "Enhancer",
+                "lnc_RNA": "lncRNA",
+                "background": "Background",
+            }
+        )
         label_order = [
             "CDS",
             "5' UTR",
@@ -633,10 +679,10 @@ rule interpretation_umap_plot:
             hue_order=label_order,
             rasterized=True,
         )
-        sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1));
-        g.legend_.set_title("Region");
+        sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
+        g.legend_.set_title("Region")
         for handle in g.legend_.legend_handles:
-            handle.set_markersize(8) 
+            handle.set_markersize(8)
             handle.set_alpha(1.0)
         sns.despine()
         plt.xticks([])
@@ -659,13 +705,12 @@ rule interpretation_umap_plot:
             hue="cons",
             rasterized=True,
         )
-        sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1));
-        g.legend_.set_title("Conservation");
+        sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
+        g.legend_.set_title("Conservation")
         for handle in g.legend_.legend_handles:
-            handle.set_markersize(8) 
+            handle.set_markersize(8)
             handle.set_alpha(1.0)
         sns.despine()
         plt.xticks([])
         plt.yticks([])
         plt.savefig(output[1], bbox_inches="tight", dpi=200)
-

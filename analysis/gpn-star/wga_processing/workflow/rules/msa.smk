@@ -35,7 +35,7 @@ rule download_tree:
     output:
         "results/tree/{ref}_{msa}.nh",
     params:
-        lambda wildcards: wildcards.msa.replace("multiz", "")
+        lambda wildcards: wildcards.msa.replace("multiz", ""),
     shell:
         "wget -O {output} https://hgdownload.soe.ucsc.edu/goldenPath/{wildcards.ref}/{wildcards.msa}/{wildcards.ref}.{params}.nh"
 
@@ -47,11 +47,14 @@ rule extract_species:
         "results/species/{ref}_{msa}.txt",
     run:
         from Bio import Phylo
+
         tree = Phylo.read(input[0], "newick")
         species = pd.DataFrame(index=[node.name for node in tree.get_terminals()])
         ref = wildcards.ref
         assert species.index.values[0] == config["reference_renaming"].get(ref, ref)
-        species.index = species.index.map(lambda s: config["species_renaming"].get(s, s))
+        species.index = species.index.map(
+            lambda s: config["species_renaming"].get(s, s)
+        )
         species.to_csv(output[0], header=False, columns=[])
 
 
@@ -75,13 +78,15 @@ rule make_msa_chrom:
             MSA.loc[s] = missing_seq
 
         MSA = MSA[species]
-        MSA = np.vstack(MSA.apply(
-            lambda seq: np.frombuffer(seq.upper().encode("ascii"), dtype="S1")
-        ))
+        MSA = np.vstack(
+            MSA.apply(
+                lambda seq: np.frombuffer(seq.upper().encode("ascii"), dtype="S1")
+            )
+        )
         # let's only keep non-gaps in reference
-        MSA = MSA[:, MSA[0]!=b'-']
+        MSA = MSA[:, MSA[0] != b"-"]
         MSA = MSA.T
-        vocab = np.frombuffer("ACGT-".encode('ascii'), dtype="S1")
+        vocab = np.frombuffer("ACGT-".encode("ascii"), dtype="S1")
         # decision: consider all "N" and similar as "-"
         # might not be the best, some aligners have a distinction
         # between N, or unaligned, and gap
@@ -100,7 +105,7 @@ rule merge_msa_chroms:
     threads: workflow.cores
     run:
         chroms = config["chroms"][wildcards.msa]
-        z = zarr.open_group(output[0], mode='w')
+        z = zarr.open_group(output[0], mode="w")
         for chrom, path in tqdm(zip(chroms, input), total=len(chroms)):
             data = np.load(path)
             z.create_dataset(
@@ -113,8 +118,7 @@ rule compress_msa:
         "results/msa/{msa}.zarr",
     output:
         "results/msa/{msa}.tar.gz",
-    threads:
-        workflow.cores
+    threads: workflow.cores
     shell:
         "tar cf - {input} | pigz -p {threads} > {output}"
 
@@ -125,9 +129,10 @@ rule hf_upload:
         "results/species/{msa}.txt",
         "results/tree/{msa}.nh",
     output:
-        touch("results/upload/{msa}.done")
+        touch("results/upload/{msa}.done"),
     run:
         from huggingface_hub import HfApi
+
         api = HfApi()
         private = False
         repo_id = config["hf"]["username"] + "/" + wildcards.msa
@@ -136,8 +141,10 @@ rule hf_upload:
         paths_in_repo = ["msa.tar.gz", "species.txt", "tree.nh"]
         for path, path_in_repo in zip(input, paths_in_repo):
             api.upload_file(
-                path_or_fileobj=path, path_in_repo=path_in_repo,
-                repo_id=repo_id, repo_type="dataset"
+                path_or_fileobj=path,
+                path_in_repo=path_in_repo,
+                repo_id=repo_id,
+                repo_type="dataset",
             )
 
 
@@ -150,6 +157,7 @@ rule download_tree_dm6_multiz124way:
 
 
 ruleorder: download_tree_dm6_multiz124way > download_tree
+
 
 # slightly different url format
 rule download_maf_ce11_multiz135way:
@@ -164,6 +172,7 @@ ruleorder: download_maf_ce11_multiz135way > download_maf
 
 # arabidopsis has a lot of custom code since it's not from UCSC Genome Browser
 # but from PlantRegMap
+
 
 rule download_genome_maf_arabidopsis:
     output:
@@ -181,7 +190,7 @@ rule split_genome_maf_arabidopsis:
     output:
         expand(
             "results/maf/tair10_multiz18way/Chr{chrom}.maf",
-            chrom=config["chroms"]["tair10_multiz18way"]
+            chrom=config["chroms"]["tair10_multiz18way"],
         ),
     params:
         "results/maf/tair10_multiz18way/",

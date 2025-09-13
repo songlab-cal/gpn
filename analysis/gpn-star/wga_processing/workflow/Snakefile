@@ -1,15 +1,15 @@
 configfile: "config/config.yaml"
 
+
 include: "rules/common.smk"
-
 include: "rules/msa.smk"
-
 include: "rules/arabidopsis.smk"
 include: "rules/chicken.smk"
 include: "rules/conservation.smk"
 include: "rules/c_elegans.smk"
 include: "rules/drosophila.smk"
 include: "rules/rice.smk"
+
 
 rule all:
     input:

@@ -10,8 +10,7 @@ rule interpretation_nuc_dep:
         lambda wc: config["gpn_star"][wc.model]["msa_path"],
         lambda wc: config["gpn_star"][wc.model]["phylo_info_path"],
         lambda wc: config["gpn_star"][wc.model]["window_size"],
-    threads:
-        workflow.cores
+    threads: workflow.cores
     shell:
         "python workflow/scripts/nuc_dep.py {params} {output}"
 
@@ -38,7 +37,7 @@ rule interpretation_nuc_dep_plot:
         plt.figure(figsize=(4, 4))
         g = sns.heatmap(
             contact,
-            cmap='coolwarm',
+            cmap="coolwarm",
             square=True,
             cbar=False,
             xticklabels=False,
@@ -46,11 +45,11 @@ rule interpretation_nuc_dep_plot:
             robust=True,
             rasterized=True,
         )
-        coords_int   = contact.columns.astype(int)
-        tick_freq = 50 if end-start > 100 else 10
-        mask         = (coords_int % tick_freq == 0)
-        xtick_idx    = np.where(mask)[0]
-        xtick_labels = [f'{coords_int[i]:,}' for i in xtick_idx]
+        coords_int = contact.columns.astype(int)
+        tick_freq = 50 if end - start > 100 else 10
+        mask = coords_int % tick_freq == 0
+        xtick_idx = np.where(mask)[0]
+        xtick_labels = [f"{coords_int[i]:,}" for i in xtick_idx]
 
         ## --- Add this code to overlay the squares ---
         for start, end in squares:
@@ -63,21 +62,21 @@ rule interpretation_nuc_dep_plot:
                 width,
                 height,
                 linewidth=1,
-                edgecolor='black',
-                facecolor='none' # This creates a no-fill square
+                edgecolor="black",
+                facecolor="none",  # This creates a no-fill square
             )
             g.add_patch(rect)
 
-        # --- This new block overlays the off-diagonal interaction squares ---
+            # --- This new block overlays the off-diagonal interaction squares ---
         for (start1, end1), (start2, end2) in combinations(squares, 2):
             width1 = end1 - start1
             width2 = end2 - start2
 
-            #linewidth = 2
+            # linewidth = 2
             linewidth = 1
             edgecolor = "black"
             linestyle = "--"
-            #linestyle = None
+            # linestyle = None
 
             # Off-diagonal rectangle 1
             rect1 = patches.Rectangle(
@@ -86,8 +85,8 @@ rule interpretation_nuc_dep_plot:
                 width2,
                 linewidth=linewidth,
                 edgecolor=edgecolor,
-                facecolor='none',
-                linestyle=linestyle  # Dashed line style
+                facecolor="none",
+                linestyle=linestyle,  # Dashed line style
             )
             g.add_patch(rect1)
 
@@ -98,12 +97,12 @@ rule interpretation_nuc_dep_plot:
                 width1,
                 linewidth=linewidth,
                 edgecolor=edgecolor,
-                facecolor='none',
-                linestyle=linestyle  # Dashed line style
+                facecolor="none",
+                linestyle=linestyle,  # Dashed line style
             )
             g.add_patch(rect2)
 
         g.set_xticks(xtick_idx)
-        g.set_xticklabels(xtick_labels, rotation=0, ha='center', fontsize=8)
-        g.set_xlabel(f'Genomic position (chr{chrom})')
+        g.set_xticklabels(xtick_labels, rotation=0, ha="center", fontsize=8)
+        g.set_xlabel(f"Genomic position (chr{chrom})")
         plt.savefig(output[0], bbox_inches="tight", dpi=200)

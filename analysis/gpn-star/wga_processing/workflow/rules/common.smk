@@ -9,7 +9,6 @@ COORDINATES = ["chrom", "pos", "ref", "alt"]
 NUCLEOTIDES = list("ACGT")
 
 
-
 rule make_ensembl_vep_input:
     input:
         "{anything}.parquet",
@@ -23,7 +22,10 @@ rule make_ensembl_vep_input:
         df["allele"] = df.ref + "/" + df.alt
         df["strand"] = "+"
         df.to_csv(
-            output[0], sep="\t", header=False, index=False,
+            output[0],
+            sep="\t",
+            header=False,
+            index=False,
             columns=["chrom", "start", "end", "allele", "strand"],
         )
 
@@ -47,11 +49,11 @@ rule install_ensembl_vep_cache:
 
 # cd results/ensembl_vep_cache/tair10
 # wget https://ftp.ebi.ac.uk/ensemblgenomes/pub/plants/current/variation/indexed_vep_cache/arabidopsis_thaliana_vep_60_TAIR10.tar.gz
-# tar xzf arabidopsis_thaliana_vep_60_TAIR10.tar.gz 
+# tar xzf arabidopsis_thaliana_vep_60_TAIR10.tar.gz
 
-#ruleorder: install_ensembl_vep_cache_tair10 > install_ensembl_vep_cache
+# ruleorder: install_ensembl_vep_cache_tair10 > install_ensembl_vep_cache
 #
-#rule install_ensembl_vep_cache_tair10:
+# rule install_ensembl_vep_cache_tair10:
 #    output:
 #        directory("results/ensembl_vep_cache/{ref,tair10}"),
 #    params:
@@ -115,15 +117,14 @@ rule process_ensembl_vep:
     run:
         V = pd.read_parquet(input[0])
         V2 = pd.read_csv(
-            input[1], sep="\t", header=None, comment="#",
-            usecols=[0, 6]
+            input[1], sep="\t", header=None, comment="#", usecols=[0, 6]
         ).rename(columns={0: "variant", 6: "consequence"})
         V2["chrom"] = V2.variant.str.split("_").str[0]
         V2["pos"] = V2.variant.str.split("_").str[1].astype(int)
         V2["ref"] = V2.variant.str.split("_").str[2].str.split("/").str[0]
         V2["alt"] = V2.variant.str.split("_").str[2].str.split("/").str[1]
         V2.drop(columns=["variant"], inplace=True)
-        #V = V.merge(V2, on=COORDINATES, how="inner")
+        # V = V.merge(V2, on=COORDINATES, how="inner")
         V = V.merge(V2, on=COORDINATES, how="left")
         print(V)
         V.to_parquet(output[0], index=False)

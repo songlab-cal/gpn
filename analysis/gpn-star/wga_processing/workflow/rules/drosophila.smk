@@ -15,11 +15,18 @@ rule drosophila_process_snp:
 
         rows = []
         for variant in tqdm(VCF(input[0]), total=4_801_114):
-            if variant.FILTER is not None: continue  # this is supposed to mean PASS
-            if len(variant.ALT) > 1: continue
-            rows.append([
-                variant.CHROM, variant.POS, variant.REF, variant.ALT[0],
-                variant.INFO.get("AF")]
+            if variant.FILTER is not None:
+                continue  # this is supposed to mean PASS
+            if len(variant.ALT) > 1:
+                continue
+            rows.append(
+                [
+                    variant.CHROM,
+                    variant.POS,
+                    variant.REF,
+                    variant.ALT[0],
+                    variant.INFO.get("AF"),
+                ]
             )
         V = pd.DataFrame(rows, columns=["chrom", "pos", "ref", "alt", "AF"])
         V = V[V.ref.isin(NUCLEOTIDES) & V.alt.isin(NUCLEOTIDES)]
