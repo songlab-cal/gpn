@@ -1,0 +1,147 @@
+from Bio import SeqIO
+from Bio.Seq import Seq
+import bioframe as bf
+from datasets import load_dataset, disable_caching, Dataset
+from gpn.star.data import load_fasta, load_table, Genome, load_dataset_from_file_or_dir
+from gpn.star.data import (
+    filter_defined, filter_length, load_table, add_flank, get_annotation_features,
+    add_jitter, get_promoters, get_random_intervals, union_intervals,
+    intersect_intervals, intervals_size, get_balanced_intervals,
+)
+from gpn.star.data import make_windows, get_seq
+from gpn.star.data import GenomeMSA
+from gpn.star.utils import normalize_logits, get_entropy
+import gzip
+from joblib import Parallel, delayed
+import numpy as np
+import os
+import pandas as pd
+from pathlib import Path
+import scipy.sparse as sp_sparse
+from scipy.special import softmax
+from scipy.stats import combine_pvalues, entropy
+from tqdm import tqdm
+tqdm.pandas()
+
+
+NUCLEOTIDES = list("ACGT")
+WINDOW_SIZE = 128
+FASTA_URLS = {"dm6": "https://ftp.ensembl.org/pub/release-107/fasta/drosophila_melanogaster/dna/Drosophila_melanogaster.BDGP6.32.dna_sm.toplevel.fa.gz"}
+
+CALIBRATION_CONFIGS = {
+    "use_ancestral_repeats": False,
+    "target_repeats": None,
+    "outgroup_repeats": None,
+    "chain_file": None,
+    "phylop": "phyloP124way",
+    "phastcons": "phastCons124way",
+}
+
+SEX_CHROMS = ['X', 'Y']
+
+SPLIT_CHROMS = {
+    "train": ['2L', '3L', '3R'] + SEX_CHROMS,
+    "validation": ["2R"],
+    "test": ["4"],
+}
+
+AUTOSOMES = ['2L', '2R', '3L', '3R', '4']
+
+SPLITS = SPLIT_CHROMS.keys()
+
+CHROMS = np.concatenate(list(SPLIT_CHROMS.values()))
+
+PHYLOP_PHASTCONS_GROUP = {'phastCons124way': 'phyloP124way'}
+
+vep_datasets = [
+    "songlab/flybase_lethal",
+    #"results/drosophila_snps/rare_vs_common",
+    #"results/flybase/filtered",
+]
+
+model_template = "{genome}/{time_enc}/{clade_thres}/{dataset}/{model_size}/{loss_weight}/{seed}/{max_steps}/{use_aux_features}/{weight_conserved}/{flip_nonconserved}"
+
+# default is first
+hparams = {
+    "dataset": [
+        "multiz124way/124/128/64/True/defined.phastCons124way.percentile-75_0.05_0.001",
+    ],
+
+    "interval": [
+        "128/64/True/defined.phastCons124way.percentile-75_0.05_0.001",
+    ],
+    
+    "genome": [
+        "dm6",
+    ],
+
+    "time_enc": [
+        "fire_1",
+    ],
+
+    "clade_thres": [
+        "0.2",
+    ],
+
+    "use_aux_features": [
+        True,
+    ],
+    "loss_weight": [
+        0.1,
+    ],
+    "weight_conserved": [
+        True,
+    ],
+    "flip_nonconserved": [
+        0.1,
+    ],
+}
+
+default_d = {k: v[0] for k, v in hparams.items()}
+hparam_models = [expand(model_template, **default_d, allow_missing=True)[0]]
+
+# one ablation at a time
+for k, v in hparams.items():
+    for vv in v[1:]:
+        new_d = default_d.copy()
+        new_d[k] = vv
+        hparam_models.append(expand(model_template, **new_d, allow_missing=True)[0])
+
+models = sum(
+    [
+        expand(
+            m,
+            seed=[
+                42,
+            ],
+            max_steps=[
+                50_000,
+            ],
+            model_size=[
+                "small",
+                #"medium",
+            ],
+        ) for m in hparam_models
+    ],
+    []
+)
+best_model = models[0]
+#models = [best_model]
+
+include: "rules/common.smk"
+include: "rules/training.smk"
+include: "rules/vep.smk"
+include: "rules/logits.smk"
+include: "rules/calibration.smk"
+#include: "rules/embeddings.smk"
+include: "rules/conservation.smk"
+
+#models += ['dm6/phastCons124way', 'dm6/phyloP124way']
+
+print(models)
+print(vep_datasets)
+
+rule all:
+    input:
+        #expand("results/checkpoints/{model}", model=models),
+        expand("results/preds/llr/{dataset}/{model}.parquet", model=models, dataset=vep_datasets),

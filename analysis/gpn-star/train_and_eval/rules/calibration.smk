@@ -9,24 +9,26 @@ rule get_ancestral_repeats:
     run:
         if params.use_ancestral_repeats:
             shell("""
-            wget -O rmsk_target.txt.gz {params.target}
-            wget -O rmsk_outgroup.txt.gz {params.outgroup}
+            wget -O results/calibration/{wildcards.genome}/rmsk_target.txt.gz {params.target}
+            wget -O results/calibration/{wildcards.genome}/rmsk_outgroup.txt.gz {params.outgroup}
 
-            gunzip -c rmsk_target.txt.gz | awk 'BEGIN{{OFS="\t"}}{{print $6,$7,$8,$11,$2,$13}}' \
-            > target.rmsk.bed
-            gunzip -c rmsk_outgroup.txt.gz | awk 'BEGIN{{OFS="\t"}}{{print $6,$7,$8,$11,$2,$13}}' \
-            > outgroup.rmsk.bed
+            gunzip -c results/calibration/{wildcards.genome}/rmsk_target.txt.gz | awk 'BEGIN{{OFS="\t"}}{{print $6,$7,$8,$11,$2,$13}}' \
+            > results/calibration/{wildcards.genome}/target.rmsk.bed
+            gunzip -c results/calibration/{wildcards.genome}/rmsk_outgroup.txt.gz | awk 'BEGIN{{OFS="\t"}}{{print $6,$7,$8,$11,$2,$13}}' \
+            > results/calibration/{wildcards.genome}/outgroup.rmsk.bed
 
             # Grab the reciprocal-best chain file
-            wget -O {params.chain}
-            gunzip {params.chain}
+            wget -O results/calibration/{wildcards.genome}/rbest.chain.gz {params.chain}
+            gunzip -f results/calibration/{wildcards.genome}/rbest.chain.gz
 
             # LiftOver
-            liftOver outgroup.rmsk.bed {params.chain} outgroup_in_target.bed outgroup_unmapped.bed
+            liftOver results/calibration/{wildcards.genome}/outgroup.rmsk.bed results/calibration/{wildcards.genome}/rbest.chain \
+            results/calibration/{wildcards.genome}/outgroup_in_target.bed \
+            results/calibration/{wildcards.genome}/outgroup_unmapped.bed
 
             bedtools intersect -u \
-            -a target.rmsk.bed \
-            -b outgroup_in_target.bed \
+            -a results/calibration/{wildcards.genome}/target.rmsk.bed \
+            -b results/calibration/{wildcards.genome}/outgroup_in_target.bed \
             | awk '$5!="Simple_repeat" && $5!="Low_complexity"' \
             > {output}
             """)
@@ -34,10 +36,18 @@ rule get_ancestral_repeats:
             shell("touch {output}")
 
 
+def get_phylop_calibration(wc):
+    """Return path to the .bw file based on a lookup table."""
+    return f"results/conservation/{wc.genome}/{CALIBRATION_CONFIGS['phylop']}.bw"
+
+def get_phastcons_calibration(wc):
+    """Return path to the .bw file based on a lookup table."""
+    return f"results/conservation/{wc.genome}/{CALIBRATION_CONFIGS['phastcons']}.bw"
+
 rule get_conserved_sites:
     input:
-        "results/conservation/{genome}/{CALIBRATION_CONFIGS['phylop']}.bw",
-        "results/conservation/{genome}/{CALIBRATION_CONFIGS['phastcons']}.bw",
+        get_phylop_calibration,
+        get_phastcons_calibration,
     output:
         "results/calibration/{genome}/conserved_sites.bed",
     run:
@@ -94,7 +104,7 @@ rule get_conserved_sites:
                         v2 = np.array(phastcons.values(chrom, win_start, win_end, numpy=True))
 
                         # pyBigWig returns np.nan for absent data; treat those as not-zero
-                        mask = (np.abs(v1) < phylop_threshold) & (v2 < 0.1)
+                        mask = (np.abs(v1) < phylop_threshold) & (v2 == 0)
 
                         # emit merged regions
                         for s, e in contiguous_runs(mask):
@@ -106,16 +116,18 @@ rule get_conserved_sites:
         phylo.close()
         phastcons.close()
 
-
 rule get_neutral_calibration_dataset:
     input:
         "results/calibration/{genome}/ancestral_repeats.bed",
         "results/calibration/{genome}/conserved_sites.bed",
+        "results/genome/{genome}.fa.gz",
     output:
         "results/calibration/{genome}/calibration_dataset/test.parquet",
     run:
         import pyranges as pr
+        from gpn.star.data import Genome
 
+        genome = Genome(input[2])
         bed_conserved = pr.read_bed(input[1])
         bed_conserved.Chromosome = bed_conserved.Chromosome.astype(str).str.replace('chr', '')
 
@@ -134,20 +146,24 @@ rule get_neutral_calibration_dataset:
         neutral_sites = []
         for _, row in tqdm(bed_neutral.df.iterrows(), total=len(bed_neutral.df), desc="Processing intervals"):
             chrom = row['Chromosome']
+            if chrom not in CHROMS:
+                continue
             start = row['Start']
             end = row['End']
             # Generate all positions in the interval (convert 0-based to 1-based)
             for pos in range(start, end):
-                neutral_sites.append({'chrom': chrom, 'pos': pos + 1})
-        neutral_df = pd.DataFrame(neutral_df)
+                ref = genome._genome[chrom][pos].upper()
+                neutral_sites.append({'chrom': chrom, 'pos': pos + 1, 'ref': ref})
+        neutral_df = pd.DataFrame(neutral_sites)
+        print(neutral_df.shape)
 
-        neutral_df = neutral_df.loc[neutral_df['chrom'].isin(CHROMS)].reset_index(drop=True)
         valid_nucleotides = {'A', 'C', 'G', 'T'}
         valid_mask = neutral_df['ref'].isin(valid_nucleotides)
+        print(valid_mask.sum())
         neutral_df = neutral_df[valid_mask].reset_index(drop=True)
+        print(neutral_df.shape)
 
         neutral_df.to_parquet(output[0])
-
 
 rule get_neutral_calibration_scores:
     input:
@@ -157,6 +173,12 @@ rule get_neutral_calibration_scores:
     output: 
         "results/calibration/{genome}/{time_enc}/{clade_thres}/{alignment}/{species}/{window_size}/{model}/entropy.parquet",
         "results/calibration/{genome}/{time_enc}/{clade_thres}/{alignment}/{species}/{window_size}/{model}/llr.parquet",
+    wildcard_constraints:
+        time_enc="[A-Za-z0-9_-]+",
+        clade_thres="[0-9.-]+",
+        alignment="[A-Za-z0-9_]+",
+        species="[A-Za-z0-9_-]+",
+        window_size="\d+",
     run:
         V = pd.read_parquet(input[0])
         logits = pd.read_parquet(input[1])
@@ -165,7 +187,7 @@ rule get_neutral_calibration_scores:
 
         # Entropy
         V['pentanuc'] = V.apply(
-            lambda row: genome.get_seq(row['chrom'], row['pos']-3, row['pos']+2), axis=1
+            lambda row: genome.get_seq(row['chrom'], row['pos']-3, row['pos']+2).upper(), axis=1
         )
         V['entropy'] = get_entropy(normalized_logits)
         df_calibration_entropy = V.groupby('pentanuc')['entropy'].mean().reset_index()

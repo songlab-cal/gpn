@@ -51,7 +51,7 @@ rule get_logits:
         num_cpus={threads}
         dataloader_num_workers=$(($num_cpus / $num_gpus))
 
-        torchrun --nproc_per_node=$num_gpus -m gpn.evo.inference logits {input[0]} {input[1]} {wildcards.window_size} {input[2]} {output} \
+        torchrun --nproc_per_node=$num_gpus -m gpn.star.inference logits {input[0]} {input[1]} {wildcards.window_size} {input[2]} {output} \
         --per_device_batch_size 8 --is_file \
         --dataloader_num_workers $dataloader_num_workers
         """
@@ -158,6 +158,35 @@ rule logits_merge_chroms:
 #        V.write_parquet(output[0])
 #        #V.to_pandas().to_parquet(output[0], index=False)
 
+rule get_calibration_logits:
+    input:
+        "results/msa/{genome}/{alignment}/{species}",
+        "results/checkpoints/{genome}/{time_enc}/{clade_thres}/{alignment}/{species}/{window_size}/{model}",
+        "results/calibration/{genome}/calibration_dataset/test.parquet",
+    output:
+        "results/logits/results/calibration/{genome}/calibration_dataset/{genome}/{time_enc}/{clade_thres}/{alignment}/{species}/{window_size}/{model}.parquet",
+    wildcard_constraints:
+        time_enc="[A-Za-z0-9_-]+",
+        clade_thres="[0-9.-]+",
+        alignment="[A-Za-z0-9_]+",
+        species="[A-Za-z0-9_-]+",
+        window_size="\d+",
+    params:
+        disable_aux_features = lambda wildcards: "disable_aux_features" if wildcards.model.split("/")[-3] == "False" else "",
+        dataset_dir = lambda wildcards, input: input[2].replace("/test.parquet", "")
+    threads:
+        workflow.cores
+    shell:
+    #$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}')
+        """
+        num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}')
+        num_cpus={threads}
+        dataloader_num_workers=$(($num_cpus / $num_gpus))
+
+        torchrun --nproc_per_node $num_gpus --master_port=25679 -m gpn.star.inference logits {params.dataset_dir} {input[0]} \
+        {wildcards.window_size} {input[1]} {output} \
+        --per_device_batch_size 32 --dataloader_num_workers $dataloader_num_workers {params.disable_aux_features}
+        """
 
 rule get_vep_logits:
     input:
@@ -166,7 +195,7 @@ rule get_vep_logits:
     output:
         "results/logits/{dataset}/{genome}/{time_enc}/{clade_thres}/{alignment}/{species}/{window_size}/{model}.parquet",
     wildcard_constraints:
-        dataset="|".join(datasets),# + ["results/variants_enformer", "results/gnomad/all/defined/128"]),
+        dataset="|".join(vep_datasets),# + ["results/variants_enformer", "results/gnomad/all/defined/128"]),
         time_enc="[A-Za-z0-9_-]+",
         clade_thres="[0-9.-]+",
         alignment="[A-Za-z0-9_]+",
@@ -183,7 +212,7 @@ rule get_vep_logits:
         num_cpus={threads}
         dataloader_num_workers=$(($num_cpus / $num_gpus))
 
-        torchrun --nproc_per_node $num_gpus --master_port=25679 -m gpn.evo.inference logits {wildcards.dataset} {input[0]} \
+        torchrun --nproc_per_node $num_gpus --master_port=25679 -m gpn.star.inference logits {wildcards.dataset} {input[0]} \
         {wildcards.window_size} {input[1]} {output} \
         --per_device_batch_size 32 --dataloader_num_workers $dataloader_num_workers {params.disable_aux_features}
         """

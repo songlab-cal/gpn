@@ -1,16 +1,16 @@
 from Bio import SeqIO
 from Bio.Seq import Seq
 import bioframe as bf
-from datasets import load_dataset, disable_caching
-from gpn.data import load_fasta, load_table, Genome, load_dataset_from_file_or_dir
-from gpn.data import (
+from datasets import load_dataset, disable_caching, Dataset
+from gpn.star.data import load_fasta, load_table, Genome, load_dataset_from_file_or_dir
+from gpn.star.data import (
     filter_defined, filter_length, load_table, add_flank, get_annotation_features,
     add_jitter, get_promoters, get_random_intervals, union_intervals,
     intersect_intervals, intervals_size, get_balanced_intervals,
-    
 )
-from gpn.data import make_windows, get_seq
-from gpn.data import GenomeMSA
+from gpn.star.data import make_windows, get_seq
+from gpn.star.data import GenomeMSA
+from gpn.star.utils import normalize_logits, get_entropy
 import gzip
 from joblib import Parallel, delayed
 import numpy as np
@@ -26,8 +26,6 @@ tqdm.pandas()
 
 #configfile: "../config/config.yaml"
 
-
-# TODO: move into config/common.smk
 NUCLEOTIDES = list("ACGT")
 WINDOW_SIZE = 128
 FASTA_URLS = {"hg38": "http://ftp.ensembl.org/pub/release-107/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna_sm.primary_assembly.fa.gz"}
@@ -61,13 +59,16 @@ PHYLOP_PHASTCONS_GROUP = {'phastCons100way': 'phyloP100way',
                           }
 
 vep_datasets = [
-    'results/clinvar/vs_benign_v2',
-    'results/cosmic',
-    'results/dms',
-    'results/finemapped_coding',
-    'results/TraitGym/mendelian_traits_matched_9',
-    'results/TraitGym/complex_traits_matched_9',
-    'results/hgmd/matched_9',
+    #'songlab/clinvar_vs_benign',
+    'songlab/cosmic',
+    
+    #'results/clinvar/vs_benign_v2',
+    #'results/cosmic',
+    #'results/dms',
+    #'results/finemapped_coding',
+    #'results/TraitGym/mendelian_traits_matched_9',
+    #'results/TraitGym/complex_traits_matched_9',
+    #'results/hgmd/matched_9',
 
     #'results/gnomad/balanced',
     #'results/gnomad/gnocchi/z_bins',
@@ -84,14 +85,14 @@ model_template = "{genome}/{time_enc}/{clade_thres}/{dataset}/{model_size}/{loss
 hparams = {
     "dataset": [
         # vertebrate
-        #"multiz100way/100/128/64/True/defined.phastCons100way.percentile-75_0.05_0.001",
+        "multiz100way/100/128/64/True/defined.phastCons100way.percentile-75_0.05_0.001",
         #"multiz100way/100/256/128/True/defined.phastCons100way.percentile-75_0.05_0.001",
         #"multiz100way/100/512/256/True/defined.phastCons100way.percentile-75_0.05_0.001",
 
         # mammal
-        "cactus447way/447/128/64/True/defined.phastCons470way.percentile-75_0.05_0.001",
-        "cactus447way/447/256/128/True/defined.phastCons470way.percentile-75_0.05_0.001",
-        "cactus447way/447/512/256/True/defined.phastCons470way.percentile-75_0.05_0.001",
+        #"cactus447way/447/128/64/True/defined.phastCons470way.percentile-75_0.05_0.001",
+        #"cactus447way/447/256/128/True/defined.phastCons470way.percentile-75_0.05_0.001",
+        #"cactus447way/447/512/256/True/defined.phastCons470way.percentile-75_0.05_0.001",
 
         # primate
         #"cactus447way/243/128/64/True/defined.phastCons43way.percentile-75_0.05_0.001",
@@ -111,8 +112,8 @@ hparams = {
     ],
 
     "clade_thres": [
-        #"0.2",
-        "0.05",
+        "0.2",
+        #"0.05",
     ],
 
     "use_aux_features": [
@@ -126,9 +127,9 @@ hparams = {
         #False,
     ],
     "flip_nonconserved": [
-        "0.1",
-        #"0.2",
-        #"0",
+        0.1,
+        #0.2,
+        #0,
     ],
 }
 
@@ -151,7 +152,6 @@ models = sum(
             ],
             max_steps=[
                 150_000,
-                #150_001,
                 #200_000,
             ],
             model_size=[
@@ -169,15 +169,13 @@ include: "rules/training.smk"
 include: "rules/vep.smk"
 include: "rules/logits.smk"
 include: "rules/calibration.smk"
-#include: "rules/embeddings.smk"
+#include: "rules/embeddings.smk" 
 
 include: "rules/gpnmsa.smk"
 include: "rules/conservation.smk"
 include: "rules/cadd.smk"
 include: "rules/nucleotide_transformer.smk"
 include: "rules/specieslm.smk"
-
-include: "rules/esm1b.smk"
 
 #models = []
 #models += ['hg38/GPN-MSA']
@@ -190,10 +188,11 @@ include: "rules/esm1b.smk"
 
 #pd.DataFrame(models).to_csv("models.txt", index=False, header=False)
 print(models)
-print(eval_datasets)
+print(vep_datasets)
 
 rule all:
     input:
-        expand("results/checkpoints/{model}", model=models),
-        #expand("results/preds/llr/{dataset}/{model}.parquet", model=models, dataset=vep_datasets),
+        #expand("results/checkpoints/{model}", model=models),
+        expand("results/preds/llr/{dataset}/{model}.parquet", model=models, dataset=vep_datasets),
         #expand("results/preds/entropy/{dataset}/{model}.parquet", model=models, dataset=vep_datasets),
+        #expand("results/logits/{dataset}/{model}.parquet", model=models, dataset=vep_datasets),

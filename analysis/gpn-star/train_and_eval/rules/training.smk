@@ -352,7 +352,7 @@ rule train_gpn_star:
         --save_strategy steps --save_steps 5000 --evaluation_strategy steps \
         --eval_steps 5000 --logging_steps 1000 --max_steps {wildcards.max_steps} \
         --warmup_steps 2500 --save_total_limit 1 --load_best_model_at_end \
-        --model_type GPNSTAR {params.model_conf} \
+        --model_type GPNStar {params.model_conf} \
         --use_aux_features {wildcards.use_aux_features} \
         --weight_conserved {wildcards.weight_conserved} \
         --flip_nonconserved {wildcards.flip_nonconserved} \

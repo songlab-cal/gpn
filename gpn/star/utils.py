@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from numpy.lib.stride_tricks import sliding_window_view
 import torch
 import torch.nn.functional as F
@@ -73,3 +74,22 @@ def find_directory_sum_paths(path_str):
     else:
         dirs = sorted(dirs, reverse=True)
         return {int(name): os.path.join(path_str, name, 'all.zarr') for name in dirs}
+    
+
+def normalize_logits(logits):
+    logits_array = logits.values
+    
+    exp_logits = np.exp(logits_array)
+    probs = exp_logits / np.sum(exp_logits, axis=1, keepdims=True)
+    
+    normalized_logits = np.log(probs)
+    
+    return pd.DataFrame(normalized_logits, columns=logits.columns, index=logits.index)
+
+def get_entropy(logits):
+    logits_array = logits.values
+    
+    probs = np.exp(logits_array)
+    probs = probs / np.sum(probs, axis=1, keepdims=True)
+    entropy = -np.sum(probs * np.log(probs), axis=1)
+    return entropy

@@ -24,7 +24,7 @@ rule get_entropy_calibrated:
     output:
         "results/preds/entropy/{dataset}/{genome}/{time_enc}/{clade_thres}/{alignment}/{species}/{window_size}/{model}.parquet",
     wildcard_constraints:
-        dataset="|".join(datasets),
+        dataset="|".join(vep_datasets),
         time_enc="[A-Za-z0-9_-]+",
         clade_thres="[0-9.-]+",
         alignment="[A-Za-z0-9_]+",
@@ -35,13 +35,14 @@ rule get_entropy_calibrated:
             V = load_dataset_from_file_or_dir(
                 wildcards.dataset,
                 split="test",
-                is_file=True,
+                is_file=False,
             )
+            V = V.to_pandas()
         except:
             V = Dataset.from_pandas(pd.read_parquet(wildcards.dataset+'/test.parquet'))
         genome = Genome(input[2])
         V['pentanuc'] = V.apply(
-            lambda row: genome.get_seq(row['chrom'], row['pos']-3, row['pos']+2), axis=1
+            lambda row: genome.get_seq(row['chrom'], row['pos']-3, row['pos']+2).upper(), axis=1
         )
         df_calibration = pd.read_parquet(input[1])
         logits = pd.read_parquet(input[0])
@@ -59,7 +60,7 @@ rule get_llr_calibrated:
     output:
         "results/preds/llr/{dataset}/{genome}/{time_enc}/{clade_thres}/{alignment}/{species}/{window_size}/{model}.parquet",
     wildcard_constraints:
-        dataset="|".join(datasets),
+        dataset="|".join(vep_datasets),
         time_enc="[A-Za-z0-9_-]+",
         clade_thres="[0-9.-]+",
         alignment="[A-Za-z0-9_]+",
@@ -70,13 +71,14 @@ rule get_llr_calibrated:
             V = load_dataset_from_file_or_dir(
                 wildcards.dataset,
                 split="test",
-                is_file=True,
+                is_file=False,
             )
+            V = V.to_pandas()
         except:
             V = Dataset.from_pandas(pd.read_parquet(wildcards.dataset+'/test.parquet'))
         genome = Genome(input[2])
         V['pentanuc'] = V.apply(
-            lambda row: genome.get_seq(row['chrom'], row['pos']-3, row['pos']+2), axis=1
+            lambda row: genome.get_seq(row['chrom'], row['pos']-3, row['pos']+2).upper(), axis=1
         )
         V['pentanuc_mut'] = V['pentanuc'] + '_' + V['alt']
         df_calibration = pd.read_parquet(input[1])
