@@ -123,6 +123,12 @@ torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{print NF}')
 ## PhyloGPN
 PhyloGPN is a convolutional neural network that takes encoded DNA sequences as input and outputs rate matrix parameters for [Felsenstein's 1981 model](https://en.wikipedia.org/wiki/Models_of_DNA_evolution#F81_model_(Felsenstein_1981)) (the F81 model, for short). It was trained to maximize the likelihood of columns in the [Zoonomia alignment](https://cglgenomics.ucsc.edu/november-2023-nature-zoonomia-with-expanded-primates-alignment/) given a phylogenetic tree. The stationary distribution of the substitution process described by the F81 model indicates the relative viability of each allele at any given locus. As a result, PhyloGPN is formally a (single-sequence) genomic language model. It can be used for transfer learning and zero-shot SNV deleteriousness prediction. It is especially useful for sequences that are not directly in the human reference genome.
 
+## GPN-Star
+*Under construction*
+### Examples
+* Play with the model: `examples/star/demo.ipynb`
+* More coming soon!
+
 ## Citation
 [GPN](https://doi.org/10.1073/pnas.2311219120):
 ```bibtex
