@@ -4,7 +4,7 @@
 
 TODO: provide an environment
 
-Optional (recommended): download the processed data:
+Optional (recommended): download the processed data (9.1G, feel free to only download a subset):
 - S-LDSC reference files, originally in (https://zenodo.org/records/10515792) but packaged here as well for your convenience.
 - Models
 - Traits
@@ -13,6 +13,8 @@ Optional (recommended): download the processed data:
 # first install https://huggingface.co/docs/huggingface_hub/en/guides/cli
 mkdir -p results
 hf download songlab/ldsc --repo-type dataset --local-dir results/
+cd results
+tar -xf output.tar
 ```
 
 ## Running
