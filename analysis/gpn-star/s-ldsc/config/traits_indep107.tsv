@@ -1,0 +1,108 @@
+Trait	File name	Paper Link	Mean N	h2 Z	
+Schizophrenia	PASS.Schizophrenia.Trubetskoy2022	https://www.nature.com/articles/s41586-022-04434-5#Abs1	58572	28.3	
+Depression	PASS.Depression.Howard2019	https://www.nature.com/articles/s41593-018-0326-7#data-availability	500199	24.12	
+Bipolar disorder (all cases)	PASS.Bipolar_Disorder_ALL.Mullins2021	https://www.nature.com/articles/s41588-021-00857-4	405675	23.53	
+KneeOA	PASS.Knee_Osteoarthritis.Boer2021	https://www.cell.com/cell/fulltext/S0092-8674(21)00941-7?_returnURL=https%3A%2F%2Flinkinghub.elsevier.com%2Fretrieve%2Fpii%2FS0092867421009417%3Fshowall%3Dtrue	395571	22.3	
+COPD	PASS.Chronic_Obstructive_Pulmonary_Disease.Consentino2023	https://www.medrxiv.org/content/10.1101/2022.09.12.22279863v1	325027	21.1	
+Asthma	GBMI.Asthma	https://www.sciencedirect.com/science/article/pii/S2666979X2200204X?via%3Dihub	1344420	18.75	
+ADHD	PASS.Attention_Deficit_Hyperactivity_Disorder_ADHD.Demontis2023	https://www.nature.com/articles/s41588-022-01285-8	220735	17.43	
+Atrial Fibrillation	PASS.Atrial_Fibrillation.Nielsen2018	https://www.nature.com/articles/s41588-018-0171-3	1030840	16.77	
+Glaucoma	PASS.Glaucoma.Craig2020	https://www.nature.com/articles/s41588-019-0556-y	67040	16.64	
+Insomnia	PASS.Insomnia.Watanabe2022	https://www.nature.com/articles/s41588-022-01124-w	608594	16.24	
+Coronary Artery Disease (Aragam)	PASS.Coronary_Artery_Disease.Aragam2022	https://www.nature.com/articles/s41588-022-01233-6	1322480	16.14	
+Hypothyroidism (Self reported)	UKB_460K.disease_HYPOTHYROIDISM_SELF_REP	Price lab summary statistics (https://www.nature.com/articles/s41588-018-0144-6)	459324	15.17	
+Multiple Sclerosis	PASS.Multiple_Sclerosis.IMSGC2019	https://www.science.org/doi/10.1126/science.aav7188	115803	15.05	Need to send an application first to https://imsgc.net/?page_id=31
+Gastrointestinal Disease	PASS.Gastrointestinal_Disease.Donertas2021	https://pubmed.ncbi.nlm.nih.gov/33959723/	484598	14.33	
+Total Hip Replacement	PASS.Total_Hip_Replacement.Boer2021	https://www.cell.com/cell/fulltext/S0092-8674(21)00941-7?_returnURL=https%3A%2F%2Flinkinghub.elsevier.com%2Fretrieve%2Fpii%2FS0092867421009417%3Fshowall%3Dtrue	317466	13.69	
+Diverticulosis And Diverticulitis	PANUKBB.Diverticulosis_And_Diverticulitis	https://pan.ukbb.broadinstitute.org	365887	13.55	
+Bronchitis, Emphysema, Asthma, Rhinitis, Eczema, Allergy Diagnosed By Doctor	PANUKBB.Blood_Clot_DVT_Bronchitis_Emphysema_Asthma_Rhinitis_Eczema_Allergy_Diagnosed_By_Doctor	https://pan.ukbb.broadinstitute.org	419768	13.36	
+Type 2 Diabetes	PASS.Type_2_Diabetes.Xue2018	https://www.nature.com/articles/s41467-018-04951-w	573919	13.25	
+IBD	PASS.Inflammatory_Bowel_Disease.deLange2017	https://www.nature.com/articles/ng.3760	59957	13.19	
+Varicose Vein Surgery	PANUKBB.Varicose_Vein_Surgery	https://pan.ukbb.broadinstitute.org	420473	13	
+Rheumatoid Arthritis (Ishigaki)	PASS.Rheumatoid_Arthritis.Ishigaki2022	https://www.nature.com/articles/s41588-022-01213-w#data-availability	97173	12.22	
+Rheumatoid Arthritis (Saevarsdottir)	PASS.Rheumatoid_Arthritis.Saevarsdottir2022	https://ard.bmj.com/content/81/8/1085.long	1026690	12	
+Anorexia nervosa	PASS.Anorexia_Nervosa.Watson2019	https://www.nature.com/articles/s41588-019-0439-2	70157	11.5	
+Prostate Cancer	PASS.Cancer_Prostate.Schumacher2018	https://www.nature.com/articles/s41588-018-0142-8	74849	11	
+Heart Failure	PASS.Heart_Failure.Shah2020	https://www.nature.com/articles/s41467-019-13690-5	945560	9.67	
+Primary open-angle glaucoma	GBMI.Primary_Apen_Angle_Glaucoma	https://www.sciencedirect.com/science/article/pii/S2666979X2200204X?via%3Dihub	1144540	9.36	
+Atrial Fibrillation And Flutter	PANUKBB.Atrial_Fibrillation_And_Flutter	https://pan.ukbb.broadinstitute.org	403890	9.32	
+Varicose veins	PASS.Varicose_Veins.Ahmed2022	https://www.nature.com/articles/s41467-022-30765-y	401656	9.06	
+Mouth Teeth Dental Problems	PANUKBB.Mouth_Teeth_Dental_Problems	https://pan.ukbb.broadinstitute.org	418978	8.87	
+Alzheimer’s disease	PASS.Alzheimers_Disease.Wightman2021	https://www.nature.com/articles/s41588-021-00921-z	1126560	8.75	
+Inguinal Hernia	PANUKBB.Inguinal_Hernia	https://pan.ukbb.broadinstitute.org	382422	8.7	
+Endometriosis	PASS.Endometriosis.Rahmioglu2023	https://www.nature.com/articles/s41588-023-01323-z#data-availability	477454	8.65	
+Acne vulgaris	PASS.Acne_Vulgaris.TederLaving2023	https://www.nature.com/articles/s41431-023-01326-8	399413	8.53	
+GGE	PASS.Genetic_Generalized_Epilepsy.Berkovic2022	https://www.medrxiv.org/content/10.1101/2022.06.08.22276120v1.full	23259	8.4	
+Stroke	PASS.Ischemic_Stroke.Malik2018	https://www.nature.com/articles/s41588-018-0058-3	440328	8.35	
+Abdominal aortic aneurysm	GBMI.Abdominal_Aortic_Aneurysm	https://www.sciencedirect.com/science/article/pii/S2666979X2200204X?via%3Dihub	1235990	8.17	
+Parkinson Disease	PASS.Parkinson.Nalls2019	https://www.nature.com/articles/ng.3043	450228	8.05	
+T1D - Type 1 Diabetes	PASS.Type_1_Diabetes.Chiou2021	https://www.nature.com/articles/s41586-021-03552-w#data-availability	511737	7.49	
+Venous Tromboembolism (VTE)	PASS.Venous_Thromboembolism.Ghouse2023	https://www.nature.com/articles/s41588-022-01286-7#Abs1	1449600	7.26	
+Lung cancer	PASS.Cancer_Lung.McKay2017	https://www.nature.com/articles/ng.3892	85716	7.16	
+Breast Cancer (female)	PANUKBB.Breast_Cancer_female	https://pan.ukbb.broadinstitute.org	219170	7.02	
+Prostate Cancer	UKB_460K.cancer_PROSTATE	Price lab summary statistics (https://www.nature.com/articles/s41588-018-0144-6)	459324	7	
+Acute appendicitis	GBMI.Acute_Appendicitis	https://www.sciencedirect.com/science/article/pii/S2666979X2200204X?via%3Dihub	982641	6.88	
+Gout	PASS.Gout.Donertas2021	https://pubmed.ncbi.nlm.nih.gov/33959723/	484598	6.63	
+Malignant Neoplasms Of Skin	PANUKBB.C44_Other_Malignant_Neoplasms_Of_Skin	https://pan.ukbb.broadinstitute.org	420531	6.43	
+Esophageal Cancer	PASS.Cancer_Esophageal.Gharahkhani2016	https://www.thelancet.com/journals/lanonc/article/PIIS1470-2045(16)30240-6/fulltext	21271	6.32	
+ThumbOA	PASS.Thumb_Osteoarthritis.Boer2021	https://www.cell.com/cell/fulltext/S0092-8674(21)00941-7?_returnURL=https%3A%2F%2Flinkinghub.elsevier.com%2Fretrieve%2Fpii%2FS0092867421009417%3Fshowall%3Dtrue	246305	6.27	
+Autism Spectrum Disorder	PASS.Autism.PGC2013	https://www.thelancet.com/journals/lancet/article/PIIS0140-6736(12)62129-1/fulltext	10263	6.19	
+Tourette Syndrome	PASS.Tourette_Syndrome.Yu2019	https://ajp.psychiatryonline.org/doi/10.1176/appi.ajp.2018.18070857?url_ver=Z39.88-2003&rfr_id=ori:rid:crossref.org&rfr_dat=cr_pub%20%200pubmed	14307	5.97	
+Primary Biliary Cirrhosis	PASS.Primary_Biliary_Cirrhosis.Cordell2015	https://www.nature.com/articles/ncomms9019	13239	5.61	
+Covid 19 Vaccination	PASS.Covid19_Infection.hg_v7	https://www.medrxiv.org/content/10.1101/2022.11.11.22282213v1	2520920	5.2	
+Lupus (SLE)	PASS.Lupus.Bentham2015	https://www.nature.com/articles/ng.3434	14267	4.79	
+Celiac disease	PASS.Celiac.Dubois2010	https://www.nature.com/articles/ng.543	15283	4.73	
+BMI	PASS.BMI.Yengo2018	https://academic.oup.com/hmg/article/27/20/3641/5067845?login=true	686181	32.48	
+COPD - FVC	PASS.Forced_Vital_Capacity.Shrine2023	https://www.nature.com/articles/s41588-023-01314-0#data-availability	580505	32.05	
+Intelligence	PASS.Intelligence.SavageJansen2018	https://www.nature.com/articles/s41588-018-0152-6	264193	29.05	
+Diastolic (Blood Pressure)	UKB_460K.bp_DIASTOLICadjMEDz	Price lab summary statistics (https://www.nature.com/articles/s41588-018-0144-6)	422771	27.74	
+Daytime napping	PASS.Daytime_Napping.Dashti2021	https://www.nature.com/articles/s41467-020-20585-3#data-availability	452633	27.45	
+Wbc Count	UKB_460K.blood_WHITE_COUNT	Price lab summary statistics (https://www.nature.com/articles/s41588-018-0144-6)	444502	27.39	
+Height	PASS.Height.Yengo2022	https://www.nature.com/articles/s41586-022-05275-y#data-availability	1556950	26.34	
+Morning Person	UKB_460K.other_MORNINGPERSON	Price lab summary statistics (https://www.nature.com/articles/s41588-018-0144-6)	410520	24.67	
+Menarche Age	UKB_460K.repro_MENARCHE_AGE	Price lab summary statistics (https://www.nature.com/articles/s41588-018-0144-6)	242278	24.56	
+Total Protein	UKB_460K.biochemistry_TotalProtein	Price lab summary statistics (https://www.nature.com/articles/s41588-018-0144-6)	397652	24.15	
+WHR BMI ratio	UKB_460K.body_WHRadjBMIz	Price lab summary statistics (https://www.nature.com/articles/s41588-018-0144-6)	458417	23.68	
+Reaction Time	PASS.Reaction_Time.Davies2018	https://www.nature.com/articles/s41467-018-04362-x	300486	22.56	
+Creatinine	UKB_460K.biochemistry_Creatinine	Price lab summary statistics (https://www.nature.com/articles/s41588-018-0144-6)	434158	21.91	
+Snoring	PASS.Snoring.Campos2020	https://www.nature.com/articles/s41467-020-14625-1#Abs1	408317	21.79	
+Rbc Count	UKB_460K.blood_RED_COUNT	Price lab summary statistics (https://www.nature.com/articles/s41588-018-0144-6)	445174	21.78	
+Fetal Birth Weight	PASS.Fetal_Birth_Weight.Warrington2019	https://www.nature.com/articles/s41588-019-0403-1	290657	21.54	
+Heel T-score	UKB_460K.bmd_HEEL_TSCOREz	Price lab summary statistics (https://www.nature.com/articles/s41588-018-0144-6)	445921	20.51	
+Sleep Duration	PASS.Sleep_Duration.Dashti2019	https://www.nature.com/articles/s41467-019-08917-4	446118	19.67	
+Maternal Birth Weight	PASS.Maternal_Birth_Weight.Warrington2019	https://www.nature.com/articles/s41588-019-0403-1	208541	19.48	
+Eosinophil Percentage	PASS.Eosinophil_Percentage.Vuckovic2020	https://www.cell.com/cell/fulltext/S0092-8674(20)30999-5?_returnURL=https%3A%2F%2Flinkinghub.elsevier.com%2Fretrieve%2Fpii%2FS0092867420309995%3Fshowall%3Dtrue	408112	19.03	
+IGF1	UKB_460K.biochemistry_IGF1	Price lab summary statistics (https://www.nature.com/articles/s41588-018-0144-6)	432292	18.68	
+General Risk Tolerance	PASS.General_Risk_Tolerance.KarlssonLinner2019	https://www.nature.com/articles/s41588-018-0309-3	466570	18.36	
+Aspartate Aminotransferase	UKB_460K.biochemistry_AspartateAminotransferase	Price lab summary statistics (https://www.nature.com/articles/s41588-018-0144-6)	430982	18.31	
+Aging Parental Lifespan	PASS.Aging_Parental_Lifespan.Timmers2020	https://www.nature.com/articles/s41467-020-17312-4	627346	17.93	
+Rbc Distribution Width	UKB_460K.blood_RBC_DISTRIB_WIDTH	Price lab summary statistics (https://www.nature.com/articles/s41588-018-0144-6)	442700	17.8	
+Number Children Ever Born	UKB_460K.repro_NumberChildrenEverBorn_Pooled	Price lab summary statistics (https://www.nature.com/articles/s41588-018-0144-6)	456500	16.78	
+Testosterone Male	UKB_460K.biochemistry_Testosterone_Male	Price lab summary statistics (https://www.nature.com/articles/s41588-018-0144-6)	196813	16.58	
+Physical Activity	PASS.Physical_Activity.Wang2022	https://www.nature.com/articles/s41588-022-01165-1	589564	16.38	
+Reticulocyte Count	PASS.Reticulocyte_Count.Vuckovic2020	https://www.cell.com/cell/fulltext/S0092-8674(20)30999-5?_returnURL=https%3A%2F%2Flinkinghub.elsevier.com%2Fretrieve%2Fpii%2FS0092867420309995%3Fshowall%3Dtrue	408112	16.37	
+Platelet Distribution Width	PASS.Platelet_Distribution_Width.Vuckovic2020	https://www.cell.com/cell/fulltext/S0092-8674(20)30999-5?_returnURL=https%3A%2F%2Flinkinghub.elsevier.com%2Fretrieve%2Fpii%2FS0092867420309995%3Fshowall%3Dtrue	408112	15.38	
+Monocyte Percentage	PASS.Monocyte_Percentage.Vuckovic2020	https://www.cell.com/cell/fulltext/S0092-8674(20)30999-5?_returnURL=https%3A%2F%2Flinkinghub.elsevier.com%2Fretrieve%2Fpii%2FS0092867420309995%3Fshowall%3Dtrue	408112	15.08	
+Age First Birth	PASS.Age_First_Birth.Barban2016	https://www.nature.com/articles/ng.3698	222037	15.07	
+Balding	UKB_460K.body_BALDING1	Price lab summary statistics (https://www.nature.com/articles/s41588-018-0144-6)	208336	14.7	
+Alkaline Phosphatase	UKB_460K.biochemistry_AlkalinePhosphatase	Price lab summary statistics (https://www.nature.com/articles/s41588-018-0144-6)	433862	14.68	
+Drinks Per Week	PASS.Drinks_Per_Week.Liu2019	https://www.nature.com/articles/s41588-018-0307-5	527298	14.44	
+Phosphate	UKB_460K.biochemistry_Phosphate	Price lab summary statistics (https://www.nature.com/articles/s41588-018-0144-6)	397561	14.2	
+Medication use (drugs used in diabetes)	PASS.Medication_Use.Wu2019	https://www.nature.com/articles/s41467-019-09572-5	78808	14.04	
+Vitamin D	UKB_460K.biochemistry_VitaminD	Price lab summary statistics (https://www.nature.com/articles/s41588-018-0144-6)	415700	12.46	
+Cholesterol	UKB_460K.biochemistry_Cholesterol	Price lab summary statistics (https://www.nature.com/articles/s41588-018-0144-6)	435137	11.67	
+Alcohol use/AUDIT	PASS.Alcohol_use.SanchezRoige2018	https://ajp.psychiatryonline.org/doi/10.1176/appi.ajp.2018.18040369?url_ver=Z39.88-2003&rfr_id=ori:rid:crossref.org&rfr_dat=cr_pub%20%200pubmed	120388	11.61	
+Total Bilirubin	UKB_460K.biochemistry_TotalBilirubin	Price lab summary statistics (https://www.nature.com/articles/s41588-018-0144-6)	429423	11.07	
+SARS-CoV-2 infection (C2)	PASS.Covid19_Vaccination.Hartonen2023	https://www.nature.com/articles/s41586-022-04826-9	273765	9.97	
+Sunburn	UKB_460K.pigment_SUNBURN	Price lab summary statistics (https://www.nature.com/articles/s41588-018-0144-6)	344229	9.62	
+Basophil Percentage	PASS.Basophil_Percentage.Vuckovic2020	https://www.cell.com/cell/fulltext/S0092-8674(20)30999-5?_returnURL=https%3A%2F%2Flinkinghub.elsevier.com%2Fretrieve%2Fpii%2FS0092867420309995%3Fshowall%3Dtrue	408112	9.45	
+Education Years	PASS.Education_Years.Rietveld2013	https://www.science.org/doi/10.1126/science.1235488?url_ver=Z39.88-2003&rfr_id=ori:rid:crossref.org&rfr_dat=cr_pub%20%200pubmed	126559	9.35	
+HDL	PASS.HDL.Teslovich2010	https://www.nature.com/articles/nature09270	97750	9.27	
+LDL	PASS.LDL.Teslovich2010	https://www.nature.com/articles/nature09270	93355	8.83	
+Visceral Adipose Tissue Volume	PASS.Visceral_Adipose_Tissue_Volume.Agrawal2022	https://www.nature.com/articles/s41467-022-30931-2	38965	8.75	
+Cigarettes Per Day	PASS.Cigarettes_Per_Day.Liu2019	https://www.nature.com/articles/s41588-018-0307-5	257073	8.66	
+Cannabis use disorder	PASS.Cannabis_Use_Disorder.Johnson2020	https://www.thelancet.com/journals/lanpsy/article/PIIS2215-0366(20)30339-4/fulltext	359934	8.57	
+Telomere Lenght	PASS.Telomere_Length.Codd2021	https://www.nature.com/articles/s41588-021-00944-6#data-availability	472174	8.32	
+Ever Smoked	PASS.Ever_Smoked.TAGC2010	https://www.nature.com/articles/ng.571	74035	7.54	
+Structural Connectivity Global (imaging)	PASS.Structural_Connectivity_Global.Tissink2023	https://www.eneuro.org/content/10/4/ENEURO.0242-22.2023.long	22720	7.44	
+CHIP	PASS.CHIP.Kessler2022	https://www.nature.com/articles/s41586-022-05448-9	368411	6	

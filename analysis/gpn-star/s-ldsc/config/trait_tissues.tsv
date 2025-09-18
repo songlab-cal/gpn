@@ -1,0 +1,108 @@
+Trait	brain	blood/immune	fat	gut	heart	kidney	liver	lung	skin
+Schizophrenia	1	0	0	0	0	0	0	0	0
+Depression	1	0	0	0	0	0	0	0	0
+Bipolar disorder (all cases)	1	0	0	0	0	0	0	0	0
+KneeOA	0	0	1	0	0	0	0	0	0
+COPD	0	0	0	0	0	0	0	1	0
+Asthma	0	1	0	0	0	0	0	1	0
+ADHD	1	0	0	0	0	0	0	0	0
+Atrial Fibrillation	0	0	0	0	1	0	0	0	0
+Glaucoma	0	0	0	0	0	0	0	0	0
+Insomnia	1	0	0	0	0	0	0	0	0
+Coronary Artery Disease (Aragam)	0	0	0	0	1	0	1	0	0
+Hypothyroidism (Self reported)	0	0	0	0	0	0	0	0	0
+Multiple Sclerosis	1	1	0	0	0	0	0	0	0
+Gastrointestinal Disease	0	0	0	1	0	0	0	0	0
+Total Hip Replacement	0	0	1	0	0	0	0	0	0
+Diverticulosis And Diverticulitis	0	0	0	1	0	0	0	0	0
+Bronchitis, Emphysema, Asthma, Rhinitis, Eczema, Allergy Diagnosed By Doctor	0	1	0	0	0	0	0	1	1
+Type 2 Diabetes	0	0	1	1	0	0	1	0	0
+IBD	0	1	0	1	0	0	0	0	0
+Varicose Vein Surgery	0	0	0	0	0	0	0	0	0
+Rheumatoid Arthritis (Ishigaki)	0	1	0	0	0	0	0	0	0
+Rheumatoid Arthritis (Saevarsdottir)	0	1	0	0	0	0	0	0	0
+Anorexia nervosa	1	0	0	0	0	0	0	0	0
+Prostate Cancer	0	0	0	0	0	0	0	0	0
+Heart Failure	0	0	0	0	1	1	0	0	0
+Primary open-angle glaucoma	0	0	0	0	0	0	0	0	0
+Atrial Fibrillation And Flutter	0	0	0	0	1	0	0	0	0
+Varicose veins	0	0	0	0	0	0	0	0	0
+Mouth Teeth Dental Problems	0	0	0	0	0	0	0	0	0
+Alzheimer’s disease	1	0	0	0	0	0	0	0	0
+Inguinal Hernia	0	0	0	0	0	0	0	0	0
+Endometriosis	0	0	0	0	0	0	0	0	0
+Acne vulgaris	0	0	0	0	0	0	0	0	1
+GGE	1	0	0	0	0	0	0	0	0
+Stroke	0	0	0	0	1	0	1	0	0
+Abdominal aortic aneurysm	0	0	0	0	0	0	0	0	0
+Parkinson Disease	1	0	0	0	0	0	0	0	0
+T1D - Type 1 Diabetes	0	1	0	0	0	0	0	0	0
+Venous Tromboembolism (VTE)	0	0	0	0	0	0	1	0	0
+Lung cancer	0	0	0	0	0	0	0	1	0
+Breast Cancer (female)	0	0	1	0	0	0	0	0	0
+Prostate Cancer	0	0	0	0	0	0	0	0	0
+Acute appendicitis	0	0	0	1	0	0	0	0	0
+Gout	0	1	0	0	0	1	0	0	0
+Malignant Neoplasms Of Skin	0	0	0	0	0	0	0	0	1
+Esophageal Cancer	0	0	0	1	0	0	0	0	0
+ThumbOA	0	0	1	0	0	0	0	0	0
+Autism Spectrum Disorder	1	0	0	0	0	0	0	0	0
+Tourette Syndrome	1	0	0	0	0	0	0	0	0
+Primary Biliary Cirrhosis	0	1	0	0	0	0	1	0	0
+Covid 19 Vaccination	0	0	0	0	0	0	0	0	0
+Lupus (SLE)	0	1	0	0	0	1	0	0	1
+Celiac disease	0	1	0	1	0	0	0	0	0
+BMI	1	0	1	0	0	0	0	0	0
+COPD - FVC	0	0	0	0	0	0	0	1	0
+Intelligence	1	0	0	0	0	0	0	0	0
+Diastolic (Blood Pressure)	0	0	0	0	1	1	0	0	0
+Daytime napping	1	0	0	0	0	0	0	0	0
+Wbc Count	0	1	0	0	0	0	0	0	0
+Height	0	0	0	0	0	0	0	0	0
+Morning Person	1	0	0	0	0	0	0	0	0
+Menarche Age	1	0	0	0	0	0	0	0	0
+Total Protein	0	0	0	0	0	1	1	0	0
+WHR BMI ratio	0	0	1	0	0	0	0	0	0
+Reaction Time	1	0	0	0	0	0	0	0	0
+Creatinine	0	0	0	0	0	1	0	0	0
+Snoring	1	0	0	0	0	0	0	0	0
+Rbc Count	0	0	0	0	0	1	0	0	0
+Fetal Birth Weight	0	0	0	0	0	0	1	0	0
+Heel T-score	0	0	0	0	0	0	0	0	0
+Sleep Duration	1	0	0	0	0	0	0	0	0
+Maternal Birth Weight	0	0	0	0	0	0	0	0	0
+Eosinophil Percentage	0	1	0	0	0	0	0	0	0
+IGF1	0	0	0	0	0	0	1	0	0
+General Risk Tolerance	1	0	0	0	0	0	0	0	0
+Aspartate Aminotransferase	0	0	0	0	1	0	1	0	0
+Aging Parental Lifespan	0	0	0	0	0	0	0	0	0
+Rbc Distribution Width	0	0	0	0	0	0	0	0	0
+Number Children Ever Born	1	0	0	0	0	0	0	0	0
+Testosterone Male	0	0	0	0	0	0	0	0	0
+Physical Activity	1	0	0	0	0	0	0	0	0
+Reticulocyte Count	0	0	0	0	0	0	0	0	0
+Platelet Distribution Width	0	0	0	0	0	0	0	0	0
+Monocyte Percentage	0	1	0	0	0	0	0	0	0
+Age First Birth	1	0	0	0	0	0	0	0	0
+Balding	0	0	0	0	0	0	0	0	1
+Alkaline Phosphatase	0	0	0	1	0	0	1	0	0
+Drinks Per Week	1	0	0	0	0	0	0	0	0
+Phosphate	0	0	0	1	0	1	0	0	0
+Medication use (drugs used in diabetes)	0	0	0	0	0	0	0	0	0
+Vitamin D	0	0	0	0	0	1	1	0	1
+Cholesterol	0	0	0	1	0	0	1	0	0
+Alcohol use/AUDIT	1	0	0	0	0	0	0	0	0
+Total Bilirubin	0	0	0	0	0	0	1	0	0
+SARS-CoV-2 infection (C2)	0	0	0	1	0	0	0	1	0
+Sunburn	0	0	0	0	0	0	0	0	1
+Basophil Percentage	0	1	0	0	0	0	0	0	0
+Education Years	1	0	0	0	0	0	0	0	0
+HDL	0	0	0	1	0	0	1	0	0
+LDL	0	0	0	1	0	0	1	0	0
+Visceral Adipose Tissue Volume	0	0	1	0	0	0	0	0	0
+Cigarettes Per Day	1	0	0	0	0	0	0	0	0
+Cannabis use disorder	1	0	0	0	0	0	0	0	0
+Telomere Length	0	0	0	0	0	0	0	0	0
+Ever Smoked	1	0	0	0	0	0	0	0	0
+Structural Connectivity Global (imaging)	1	0	0	0	0	0	0	0	0
+CHIP	0	1	0	0	0	0	0	0	0

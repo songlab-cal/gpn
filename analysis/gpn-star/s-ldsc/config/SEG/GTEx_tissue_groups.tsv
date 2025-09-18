@@ -1,0 +1,54 @@
+Tissue	Tissue category for t-statistics	Tissue category for display 	Number of samples
+Cervix Endocervix	Cervix Uteri	Other	5
+Cervix Ectocervix	Cervix Uteri	Other	6
+Fallopian Tube	Fallopian Tube	Other	6
+Bladder	Bladder	Other	11
+Kidney Cortex	Kidney	Other	32
+Minor Salivary Gland	Salivary Gland	Other	57
+Brain Substantia nigra	Brain	CNS	63
+Brain Spinal cord (cervical c-1)	Brain	CNS	70
+Brain Amygdala	Brain	CNS	72
+Uterus	Uterus	Other	83
+Brain Anterior cingulate cortex (BA24)	Brain	CNS	84
+Small Intestine Terminal Ileum	Small Intestine	Digestive	88
+Brain Hippocampus	Brain	CNS	94
+Brain Hypothalamus	Brain	CNS	96
+Vagina	Vagina	Other	96
+Brain Putamen (basal ganglia)	Brain	CNS	97
+Ovary	Ovary	Other	97
+Pituitary	Pituitary	Endocrine	103
+Spleen	Spleen	Blood/Immune	104
+Brain Cerebellar Hemisphere	Brain	CNS	105
+Prostate	Prostate	Other	106
+Brain Frontal Cortex (BA9)	Brain	CNS	108
+Brain Nucleus accumbens (basal ganglia)	Brain	CNS	113
+Brain Cortex	Brain	CNS	114
+Brain Caudate (basal ganglia)	Brain	CNS	115
+Cells EBV-transformed lymphocytes	Blood	Blood/Immune	118
+Liver	Liver	Liver	119
+Brain Cerebellum	Brain	CNS	125
+Artery Coronary	Blood Vessel	Cardiovascular	133
+Adrenal Gland	Adrenal Gland	Endocrine	145
+Colon Sigmoid	Colon	Digestive	149
+Esophagus Gastroesophageal Junction	Esophagus	Digestive	153
+Pancreas	Pancreas	Other	171
+Testis	Testis	Endocrine	172
+Stomach	Stomach	Digestive	193
+Heart Atrial Appendage	Heart	Cardiovascular	194
+Colon Transverse	Colon	Digestive	196
+Breast Mammary Tissue	Breast	Other	214
+Heart Left Ventricle	Heart	Cardiovascular	218
+Artery Aorta	Blood Vessel	Cardiovascular	224
+Adipose Visceral (Omentum)	Adipose Tissue	Adipose	227
+Esophagus Muscularis	Esophagus	Digestive	247
+Skin Not Sun Exposed (Suprapubic)	Skin	Other	250
+Cells Transformed fibroblasts	Skin	Other	284
+Esophagus Mucosa	Esophagus	Digestive	286
+Nerve Tibial	Nerve	Other	304
+Lung	Lung	Other	319
+Thyroid	Thyroid	Endocrine	322
+Artery Tibial	Blood Vessel	Cardiovascular	332
+Adipose Subcutaneous	Adipose Tissue	Adipose	350
+Skin Sun Exposed (Lower leg)	Skin	Other	357
+Whole Blood	Blood	Blood/Immune	393
+Muscle Skeletal	Muscle	Musculoskeletal/connective	430
