@@ -127,7 +127,11 @@ PhyloGPN is a convolutional neural network that takes encoded DNA sequences as i
 *Under construction*
 ### Examples
 * Play with the model: `examples/star/demo.ipynb`
-* More coming soon!
+### Analyses
+* Main results on variant effect prediction: `analysis/gpn-star/train_and_eval/workflow/notebooks`
+* Complex trait heritability analysis (S-LDSC): `analysis/gpn-star/s-ldsc`
+
+More coming soon!
 
 ## Citation
 [GPN](https://doi.org/10.1073/pnas.2311219120):
