@@ -225,8 +225,6 @@ def barplot_with_numbers(
     if save_path is not None:
         plt.savefig(save_path, bbox_inches="tight")
 
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 def barplot_vertical_aligned(
     df, metric, title, palette, groupby="Consequence",
@@ -368,7 +366,7 @@ def barplot_vertical_aligned(
         ax.tick_params(axis='y', which='minor', length=4, width=0.5)
 
     # 5) shared labels & title
-    fig.supylabel('Odds ratio', fontsize=13, **{"x":-0.02})
+    fig.supylabel('Odds ratio', fontsize=13, **{"x":-0.3})
     fig.suptitle(title, y=suptitle_y, fontsize=15, fontweight='light')
 
     # super‐tight layout
@@ -377,3 +375,86 @@ def barplot_vertical_aligned(
     if save_path:
         fig.savefig(save_path, bbox_inches="tight")
     plt.show()
+
+def barplot_vertical(
+    df, metric, title, palette, groupby="Consequence", 
+    width=2, height=2, nrows=1, ncols=1,
+    save_path=None, wspace=None, hspace=None,
+    x=None, y=None,
+):
+    plt.rcParams["font.family"] = "sans-serif"
+    plt.rcParams["font.sans-serif"] = ["DejaVu Sans"]
+    plt.rcParams["font.weight"] = 'regular'
+    plt.rcParams["ytick.color"] = "black"
+    plt.rcParams["xtick.color"] = "black"
+
+    plt.rcParams["mathtext.fontset"] = "dejavuserif"
+    plt.rcParams["mathtext.default"] = "regular"
+    plt.rcParams["mathtext.sf"] = "dejavusans"
+
+    if groupby not in df.columns: df[groupby] = "all"
+    groups = df[groupby].unique()
+    fig, axes = plt.subplots(
+        nrows=nrows, ncols=ncols, sharex=False, sharey=False,
+        figsize=(width*ncols, height*nrows), squeeze=False,
+        gridspec_kw={'wspace': wspace, 'hspace': hspace},
+    )
+
+    for group, ax in zip(groups, axes.flat):
+        df_g = df[df[groupby]==group].sort_values(metric, ascending=False)
+        n_pos, n_neg = df_g.n_pos.iloc[0], df_g.n_neg.iloc[0]
+
+        if metric == "AUROC":
+            baseline = 0.5
+        elif metric == "AUPRC":
+            baseline = n_pos / (n_pos + n_neg)
+        elif metric == "Odds ratio":
+            baseline = 1
+
+        g = sns.barplot(
+            data=df_g,
+            x="Model",
+            y=metric,
+            palette=palette,
+            ax=ax,
+        )
+        sns.despine()
+        sample_size = f"n={format_number(n_pos)} vs. {format_number(n_neg)}"
+        subtitle = f"{group}\n{sample_size}" if len(groups) > 1 else sample_size
+        g.set_title(subtitle, fontsize=10, fontweight="light", pad=15)
+        g.set(ylim=baseline, xlabel="")
+
+        # Add padding between y-axis and first bar
+        ax.margins(x=0.1)
+
+        # Rotate x-axis labels for better readability
+        plt.setp(g.get_xticklabels(), rotation=45, ha='right')
+
+        for bar, model in zip(g.patches, df_g.Model):
+            if metric == "Odds ratio":
+                text = f'{bar.get_height():.1f}'
+                if df_g[df_g.Model==model].p_value.iloc[0] >= 0.05:
+                    text = text + " (NS)"
+            else:
+                text = f'{bar.get_height():.3f}'
+            
+            g.text(
+                bar.get_x() + bar.get_width()/2,  # X position, center of bar
+                max(bar.get_height(), baseline)+0.01,  # Y position, above the bar
+                text,  # Text to be displayed
+                ha='center',  # Horizontal alignment
+                va='bottom',  # Vertical alignment
+                fontweight='light',
+                rotation=0
+            )
+        
+        # Add minor ticks with reduced frequency
+        ax.yaxis.set_minor_locator(AutoMinorLocator(2))
+        
+        # Make major ticks longer and thicker than minor ticks
+        ax.tick_params(axis='y', which='major', length=6)
+        ax.tick_params(axis='y', which='minor', length=4, width=0.5)
+
+    plt.suptitle(title, x=x, y=y, fontsize=11, fontweight="light")
+    if save_path is not None:
+        plt.savefig(save_path, bbox_inches="tight")
