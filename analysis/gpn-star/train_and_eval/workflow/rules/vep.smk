@@ -84,7 +84,7 @@ rule get_llr_calibrated:
         df_calibration = pd.read_parquet(input[1])
         logits = pd.read_parquet(input[0])
         normalized_logits = normalize_logits(logits)
-        V['llr'] = get_entropy(normalized_logits)
+        V['llr'] = get_llr(normalized_logits, V['ref'], V['alt'])
         V = V.merge(df_calibration, on="pentanuc_mut", how="left")
         V['llr_calibrated'] = V['llr'] - V['llr_neutral_mean']
         V[["llr_calibrated"]].to_parquet(output[0], index=False)

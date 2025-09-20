@@ -108,11 +108,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print(args)
 
-    dataset = load_dataset_from_file_or_dir(
-        args.input_path,
-        split=args.split,
-        is_file=args.is_file,
-    )
     try:
         dataset = load_dataset_from_file_or_dir(
             args.input_path,

@@ -93,3 +93,9 @@ def get_entropy(logits):
     probs = probs / np.sum(probs, axis=1, keepdims=True)
     entropy = -np.sum(probs * np.log(probs), axis=1)
     return entropy
+
+def get_llr(logits, ref, alt):
+    ref_logits = logits.values[np.arange(len(ref)), [logits.columns.get_loc(r) for r in ref]]
+    alt_logits = logits.values[np.arange(len(alt)), [logits.columns.get_loc(a) for a in alt]]
+    
+    return (alt_logits - ref_logits)
