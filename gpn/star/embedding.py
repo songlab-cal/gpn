@@ -69,7 +69,6 @@ class EmbeddingInference(object):
         def prepare_output(msa):
             input_ids = msa[:, :, :1]
             input_ids = input_ids.astype(np.int64)
-            msa[:, pos, 0] = self.tokenizer.mask_token_id()
             return input_ids, msa
 
         res = {}
