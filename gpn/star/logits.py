@@ -24,7 +24,7 @@ class MLMforLogitsModel(torch.nn.Module):
             input_ids=input_ids, source_ids=source_ids,
             target_species=target_species,
         ).logits
-        logits = logits[torch.arange(len(pos)), pos].squeeze()
+        logits = logits[torch.arange(len(pos)), pos].squeeze(-2)
         return logits
 
     def forward(
