@@ -1,16 +1,16 @@
 # GPN (Genomic Pre-trained Network)
 [![hgt_genome_392c4_a47ce0](https://github.com/user-attachments/assets/282b6204-156b-4b6d-83ff-2f4a53a9bb2e)](https://genome.ucsc.edu/s/gbenegas/gpn-arabidopsis)
  
-Code and resources from [GPN](https://doi.org/10.1073/pnas.2311219120) and related genomic language models.
+Code and resources for genomic language models [GPN](https://doi.org/10.1073/pnas.2311219120), [GPN-MSA](https://www.nature.com/articles/s41587-024-02511-w), [PhyloGPN](https://link.springer.com/chapter/10.1007/978-3-031-90252-9_7) and [GPN-Star](...).
 
 ## Table of contents
 - [Installation](#installation)
-- [Quick start](#quick-start)
 - [Modeling frameworks](#modeling-frameworks)
 - [Applications of the models](#applications-of-the-models)
 - [GPN](#gpn)
 - [GPN-MSA](#gpn-msa)
 - [PhyloGPN](#phylogpn)
+- [GPN-Star](#gpn-star)
 - [Citation](#citation)
 
 ## Installation
@@ -18,31 +18,21 @@ Code and resources from [GPN](https://doi.org/10.1073/pnas.2311219120) and relat
 pip install git+https://github.com/songlab-cal/gpn.git
 ```
 
-## Quick start
-```python
-import gpn.model
-from transformers import AutoModelForMaskedLM, AutoModel
-
-model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-brassicales")
-# or
-model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-msa-sapiens")
-# or
-model = AutoModel.from_pretrained("songlab/PhyloGPN", trust_remote_code=True)
-```
-
 ## Modeling frameworks
 | Model | Paper | Notes |
 | --------- | --- | ----------- |
 | GPN | [Benegas et al. 2023](https://doi.org/10.1073/pnas.2311219120) | Requires unaligned genomes | 
-| GPN-MSA | [Benegas et al. 2025](https://www.nature.com/articles/s41587-024-02511-w) | Requires aligned genomes for both training and inference |
+| GPN-MSA | [Benegas et al. 2025](https://www.nature.com/articles/s41587-024-02511-w) | Requires aligned genomes for both training and inference [deprecated in favor of GPN-Star] |
 | PhyloGPN | [Albors et al. 2025](https://link.springer.com/chapter/10.1007/978-3-031-90252-9_7) | Uses an alignment during training, but does not require it for inference or fine-tuning |
+| GPN-Star | Upcoming | Requires aligned genomes for both training and inference |
 
 ## Applications of the models
 | Paper |  Model | Dataset | Code | Resources on HuggingFace 🤗 |
 |  -- | --- | ------- | ---- | -------------- |
-| [Benegas et al. 2023](https://doi.org/10.1073/pnas.2311219120) | GPN | Arabidopsis and other Brassicale plants | [analysis/gpn_arabidopsis](analysis/gpn_arabidopsis) |  [Model, dataset, intermediate results](https://huggingface.co/collections/songlab/gpn-653191edcb0270ed05ad2c3e) |
-| [Benegas et al. 2025](https://www.nature.com/articles/s41587-024-02511-w) | GPN-MSA | Human and other vertebrates | [analysis/gpn-msa_human](analysis/gpn-msa_human) | [Model, dataset, benchmarks, predictions](https://huggingface.co/collections/songlab/gpn-msa-65319280c93c85e11c803887) |
+| [Benegas et al. 2023](https://doi.org/10.1073/pnas.2311219120) | GPN | *A. Thaliana* and other Brassicale plants | [analysis/gpn_arabidopsis](analysis/gpn_arabidopsis) |  [Model, dataset, intermediate results](https://huggingface.co/collections/songlab/gpn-653191edcb0270ed05ad2c3e) |
+| [Benegas et al. 2025](https://www.nature.com/articles/s41587-024-02511-w) | GPN-MSA | Human | [analysis/gpn-msa_human](analysis/gpn-msa_human) | [Model, dataset, benchmarks, predictions](https://huggingface.co/collections/songlab/gpn-msa-65319280c93c85e11c803887) |
 | [Benegas et al. 2025b](https://www.biorxiv.org/content/10.1101/2025.02.11.637758v1) | GPN | Animal promoters | [analysis/gpn_animal_promoter](analysis/gpn_animal_promoter) | [Model, dataset, benchmarks](https://huggingface.co/collections/songlab/traitgym-6796d4fbb825d5b94e65d30f) |
+| Upcoming | GPN-Star | Human, Mouse, Chicken, Fruit fly, *C. elegans*, *A. thaliana* | [analysis/gpn-star](analysis/gpn-star) | [Model, dataset, benchmarks](https://huggingface.co/collections/songlab/gpn-star-68c0c055acc2ee51d5c4f129) |
 | Upcoming | GPN | Sorghum gene expression | [analysis/gpn_sorghum_expression](analysis/gpn_sorghum_expression) |  [Model, dataset](https://huggingface.co/collections/songlab/sorghum-gene-expression-prediction-68963dd31658bfb98c07ae1b) |
  
 ## GPN
@@ -105,6 +95,24 @@ torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{print NF}')
 
 ## PhyloGPN
 PhyloGPN is a convolutional neural network that takes encoded DNA sequences as input and outputs rate matrix parameters for [Felsenstein's 1981 model](https://en.wikipedia.org/wiki/Models_of_DNA_evolution#F81_model_(Felsenstein_1981)) (the F81 model, for short). It was trained to maximize the likelihood of columns in the [Zoonomia alignment](https://cglgenomics.ucsc.edu/november-2023-nature-zoonomia-with-expanded-primates-alignment/) given a phylogenetic tree. The stationary distribution of the substitution process described by the F81 model indicates the relative viability of each allele at any given locus. As a result, PhyloGPN is formally a (single-sequence) genomic language model. It can be used for transfer learning and zero-shot SNV deleteriousness prediction. It is especially useful for sequences that are not directly in the human reference genome.
+
+* Quick start
+```python
+import gpn.model
+from transformers import AutoModel
+
+model = AutoModel.from_pretrained("songlab/PhyloGPN", trust_remote_code=True)
+```
+
+## GPN-Star
+*Under construction*
+### Examples
+* Play with the model: `examples/star/demo.ipynb`
+### Analyses
+* Main results on variant effect prediction: `analysis/gpn-star/train_and_eval/workflow/notebooks`
+* Complex trait heritability analysis (S-LDSC): `analysis/gpn-star/s-ldsc`
+
+More coming soon!
 
 ## Citation
 [GPN](https://doi.org/10.1073/pnas.2311219120):

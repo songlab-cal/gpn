@@ -1,0 +1,11 @@
+name: wga_processing
+channels:
+- anaconda
+- conda-forge
+- bioconda
+dependencies:
+- snakemake
+- zarr=2.18.4
+- pip
+- pip:
+  - git+https://github.com/songlab-cal/gpn.git

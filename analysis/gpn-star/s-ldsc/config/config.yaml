@@ -1,0 +1,189 @@
+genome_url: "http://ftp.ensembl.org/pub/release-107/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna_sm.primary_assembly.fa.gz"
+annotation_url: "http://ftp.ensembl.org/pub/release-107/gtf/homo_sapiens/Homo_sapiens.GRCh38.107.chr.gtf.gz"
+
+
+# need to be careful about specific files, often poorly documented or even misnamed
+# e.g. phastCons_43p is called phyloPPrimates
+conservation:
+  phastCons_43p: "https://cgl.gi.ucsc.edu/data/cactus/zoonomia-2021-track-hub/hg38/phyloPPrimates.bigWig"
+  #phyloP_241m: "https://hgdownload.soe.ucsc.edu/goldenPath/hg38/cactus241way/cactus241way.phyloP.bw"
+  # Zoonomia+Primates 447 - 447 mammals, including 233 primates, aligned with Cactus, for Kuderna et al. 2023 
+  # there seem to be two bw files for this, one with LRT and the other I don't know :/
+  # https://genome-euro.ucsc.edu/cgi-bin/hgTrackUi?hgsid=341893853_hraZipCWCDs0KNHD6m789DzRd4xR&g=cons447way
+  # hopefully it's the one from here:
+  # Identification of constrained sequence elements across 239 primate genomes
+  phyloP_239p: "https://hgdownload.soe.ucsc.edu/goldenPath/hg38/phyloP447way/hg38.phyloP447wayLRT.bw"
+  phyloP_447m: "https://hgdownload.soe.ucsc.edu/goldenPath/hg38/phyloP447way/hg38.phyloP447way.bw"
+  # 
+  phastCons_470m: "https://hgdownload.soe.ucsc.edu/goldenPath/hg38/phastCons470way/hg38.phastCons470way.bw"
+  #phyloP_470m: "https://hgdownload.soe.ucsc.edu/goldenPath/hg38/phyloP470way/hg38.phyloP470way.bw"
+  # 100 vertebrate alignment
+  phastCons_100v: "https://hgdownload.soe.ucsc.edu/goldenPath/hg38/phastCons100way/hg38.phastCons100way.bw"
+  phyloP_100v: "https://hgdownload.soe.ucsc.edu/goldenPath/hg38/phyloP100way/hg38.phyloP100way.bw"
+
+
+gpn_msa:
+  model_path: "songlab/gpn-msa-sapiens"
+  msa_path: "/accounts/projects/yss/gbenegas/projects/gpn/analysis/gpn-msa_human/results/msa/multiz100way/89/all.zarr"
+  window_size: 128
+  batch_size: 2048
+
+
+matching_features:
+  maf:
+    continuous:
+      - maf
+    categorical:
+      - chrom
+
+  maf+ld:
+    continuous:
+      - maf
+      - ld_score
+    categorical:
+      - chrom
+
+  maf+ld+dist:
+    continuous:
+      - maf
+      - ld_score
+      - tss_dist
+    categorical:
+      - chrom
+
+  maf+ld+consequence:
+    continuous:
+      - maf
+      - ld_score
+    categorical:
+      - chrom
+      - consequence
+
+  maf+ld+dist+consequence:
+    continuous:
+      - maf
+      - ld_score
+      - tss_dist
+    categorical:
+      - chrom
+      - consequence
+
+  maf+ld+gene:
+    continuous:
+      - maf
+      - ld_score
+    categorical:
+      - gene
+
+  maf+ld+consequence+pos:
+    continuous:
+      - maf
+      - ld_score
+      - pos
+    categorical:
+      - chrom
+      - consequence
+
+
+SEG_GTEx_tissue_groups:
+  blood_immune:
+    - Spleen
+    - Cells_EBV-transformed_lymphocytes
+    - Whole_Blood
+  CNS:
+    - Brain_Substantia_nigra
+    - Brain_Spinal_cord__cervical_c-1_
+    - Brain_Amygdala
+    - Brain_Anterior_cingulate_cortex__BA24_
+    - Brain_Hippocampus
+    - Brain_Hypothalamus
+    - Brain_Putamen__basal_ganglia_
+    - Brain_Cerebellar_Hemisphere
+    - Brain_Frontal_Cortex__BA9_
+    - Brain_Nucleus_accumbens__basal_ganglia_
+    - Brain_Cortex
+    - Brain_Caudate__basal_ganglia_
+    - Brain_Cerebellum
+  cardiovascular:
+    - Artery_Coronary
+    - Heart_Atrial_Appendage
+    - Heart_Left_Ventricle
+    - Artery_Aorta
+    - Artery_Tibial
+  digestive:
+    - Small_Intestine_Terminal_Ileum
+    - Colon_Sigmoid
+    - Esophagus_Gastroesophageal_Junction
+    - Stomach
+    - Colon_Transverse
+    - Esophagus_Muscularis
+    - Esophagus_Mucosa
+  endocrine:
+    - Pituitary
+    - Adrenal_Gland
+    - Testis
+    - Thyroid
+  adipose:
+    - Adipose_Visceral__Omentum_
+    - Adipose_Subcutaneous
+
+  heart:
+    - Heart_Atrial_Appendage
+    - Heart_Left_Ventricle
+
+  skin:
+    - Skin_Not_Sun_Exposed__Suprapubic_
+    - Cells_Transformed_fibroblasts
+    - Skin_Sun_Exposed__Lower_leg_
+
+gpn_star_top_model: GPN-Star-p243-200M-256_minus_entropy_calibrated
+gpn_star_p: GPN-Star-p243-200M-256_minus_entropy_calibrated
+gpn_star_m: GPN-Star-m447-200M-256_minus_entropy_calibrated
+gpn_star_v: GPN-Star-v100-200M-128_minus_entropy_calibrated
+
+filt_seg_tissues:
+  - Liver
+  - Kidney_Cortex
+  - Lung
+  - group_blood_immune
+  - group_CNS
+  - group_digestive
+  - group_adipose
+  - group_heart
+  - group_skin
+
+enformer_models:
+  - cV2F_tissue_agnostic_extract_Enformer.Enformer_all_all
+  - cV2F_tissue_agnostic_extract_Enformer.Enformer_brain_all
+  - cV2F_tissue_agnostic_extract_Enformer.Enformer_blood_all
+  - cV2F_tissue_agnostic_extract_Enformer.Enformer_liver_all
+  - cV2F_tissue_agnostic_extract_Enformer.Enformer_gut_all
+  - cV2F_tissue_agnostic_extract_Enformer.Enformer_kidney_all
+  - cV2F_tissue_agnostic_extract_Enformer.Enformer_fat_all
+  - cV2F_tissue_agnostic_extract_Enformer.Enformer_heart_all
+  - cV2F_tissue_agnostic_extract_Enformer.Enformer_skin_all
+  - cV2F_tissue_agnostic_extract_Enformer.Enformer_lung_all
+
+# in order of importance, similar to https://screen.wenglab.org/about
+cre_classes:
+  - PLS
+  - pELS
+  - dELS
+  - CA-H3K4me3
+  - CA-CTCF
+  - CA-TF
+  - CA
+  - TF
+
+quantiles:
+  - 0.001
+  - 0.005
+  - 0.01
+  - 0.015
+  - 0.02
+  - 0.025
+  - 0.03
+  - 0.035
+  - 0.04
+  - 0.045
+  - 0.05

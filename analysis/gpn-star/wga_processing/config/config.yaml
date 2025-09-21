@@ -1,0 +1,129 @@
+msa:
+  - mm39_multiz35way
+  - dm6_multiz124way
+  - galGal6_multiz77way
+  - ce11_multiz135way
+  - tair10_multiz18way
+
+# this controls the amount of bp that is read/written from disk at once
+# since we train on 128-bp windows, 512bp sounds reasonable
+# for now having larger chunks reduces the number of files
+# in zarr v3 you'll have shards which would allow to have fast reads 
+# with a small number of files
+chunk_size: 1024
+
+hf:
+  username: gonzalobenegas
+  private: False
+
+species_renaming:
+  GCF_003668045v3: GCF_003668045
+
+# the name in the MAF file
+reference_renaming:
+  tair10: Arabidopsis_thaliana
+
+chroms:
+  mm39_multiz35way:
+    - "1"
+    - "2"
+    - "3"
+    - "4"
+    - "5"
+    - "6"
+    - "7"
+    - "8"
+    - "9"
+    - "10"
+    - "11"
+    - "12"
+    - "13"
+    - "14"
+    - "15"
+    - "16"
+    - "17"
+    - "18"
+    - "19"
+    - "X"
+    - "Y"
+  dm6_multiz124way:
+    - "2L"
+    - "2R"
+    - "3L"
+    - "3R"
+    - "4"
+    - "X"
+    - "Y"
+  galGal6_multiz77way:
+    - "1"
+    - "2"
+    - "3"
+    - "4"
+    - "5"
+    - "6"
+    - "7"
+    - "8"
+    - "9"
+    - "10"
+    - "11"
+    - "12"
+    - "13"
+    - "14"
+    - "15"
+    - "16"
+    - "17"
+    - "18"
+    - "19"
+    - "20"
+    - "21"
+    - "22"
+    - "23"
+    - "24"
+    - "25"
+    - "26"
+    - "27"
+    - "28"
+    - "30"
+    - "31"
+    - "32"
+    - "33"
+    - "W"
+    - "Z"
+  ce11_multiz135way:
+    - "I"
+    - "II"
+    - "III"
+    - "IV"
+    - "V"
+    - "X"
+  tair10_multiz18way:
+    - "1"
+    - "2"
+    - "3"
+    - "4"
+    - "5"
+
+ensembl_vep:
+  dm6:
+    s: drosophila_melanogaster
+    y: BDGP6.46
+  galGal6:
+    s: gallus_gallus_gca000002315v5
+    y: GRCg6a
+  ce11:
+    s: caenorhabditis_elegans
+    y: WBcel235
+  tair10:
+    s: arabidopsis_thaliana
+    y: TAIR10
+
+plantregmap:
+  tair10:
+    phastCons18way: http://plantregmap.gao-lab.org/download_ftp.php?filepath=08-download/Arabidopsis_thaliana/sequence_conservation/Ath_PhastCons.bedGraph.gz
+    phyloP18way: http://plantregmap.gao-lab.org/download_ftp.php?filepath=08-download/Arabidopsis_thaliana/sequence_conservation/Ath_PhyloP.bedGraph.gz
+  msu7:
+    phastCons9way: https://plantregmap.gao-lab.org/download_ftp.php?filepath=08-download/Oryza_sativa_Japonica_Group/sequence_conservation/Osj_PhastCons.bedGraph.gz
+    phyloP9way: https://plantregmap.gao-lab.org/download_ftp.php?filepath=08-download/Oryza_sativa_Japonica_Group/sequence_conservation/Osj_PhyloP.bedGraph.gz
+
+cons_chr_prefix:
+  msu7: "Chr"

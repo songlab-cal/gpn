@@ -1,0 +1,111 @@
+configfile: "config/config.yaml"
+
+
+include: "rules/common.smk"
+
+
+traits = pd.read_csv("config/traits_indep107.tsv", sep="\t")["File name"].values.ravel()
+# this one requires submitting an application first
+traits = [t for t in traits if t != "PASS.Multiple_Sclerosis.IMSGC2019"]
+
+conservation_models = list(config["conservation"].keys())
+
+
+include: "rules/conservation.smk"
+include: "rules/dist.smk"
+include: "rules/finemapping_dataset.smk"
+include: "rules/gpn.smk"
+include: "rules/ldsc.smk"
+include: "rules/seg.smk"
+
+
+gpn_star_top_model = config["gpn_star_top_model"]
+filt_seg_tissues = config["filt_seg_tissues"]
+enformer_models = config["enformer_models"]
+enformer_tissue_agnostic = "cV2F_tissue_agnostic_extract_Enformer.Enformer_all_all"
+seg_models = [f"filt_SEG/{gpn_star_top_model}/{tissue}" for tissue in filt_seg_tissues]
+gpn_star_models = [
+    config["gpn_star_p"],
+    config["gpn_star_m"],
+    config["gpn_star_v"],
+]
+other_models = [
+    "GPN-MSA_absLLR",
+    "CADD",
+]
+ablation_models = [
+    "GPN-Star-p36-200M-256_minus_entropy_calibrated",
+]
+
+models_all = (
+    conservation_models
+    + seg_models
+    + enformer_models
+    + gpn_star_models
+    + other_models
+    + ablation_models
+)
+
+models_part1 = (
+    gpn_star_models
+    + conservation_models
+    + [enformer_tissue_agnostic]
+    + other_models
+)
+
+qs_part_2 = config["quantiles"]
+models_part2 = gpn_star_models + conservation_models + ablation_models
+
+
+rule all:
+    input:
+        ################################################################################
+        # example of a single model and single trait for illustration purposes
+        ################################################################################
+        expand(
+            "results/output/{approach}/{model}/{q}/{trait}.parquet",
+            approach=["quantile"],
+            model=[gpn_star_top_model],
+            q=[0.001],
+            trait=["PASS.Schizophrenia.Trubetskoy2022"],
+        ),
+        ################################################################################
+        # main analysis
+        ################################################################################
+        #expand(
+        #    "results/output/{approach}/{model}/{q}/{trait}.parquet",
+        #    approach=["quantile"],
+        #    model=models_all,
+        #    q=[0.001],
+        #    trait=traits,
+        #),
+        ################################################################################
+        # CDS vs. not
+        ################################################################################
+        #expand(
+        #    "results/output/{approach}/{model}/{q}/{trait}.parquet",
+        #    approach=["quantile_CDS", "quantile_nonCDS"],
+        #    model=models_part1,
+        #    q=[0.001],
+        #    trait=traits,
+        #),
+        ################################################################################
+        # varying quantiles
+        ################################################################################
+        #expand(
+        #    "results/output/{approach}/{model}/{q}/{trait}.parquet",
+        #    approach=["quantile"],
+        #    model=models_part2,
+        #    q=qs_part_2,
+        #    trait=traits,
+        #),
+        ################################################################################
+        # score consequence
+        ################################################################################
+        #expand(
+        #    "results/score_consequence/{annot_mode}/{approach}/{model}/{q}.parquet",
+        #    annot_mode=["annot_with_cre_v2"],
+        #    approach=["quantile"],
+        #    model=gpn_star_models,
+        #    q=[0.001],
+        #),

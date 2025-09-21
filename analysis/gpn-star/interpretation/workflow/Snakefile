@@ -1,0 +1,26 @@
+configfile: "config/config.yaml"
+
+
+include: "rules/common.smk"
+include: "rules/nuc_dep.smk"
+include: "rules/umap.smk"
+
+
+models_human = config["models"]["human"]
+models_human_M_P = config["models"]["human_M_P"]
+
+
+rule all:
+    input:
+        expand(
+            "results/plots/umap/{intervals}/{model}/region.svg",
+            intervals=[
+                "v8_0_subsamplestratified_20000",
+            ],
+            model=models_human,
+        ),
+        expand("results/plots/nuc_dep/TH/{model}.svg", model=models_human_M_P),
+        expand("results/plots/nuc_dep/LDLR/{model}.svg", model=models_human),
+        expand("results/plots/nuc_dep/HBA1/{model}.svg", model=models_human_M_P),
+        expand("results/plots/nuc_dep/GRIA4/{model}.svg", model=models_human),
+        expand("results/plots/nuc_dep/drosophila_MSE/{model}.svg", model=["dm6"]),
