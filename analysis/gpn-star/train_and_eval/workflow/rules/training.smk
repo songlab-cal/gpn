@@ -83,42 +83,6 @@ rule filter_conservation_intervals:
         print(res)
         res.to_parquet(output[0], index=False)
 
-rule download_maf_multiz100way:
-    output:
-        "results/maf/multiz100way/{chrom}.maf",
-    shell:
-        "wget -O - https://hgdownload.soe.ucsc.edu/goldenPath/hg38/multiz100way/maf/chr{wildcards.chrom}.maf.gz | gunzip -c > {output}"
-
-
-rule download_reference_chr:
-    output:
-        temp("results/genome_chr.fa"),
-    shell:
-        "wget -O - https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz | gunzip -c > {output}"
-
-
-rule extract_chrom:
-    input:
-        "results/genome_chr.fa",
-    output:
-        "results/chrom/{chrom}.fa",
-    shell:
-        "faOneRecord {input} chr{wildcards.chrom} > {output}"
-
-
-# I also have a python script for this, which uses less memory
-# scripts/maf_to_fasta.py
-# but it's still under development, currently assumes there's no gaps in target
-# sequence
-rule maf2fasta:
-    input:
-        "results/chrom/{chrom}.fa",
-        "results/maf/{alignment}/{chrom}.maf",
-    output:
-        "results/maf_fasta/{alignment}/{chrom}.fa",
-    threads: workflow.cores // 2
-    shell:
-        "maf2fasta {input} fasta > {output}"
 
 def get_phylop_bw(wc):
     """Return path to the .bw file based on a lookup table."""
@@ -174,70 +138,7 @@ rule make_dataset:
             intervals[
                 intervals.chrom.isin(SPLIT_CHROMS[split])
             ].to_parquet(path, index=False, engine="pyarrow")
-
-rule make_msa_chrom:
-    input:
-        "results/maf_fasta/{alignment}/{chrom}.fa",
-        "config/species/{alignment}/all.txt",
-        "config/species/{alignment}/{species}.txt",
-        "results/genome/{genome}.fa.gz",
-    output:
-        temp("results/msa/{genome}/{alignment}/{species}/{chrom}.npy"),
-    threads: workflow.cores // 10
-    run:
-        MSA = load_fasta(input[0])
-        # the ref should be in first position
-        all_species = pd.read_csv(input[1], header=None).values.ravel()
-        MSA = MSA[all_species]
-        species = pd.read_csv(input[2], header=None).values.ravel()
-        MSA = np.vstack(MSA.apply(
-            lambda seq: np.frombuffer(seq.upper().encode("ascii"), dtype="S1")
-        ))
-        print(MSA.shape)
-        # let's only keep non-gaps in reference
-        MSA = MSA[:, MSA[0]!=b'-']
-        print(MSA.shape)
-        MSA = MSA[[all_species.tolist().index(s) for s in species]]
-        print(MSA.shape)
-        MSA = MSA.T
-        print(MSA.shape)
-        vocab = np.frombuffer("ACGT-".encode('ascii'), dtype="S1")
-        # decision: consider all "N" and similar as "-"
-        # might not be the best, some aligners have a distinction
-        # between N, or unaligned, and gap
-        MSA[~np.isin(MSA, vocab)] = b"-"
-
-        # now we will add the ref genome back again (but our version, which is
-        # the latest patch). This is a bit awkward...
-        chrom = wildcards.chrom
-        ref = np.frombuffer(
-            load_fasta(input[3], subset_chroms=[chrom])[chrom].encode("ascii"), dtype="S1"
-        )
-        print(ref.shape)
-        MSA = np.concatenate((ref[:, np.newaxis], MSA), axis=1) 
-        print(MSA.shape)
-
-        np.save(output[0], MSA)
-
-# recommend archiving the zarr directory before rsyncing
-# tar -cf all.zarr.tar all.zarr
-# and then unarchive on the other side
-# tar -xf all.zarr.tar && rm all.zarr.tar
-
-rule merge_msa:
-    input:
-        expand("results/msa/{{genome}}/{{alignment}}/{{species}}/{chrom}.npy", chrom=CHROMS),
-    output:
-        directory("results/msa/{genome}/{alignment}/{species}"),
-    threads: workflow.cores
-    priority: 100
-    run:
-        z = zarr.open_group(output[0]+'/all.zarr', mode='w')
-        for chrom, path in zip(CHROMS, input):
-            print(chrom)
-            data = np.load(path)
-            z.create_dataset(chrom, data=data, chunks=(512, data.shape[1]))
-            print(z[chrom].info)
+            
 
 rule compute_phylo_dist:
     input:
