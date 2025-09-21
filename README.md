@@ -5,7 +5,6 @@ Code and resources for genomic language models [GPN](https://doi.org/10.1073/pna
 
 ## Table of contents
 - [Installation](#installation)
-- [Quick start](#quick-start)
 - [Modeling frameworks](#modeling-frameworks)
 - [Applications of the models](#applications-of-the-models)
 - [GPN](#gpn)
