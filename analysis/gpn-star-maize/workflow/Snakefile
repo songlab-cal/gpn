@@ -1,0 +1,10 @@
+configfile: "config/config.yaml"
+
+include: "rules/common.smk"
+include: "rules/training.smk"
+include: "rules/inference.smk"
+
+
+rule all:
+    input:
+        "results/intervals/128/defined.phastCons.percentile-75.parquet",
