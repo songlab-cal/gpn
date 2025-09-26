@@ -7,4 +7,5 @@ include: "rules/inference.smk"
 
 rule all:
     input:
-        "results/intervals/128/defined.phastCons.percentile-75.parquet",
+        "results/dataset/128/64/True/defined.phastCons.percentile-75_0.05_0.001/train.parquet",
+        "results/phylo_dist/0.05",
