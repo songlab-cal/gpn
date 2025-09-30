@@ -5,7 +5,62 @@ include: "rules/training.smk"
 include: "rules/inference.smk"
 
 
+model_template = "{time_enc}/{clade_thres}/{dataset}/{model_size}/{loss_weight}/{seed}/{max_steps}/{use_aux_features}/{weight_conserved}/{flip_nonconserved}"
+
+# default is first
+hparams = {
+    "dataset": [
+        "128/64/True/defined.phastCons.percentile-75_0.05_0.001",
+    ],
+    
+    "time_enc": [
+        "fire_1",
+    ],
+
+    "clade_thres": [
+        "0.05",
+    ],
+
+    "use_aux_features": [
+        True,
+    ],
+    "loss_weight": [
+        0.1,
+    ],
+    "weight_conserved": [
+        True,
+    ],
+    "flip_nonconserved": [
+        0.1,
+    ],
+}
+
+default_d = {k: v[0] for k, v in hparams.items()}
+hparam_models = [expand(model_template, **default_d, allow_missing=True)[0]]
+
+
+models = sum(
+    [
+        expand(
+            m,
+            seed=[
+                42,
+            ],
+            max_steps=[
+                50_000,
+            ],
+            model_size=[
+                "small",
+            ],
+        ) for m in hparam_models
+    ],
+    []
+)
+print(models)
+
+
 rule all:
     input:
-        "results/dataset/128/64/True/defined.phastCons.percentile-75_0.05_0.001/train.parquet",
-        "results/phylo_dist/0.05",
+        expand("results/checkpoints/{model}", model=models),
+        #"results/dataset/128/64/True/defined.phastCons.percentile-75_0.05_0.001/train.parquet",
+        #"results/phylo_dist/0.05",

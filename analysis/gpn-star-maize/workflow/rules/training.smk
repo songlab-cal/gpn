@@ -126,3 +126,101 @@ rule compute_phylo_dist:
         os.makedirs(output[0], exist_ok=True) 
         np.save(output[0] + '/pairwise.npy', phylo_dist_pairwise)
         np.save(output[0] + '/in_clade.npy', in_clade_phylo_dist)
+
+
+def model_config(wildcards, output):
+    s = wildcards.model_size
+    w = int(wildcards.dataset.split("/")[0])
+    time_enc = wildcards.time_enc
+    clade_thres = wildcards.clade_thres
+
+    if s == "small" and w == 128: 
+        conf = ",num_hidden_layers=8,num_attention_heads=8,hidden_size=512,intermediate_size=2048 --per_device_train_batch_size 64 --per_device_eval_batch_size 16 --gradient_accumulation_steps 1"
+    elif s == "small" and w == 256:
+        conf = ",num_hidden_layers=8,num_attention_heads=8,hidden_size=512,intermediate_size=2048 --per_device_train_batch_size 32 --per_device_eval_batch_size 8 --gradient_accumulation_steps 1"
+    elif s == "small" and w == 512:
+        conf = ",num_hidden_layers=8,num_attention_heads=8,hidden_size=512,intermediate_size=2048 --per_device_train_batch_size 16 --per_device_eval_batch_size 4 --gradient_accumulation_steps 1"
+    elif s == "medium" and w == 128:
+        conf = " --per_device_train_batch_size 32 --per_device_eval_batch_size 8 --gradient_accumulation_steps 2"
+    elif s == "medium" and w == 256:
+        conf = " --per_device_train_batch_size 16 --per_device_eval_batch_size 4 --gradient_accumulation_steps 2"
+    elif s == "medium" and w == 512:
+        conf = " --per_device_train_batch_size 4 --per_device_eval_batch_size 2 --gradient_accumulation_steps 4"
+    elif s == "large" and w == 128:
+        conf = ",num_hidden_layers=16,num_attention_heads=16,hidden_size=1024,intermediate_size=4096 --per_device_train_batch_size 16 --per_device_eval_batch_size 8 --gradient_accumulation_steps 4"
+    elif s == "large" and w == 256:
+        conf = ",num_hidden_layers=16,num_attention_heads=16,hidden_size=1024,intermediate_size=4096 --per_device_train_batch_size 8 --per_device_eval_batch_size 4 --gradient_accumulation_steps 4"
+    else:
+        raise Exception("Invalid model config")
+
+    if s == "large":
+        conf = f'--learning_rate 5e-5 --config_overrides time_enc={time_enc},clade_thres={clade_thres}' + conf
+    else:
+        conf = f'--learning_rate 1e-4 --config_overrides time_enc={time_enc},clade_thres={clade_thres}' + conf
+    return conf
+
+
+rule train_gpn_star:
+    input:
+        "results/msa/36",
+        "results/phylo_dist/{clade_thres}",
+        expand("results/dataset/{{dataset}}/{split}.parquet", split=SPLITS),
+    output:
+        directory("results/checkpoints/{time_enc}/{clade_thres}/{dataset}/{model_size}/{loss_weight}/{seed}/{max_steps}/{use_aux_features}/{weight_conserved}/{flip_nonconserved}"),
+    wildcard_constraints:
+        time_enc="[A-Za-z0-9_-]+",
+        clade_thres="[0-9.-]+",
+        model_size="|".join(["small", "medium", "large"]),
+        #dataset="[A-Za-z0-9_]+",
+    params:
+        model_conf=model_config,
+        project_name=lambda wildcards: wildcards.dataset.replace("/", "_"),
+        run_name=lambda wildcards, output: '/'.join(output[0].split("/")[2:]),
+    threads:
+        workflow.cores
+    priority: 100
+    shell:       
+        """
+        num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}')
+        num_cpus={threads}
+        dataloader_num_workers=$(($num_cpus / $num_gpus))
+        
+        WANDB_PROJECT=GPN-Star-Maize \
+        torchrun \
+        --nproc_per_node=$num_gpus \
+        --master_port=25678 \
+        -m gpn.star.train \
+        --do_train \
+        --do_eval \
+        --prediction_loss_only True \
+        --dataset_name results/dataset/{wildcards.dataset} \
+        --msa_path {input[0]} \
+        --phylo_dist_path {input[1]} \
+        --run_name {params.run_name} \
+        --output_dir {output} \
+        --soft_masked_loss_weight_train {wildcards.loss_weight} \
+        --soft_masked_loss_weight_evaluation {wildcards.loss_weight} \
+        --weight_decay 0.01 \
+        --optim adamw_torch \
+        --lr_scheduler_type cosine \
+        --seed {wildcards.seed} \
+        --dataloader_num_workers $dataloader_num_workers \
+        --save_strategy steps \
+        --save_steps 5000 \
+        --eval_strategy steps \
+        --eval_steps 5000 \
+        --logging_steps 1000 \
+        --max_steps {wildcards.max_steps} \
+        --warmup_steps 2500 \
+        --save_total_limit 1 \
+        --load_best_model_at_end \
+        --model_type GPNStar \
+        {params.model_conf} \
+        --use_aux_features {wildcards.use_aux_features} \
+        --weight_conserved {wildcards.weight_conserved} \
+        --flip_nonconserved {wildcards.flip_nonconserved} \
+        --remove_unused_columns False \
+        --bf16 \
+        --bf16_full_eval \
+        --torch_compile
+        """
