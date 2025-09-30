@@ -7,7 +7,6 @@ from joblib import Parallel, delayed
 import multiprocessing as mp
 import numpy as np
 import pandas as pd
-import pyBigWig
 from tqdm import tqdm
 
 tqdm.pandas()
@@ -367,6 +366,7 @@ def get_seq(intervals, genome):
 
 class BigWig(object):
     def __init__(self, path):
+        import pyBigWig
         self.bw = pyBigWig.open(path)
 
     def get_features(self, chrom, start, end, strand="+"):
@@ -586,6 +586,9 @@ class Tokenizer(object):
 
     def nucleotide_token_id_end(self):
         return self.vocab.index("T") + 1
+
+    def save_pretrained(self, path):
+        pass
 
 
 class ReverseComplementer(object):

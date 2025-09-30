@@ -271,6 +271,10 @@ class DataTrainingArguments:
     use_aux_features: Optional[bool] = field(default=True)
     weight_conserved: Optional[str] = field(default='True')
     flip_nonconserved: Optional[float] = field(default=0)
+    n_eval_examples: Optional[int] = field(
+        default=None,
+        metadata={"help": "Number of random samples to use for evaluation. If None, use all validation samples."}
+    )
 
 
 def main():
@@ -499,7 +503,16 @@ def main():
         train_dataset = tokenized_datasets["train"]
 
     if training_args.do_eval:
+        print("I'm here", data_args.n_eval_examples)
         eval_dataset = tokenized_datasets["validation"]
+        # Shuffle and take N_EVAL_SAMPLES randomly if specified
+        if data_args.n_eval_examples is not None:
+            print("I'm here 2")
+            print(eval_dataset)
+            print("subsampling eval dataset")
+            eval_dataset = eval_dataset.shuffle(seed=training_args.seed)
+            eval_dataset = eval_dataset.select(range(min(data_args.n_eval_examples, len(eval_dataset))))
+            print(eval_dataset)
 
     # Data collator
     # This one will take care of randomly masking the tokens.

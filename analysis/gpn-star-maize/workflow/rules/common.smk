@@ -9,7 +9,6 @@ from gpn.star.data import (
 import networkx as nx
 import numpy as np
 import pandas as pd
-import pyBigWig
 from tqdm import tqdm
 
 tqdm.pandas()
