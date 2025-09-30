@@ -137,8 +137,8 @@ def model_config(wildcards, output):
     clade_thres = wildcards.clade_thres
 
     if s == "small" and w == 128: 
-        conf = ",num_hidden_layers=8,num_attention_heads=8,hidden_size=512,intermediate_size=2048 --per_device_train_batch_size 64 --per_device_eval_batch_size 256 --gradient_accumulation_steps 1"
-        #conf = ",num_hidden_layers=8,num_attention_heads=8,hidden_size=512,intermediate_size=2048 --per_device_train_batch_size 512 --per_device_eval_batch_size 512 --gradient_accumulation_steps 1"
+        #conf = ",num_hidden_layers=8,num_attention_heads=8,hidden_size=512,intermediate_size=2048 --per_device_train_batch_size 32 --per_device_eval_batch_size 256 --gradient_accumulation_steps 1"
+        conf = ",num_hidden_layers=8,num_attention_heads=8,hidden_size=512,intermediate_size=2048 --per_device_train_batch_size 32 --per_device_eval_batch_size 256 --gradient_accumulation_steps 8"
     elif s == "small" and w == 256:
         conf = ",num_hidden_layers=8,num_attention_heads=8,hidden_size=512,intermediate_size=2048 --per_device_train_batch_size 32 --per_device_eval_batch_size 8 --gradient_accumulation_steps 1"
     elif s == "small" and w == 512:
@@ -212,9 +212,9 @@ rule train_gpn_star:
         --dataloader_num_workers $dataloader_num_workers \
         --eval_strategy steps \
         --save_strategy steps \
-        --logging_steps 10 \
-        --eval_steps 50 \
-        --save_steps 50 \
+        --logging_steps 1000 \
+        --eval_steps 5000 \
+        --save_steps 5000 \
         --max_steps {wildcards.max_steps} \
         --warmup_steps 2500 \
         --save_total_limit 1 \
