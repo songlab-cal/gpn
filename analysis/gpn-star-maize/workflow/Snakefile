@@ -47,8 +47,8 @@ models = sum(
                 42,
             ],
             max_steps=[
-                50_000,
-                #200,
+                #50_000,
+                200,
             ],
             model_size=[
                 "small",

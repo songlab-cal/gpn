@@ -138,7 +138,7 @@ def model_config(wildcards, output):
 
     if s == "small" and w == 128: 
         #conf = ",num_hidden_layers=8,num_attention_heads=8,hidden_size=512,intermediate_size=2048 --per_device_train_batch_size 32 --per_device_eval_batch_size 256 --gradient_accumulation_steps 1"
-        conf = ",num_hidden_layers=8,num_attention_heads=8,hidden_size=512,intermediate_size=2048 --per_device_train_batch_size 32 --per_device_eval_batch_size 256 --gradient_accumulation_steps 8"
+        conf = ",num_hidden_layers=8,num_attention_heads=8,hidden_size=512,intermediate_size=2048 --per_device_train_batch_size 32 --per_device_eval_batch_size 128 --gradient_accumulation_steps 16"
     elif s == "small" and w == 256:
         conf = ",num_hidden_layers=8,num_attention_heads=8,hidden_size=512,intermediate_size=2048 --per_device_train_batch_size 32 --per_device_eval_batch_size 8 --gradient_accumulation_steps 1"
     elif s == "small" and w == 512:
@@ -187,9 +187,7 @@ rule train_gpn_star:
         num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}')
         num_cpus={threads}
         dataloader_num_workers=$(($num_cpus / $num_gpus))
-        dataloader_num_workers=$((dataloader_num_workers > 8 ? 8 : dataloader_num_workers))
 
-        OMP_NUM_THREADS=8 \
         WANDB_PROJECT=GPN-Star-Maize \
         torchrun \
         --nproc_per_node=$num_gpus \
@@ -212,9 +210,9 @@ rule train_gpn_star:
         --dataloader_num_workers $dataloader_num_workers \
         --eval_strategy steps \
         --save_strategy steps \
-        --logging_steps 1000 \
-        --eval_steps 5000 \
-        --save_steps 5000 \
+        --logging_steps 10 \
+        --eval_steps 50 \
+        --save_steps 50 \
         --max_steps {wildcards.max_steps} \
         --warmup_steps 2500 \
         --save_total_limit 1 \
