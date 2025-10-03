@@ -137,8 +137,8 @@ def model_config(wildcards, output):
     clade_thres = wildcards.clade_thres
 
     if s == "small" and w == 128: 
-        #conf = ",num_hidden_layers=8,num_attention_heads=8,hidden_size=512,intermediate_size=2048 --per_device_train_batch_size 32 --per_device_eval_batch_size 256 --gradient_accumulation_steps 1"
         conf = ",num_hidden_layers=8,num_attention_heads=8,hidden_size=512,intermediate_size=2048 --per_device_train_batch_size 32 --per_device_eval_batch_size 128 --gradient_accumulation_steps 16"
+        #conf = ",num_hidden_layers=8,num_attention_heads=8,hidden_size=512,intermediate_size=2048 --per_device_train_batch_size 32 --per_device_eval_batch_size 128 --gradient_accumulation_steps 1"
     elif s == "small" and w == 256:
         conf = ",num_hidden_layers=8,num_attention_heads=8,hidden_size=512,intermediate_size=2048 --per_device_train_batch_size 32 --per_device_eval_batch_size 8 --gradient_accumulation_steps 1"
     elif s == "small" and w == 512:

@@ -720,6 +720,8 @@ class GPNStarModel(GPNStarPreTrainedModel):
         self.target_embedding = GPNStarEmbedding(self.config)
         self.source_embedding = GPNStarSourceModule(self.config)
         self.encoder = GPNStarEncoder(self.config)
+        # Fix: https://github.com/huggingface/transformers/issues/40564
+        self.accepts_loss_kwargs = False
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -813,6 +815,9 @@ class GPNStarForMaskedLM(GPNStarPreTrainedModel):
 
         self.model = GPNStarModel(config)
         self.cls = RoFormerOnlyMLMHead(config)
+
+        # Fix: https://github.com/huggingface/transformers/issues/40564
+        self.accepts_loss_kwargs = False
 
         # Initialize weights and apply final processing
         self.post_init()
