@@ -37,7 +37,10 @@ def run_inference(
         dataloader_num_workers=dataloader_num_workers,
         remove_unused_columns=False,
         torch_compile=True,
-        fp16=True,
+        #fp16=True,
+        bf16=True,
+        bf16_full_eval=True,
+        report_to="none",
     )
     print(dataset)
     trainer = Trainer(model=inference.model, args=training_args)

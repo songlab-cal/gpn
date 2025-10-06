@@ -61,6 +61,11 @@ print(models)
 
 rule all:
     input:
-        expand("results/checkpoints/{model}", model=models),
-        #"results/dataset/128/64/True/defined.phastCons.percentile-75_0.05_0.001/train.parquet",
-        #"results/phylo_dist/0.05",
+        # training
+        # expand("results/checkpoints/{model}", model=models),
+        # inference
+        expand(
+            "results/inference_dataset/{dataset}/logits/{model}.parquet",
+            dataset=["allele_frequency_v1"],
+            model=models,
+        )

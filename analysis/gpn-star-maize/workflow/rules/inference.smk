@@ -1,3 +1,12 @@
+rule donwload_allele_frequency_v1:
+    output:
+        "results/inference_dataset/allele_frequency_v1/test.parquet",
+    shell:
+        """
+        wget -O {output} https://huggingface.co/datasets/plantcad/maize-allele-frequency/resolve/main/test.parquet
+        """
+
+
 rule get_logits:
     input:
         "results/inference_dataset/{dataset}/test.parquet",
@@ -17,8 +26,11 @@ rule get_logits:
         num_cpus={threads}
         dataloader_num_workers=$(($num_cpus / $num_gpus))
 
-        torchrun --nproc_per_node=$num_gpus -m gpn.star.inference logits {input[0]} {input[1]} {wildcards.window_size} {input[2]} {output} \
-        --per_device_batch_size 256 --is_file \
+        torchrun --nproc_per_node=$num_gpus \
+        -m gpn.star.inference logits \
+        {input[0]} {input[1]} {wildcards.window_size} {input[2]} {output} \
+        --per_device_batch_size 512 \
+        --is_file \
         --dataloader_num_workers $dataloader_num_workers
         """
 
