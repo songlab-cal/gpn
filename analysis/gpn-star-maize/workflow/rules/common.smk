@@ -6,6 +6,7 @@ from gpn.star.data import (
     filter_length,
     make_windows,
 )
+from gpn.star.utils import get_llr
 import networkx as nx
 import numpy as np
 import pandas as pd

@@ -65,7 +65,7 @@ rule all:
         # expand("results/checkpoints/{model}", model=models),
         # inference
         expand(
-            "results/inference_dataset/{dataset}/logits/{model}.parquet",
+            "results/inference_dataset/{dataset}/llr/{model}.parquet",
             dataset=["allele_frequency_v1"],
             model=models,
         )

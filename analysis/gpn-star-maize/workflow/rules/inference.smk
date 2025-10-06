@@ -29,10 +29,23 @@ rule get_logits:
         torchrun --nproc_per_node=$num_gpus \
         -m gpn.star.inference logits \
         {input[0]} {input[1]} {wildcards.window_size} {input[2]} {output} \
-        --per_device_batch_size 512 \
+        --per_device_batch_size 2048 \
         --is_file \
         --dataloader_num_workers $dataloader_num_workers
         """
+
+
+rule get_llr:
+    input:
+        "results/inference_dataset/{dataset}/test.parquet",
+        "results/inference_dataset/{dataset}/logits/{model}.parquet",
+    output:
+        "results/inference_dataset/{dataset}/llr/{model}.parquet",
+    run:
+        V = pd.read_parquet(input[0], columns=["ref", "alt"])
+        logits = pd.read_parquet(input[1])
+        V["score"] = get_llr(logits, V["ref"], V["alt"])
+        V[["score"]].to_parquet(output[0], index=False)
 
 
 #rule get_llr_calibrated:
