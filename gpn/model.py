@@ -318,6 +318,9 @@ class GPNModel(GPNPreTrainedModel):
         self.encoder = ENCODER_CLASS[config.encoder](config)
         self.ln_f = nn.LayerNorm(config.hidden_size, bias=config.bias)
 
+        # Fix: https://github.com/huggingface/transformers/issues/40564
+        self.accepts_loss_kwargs = False
+
         # Initialize weights and apply final processing
         self.post_init()
 
@@ -347,6 +350,9 @@ class GPNForMaskedLM(GPNPreTrainedModel):
         super().__init__(config)
         self.model = GPNModel(config)
         self.cls = MLMHead(config)
+
+        # Fix: https://github.com/huggingface/transformers/issues/40564
+        self.accepts_loss_kwargs = False
 
         # Initialize weights and apply final processing
         self.post_init()
