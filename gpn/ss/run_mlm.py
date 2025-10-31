@@ -49,7 +49,6 @@ from transformers import (
     set_seed,
 )
 from transformers.trainer_utils import get_last_checkpoint
-from transformers.utils import check_min_version, send_example_telemetry
 from transformers.utils.versions import require_version
 
 from Bio.Seq import Seq
@@ -85,9 +84,6 @@ class DataCollatorForLanguageModelingSimplified(DataCollatorForLanguageModeling)
             batch["labels"] = labels
         return batch
 
-
-# Will error if the minimal version of Transformers is not installed. Remove at your own risks.
-# check_min_version("4.26.0.dev0")
 
 require_version(
     "datasets>=1.8.0",
@@ -310,10 +306,6 @@ def main():
         )
     else:
         model_args, data_args, training_args = parser.parse_args_into_dataclasses()
-
-    # Sending telemetry. Tracking the example usage helps us better allocate resources to maintain them. The
-    # information sent is the one passed as arguments along with your Python/PyTorch versions.
-    send_example_telemetry("run_mlm", model_args, data_args)
 
     # Setup logging
     logging.basicConfig(
