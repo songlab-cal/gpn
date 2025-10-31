@@ -54,8 +54,6 @@ from transformers.utils.versions import require_version
 from Bio.Seq import Seq
 import gpn.model
 import numpy as np
-import pandas as pd
-from scipy.stats import geom
 from torch.utils.data import DataLoader, IterableDataset, get_worker_info
 
 
