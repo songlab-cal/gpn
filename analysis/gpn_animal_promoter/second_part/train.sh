@@ -6,7 +6,7 @@ n_gpu=$4
 total_batch_size=2048
 gradient_accumulation_steps=$((total_batch_size / (per_device_batch_size * n_gpu)))
 
-version=v1
+version=second_part
 name=${version}
 
 if [ "$n_gpu" -eq 1 ]; then
@@ -16,7 +16,7 @@ else
 fi
 
 OMP_NUM_THREADS=8 \
-WANDB_PROJECT=gpn-animal-promoter-again \
+WANDB_PROJECT=gpn-animal-promoter \
     ${python_cmd} \
     -m gpn.ss.run_mlm \
     --do_train \
