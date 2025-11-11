@@ -21,19 +21,16 @@ https://huggingface.co/models?filter=fill-mask
 """
 # You can also adapt this script on your own masked language modeling task. Pointers for this are left as comments.
 
-from collections.abc import Iterable
 import logging
-import math
 import numpy as np
 import os
 import sys
 from dataclasses import dataclass, field
-from itertools import chain
 import torch
-from typing import Any, Callable, Dict, List, NewType, Optional, Tuple, Union
+from typing import Dict, List, Optional
 
 import datasets
-from datasets import load_dataset, DatasetDict, concatenate_datasets
+from datasets import load_dataset
 
 # import evaluate
 import transformers
@@ -41,24 +38,19 @@ from transformers import (
     CONFIG_MAPPING,
     MODEL_FOR_MASKED_LM_MAPPING,
     AutoConfig,
-    AutoModelForSequenceClassification,
-    AutoModelForTokenClassification,
     AutoTokenizer,
     HfArgumentParser,
     Trainer,
     TrainingArguments,
-    is_torch_tpu_available,
     set_seed,
 )
 from transformers.trainer_utils import get_last_checkpoint
-from transformers.utils import check_min_version, send_example_telemetry
 from transformers.utils.versions import require_version
 
 from peft import get_peft_model, LoraConfig
 
 import gpn.model
-import numpy as np
-import pandas as pd
+from modeling_species_expression import GPNForSpeciesExpression
 
 
 def standardize(x):
@@ -67,6 +59,21 @@ def standardize(x):
 
 def batched_pearsonr(x, y):
     return np.mean(standardize(x) * standardize(y), axis=0, dtype=np.float64)
+
+
+def parse_hidden_dims(value: Optional[str]) -> List[int]:
+    if value is None:
+        return []
+    value = value.strip()
+    if value == "" or value.lower() == "none":
+        return []
+    dims: List[int] = []
+    for token in value.split(","):
+        token = token.strip()
+        if not token:
+            continue
+        dims.append(int(token))
+    return dims
 
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
@@ -197,6 +204,35 @@ class DataTrainingArguments:
     seq_column_name: Optional[str] = field(
         default=None,
     )
+    species_column_name: Optional[str] = field(
+        default="species_id",
+        metadata={
+            "help": "Column containing the species identifier. Defaults to 'species_id'."
+        },
+    )
+    species_projection_hidden_dims: Optional[str] = field(
+        default="1024",
+        metadata={
+            "help": (
+                "Comma-separated hidden dimensions for the species-specific projection head. "
+                "Use an empty string to disable additional hidden layers."
+            )
+        },
+    )
+    species_projection_dropout: float = field(
+        default=0.1,
+        metadata={"help": "Dropout rate within the species-specific projection head."},
+    )
+    species_projection_activation: str = field(
+        default="gelu",
+        metadata={"help": "Activation function used inside the species-specific head."},
+    )
+    species_projection_pooling: str = field(
+        default="mean",
+        metadata={
+            "help": "Pooling strategy over sequence representations before the projection head."
+        },
+    )
     label_column_name: Optional[str] = field(
         default=None,
         metadata={
@@ -322,6 +358,46 @@ def main():
         for key in d.keys():
             d[key] = d[key].rename_column(data_args.label_column_name, "labels")
 
+    if data_args.streaming:
+        raise ValueError("Species-specific projection currently does not support streaming datasets.")
+
+    species_column = data_args.species_column_name or "species_id"
+    if species_column not in d["train"].column_names:
+        raise ValueError(
+            f"Expected column '{species_column}' in the dataset to identify species, "
+            f"but available columns are {d['train'].column_names}."
+        )
+
+    all_species = set()
+    for split_name, split_dataset in d.items():
+        if species_column not in split_dataset.column_names:
+            raise ValueError(
+                f"Column '{species_column}' missing from split '{split_name}'. "
+                "Ensure the dataset includes the species identifier for every split."
+            )
+        all_species.update(split_dataset.unique(species_column))
+
+    species_list = sorted(all_species)
+    species_to_idx = {species: idx for idx, species in enumerate(species_list)}
+    logger.info(
+        "Identified %d species for swappable projection layers: %s",
+        len(species_list),
+        species_list,
+    )
+
+    def add_species_idx(batch):
+        return {
+            "species_idx": [species_to_idx[s] for s in batch[species_column]],
+        }
+
+    d = d.map(
+        add_species_idx,
+        batched=True,
+        desc="Indexing species identifiers",
+        remove_columns=[species_column],
+        load_from_cache_file=not data_args.overwrite_cache,
+    )
+
     # Load pretrained model and tokenizer
     #
     # Distributed training:
@@ -351,6 +427,13 @@ def main():
             config.update_from_string(model_args.config_overrides)
             logger.info(f"New config: {config}")
 
+    species_hidden_dims = parse_hidden_dims(data_args.species_projection_hidden_dims)
+    config.species_to_idx = species_to_idx
+    config.species_projection_hidden_dims = species_hidden_dims
+    config.species_projection_dropout = float(data_args.species_projection_dropout)
+    config.species_projection_activation = data_args.species_projection_activation
+    config.species_projection_pooling = data_args.species_projection_pooling
+
     tokenizer_kwargs = {
         "cache_dir": model_args.cache_dir,
         "use_fast": model_args.use_fast_tokenizer,
@@ -371,13 +454,8 @@ def main():
             "You can do it from another script, save it, and load it from here, using --tokenizer_name."
         )
 
-    model_class = (
-        AutoModelForSequenceClassification if not data_args.token_classification
-        else AutoModelForTokenClassification
-    )
-
     if model_args.model_name_or_path:
-        model = model_class.from_pretrained(
+        model = GPNForSpeciesExpression.from_pretrained(
             model_args.model_name_or_path,
             from_tf=bool(".ckpt" in model_args.model_name_or_path),
             config=config,
@@ -387,13 +465,13 @@ def main():
         )
     else:
         logger.info("Training new model from scratch")
-        model = model_class.from_config(config)
+        model = GPNForSpeciesExpression(config)
 
     peft_config = LoraConfig(
         task_type="SEQ_CLS",
         #target_modules="all-linear",
         target_modules=r"^model\.encoder\.\d+\.conv\.1$|^model\.encoder\.\d+\.ffn\.0$",
-        modules_to_save=["classifier"],
+        modules_to_save=["species_projection"],
     )
 
     model = get_peft_model(model, peft_config)
@@ -403,7 +481,6 @@ def main():
         d["train"] = d["train"].shuffle(seed=training_args.seed)
 
     def tokenize_function(examples):
-        n = len(examples["seq"])
         res = {}
         res["input_ids"] = tokenizer(
             examples["seq"],
@@ -414,6 +491,7 @@ def main():
             return_attention_mask=False,
         )["input_ids"]
         res["labels"] = examples["labels"]
+        res["species_idx"] = examples["species_idx"]
         return res
 
     d.set_transform(tokenize_function)
