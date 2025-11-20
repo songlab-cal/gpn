@@ -16,5 +16,11 @@ hf download songlab/gpn-animal-promoter-dataset --repo-type dataset --local-dir 
 
 ```bash
 source .venv/bin/activate
-bash train.sh dataset checkpoints 128 1
+bash train.sh dataset checkpoints 128 8
+```
+
+## Upload results
+
+```bash
+hf upload-large-folder --repo-type dataset gonzalobenegas/gpn-animal-promoter-early-checkpoints checkpoints
 ```

@@ -49,7 +49,7 @@ WANDB_PROJECT=gpn-animal-promoter \
     --output_dir ${output_path} \
     --torch_compile \
     --learning_rate 1e-3 \
-    --lr_scheduler_type cosine \
+    --lr_scheduler_type constant_with_warmup \
     --ddp_find_unused_parameters False \
     --bf16 \
     --bf16_full_eval \
