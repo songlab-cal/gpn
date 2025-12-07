@@ -6,7 +6,6 @@ Code and resources for genomic language models [GPN](https://doi.org/10.1073/pna
 ## Table of contents
 - [Installation](#installation)
 - [Modeling frameworks](#modeling-frameworks)
-- [Applications of the models](#applications-of-the-models)
 - [GPN](#gpn)
 - [GPN-MSA](#gpn-msa)
 - [PhyloGPN](#phylogpn)
@@ -38,31 +37,71 @@ pip install -e .
 | PhyloGPN | [Albors et al. 2025](https://link.springer.com/chapter/10.1007/978-3-031-90252-9_7) | Uses an alignment during training, but does not require it for inference or fine-tuning |
 | GPN-Star | [Ye et al. 2025](https://doi.org/10.1101/2025.09.21.677619) | Requires aligned genomes for both training and inference |
 
-## Applications of the models
-| Paper |  Model | Dataset | Code | Resources on HuggingFace 🤗 |
-|  -- | --- | ------- | ---- | -------------- |
-| [Benegas et al. 2023](https://doi.org/10.1073/pnas.2311219120) | GPN | *A. Thaliana* and other Brassicale plants | [analysis/gpn_arabidopsis](analysis/gpn_arabidopsis) |  [Model, dataset, intermediate results](https://huggingface.co/collections/songlab/gpn-653191edcb0270ed05ad2c3e) |
-| [Benegas et al. 2025](https://www.nature.com/articles/s41587-024-02511-w) | GPN-MSA | Human | [analysis/gpn-msa_human](analysis/gpn-msa_human) | [Model, dataset, benchmarks, predictions](https://huggingface.co/collections/songlab/gpn-msa-65319280c93c85e11c803887) |
-| [Benegas et al. 2025b](https://www.biorxiv.org/content/10.1101/2025.02.11.637758v1) | GPN | Animal promoters | [analysis/gpn_animal_promoter](analysis/gpn_animal_promoter) | [Model, dataset, benchmarks](https://huggingface.co/collections/songlab/traitgym-6796d4fbb825d5b94e65d30f) |
-| Upcoming | GPN-Star | Human, Mouse, Chicken, Fruit fly, *C. elegans*, *A. thaliana* | [analysis/gpn-star](analysis/gpn-star) | [Model, dataset, benchmarks](https://huggingface.co/collections/songlab/gpn-star-68c0c055acc2ee51d5c4f129) |
-| Upcoming | GPN | Sorghum gene expression | [analysis/gpn_sorghum_expression](analysis/gpn_sorghum_expression) |  [Model, dataset](https://huggingface.co/collections/songlab/sorghum-gene-expression-prediction-68963dd31658bfb98c07ae1b) |
- 
 ## GPN
-Can also be called GPN-SS (single sequence).
+Also known as GPN-SS (single sequence).
 
-### Examples
-* Play with the model: `examples/ss/basic_example.ipynb` [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/songlab-cal/gpn/blob/main/examples/ss/basic_example.ipynb)
+### Quick start
+
+```python
+import gpn.model  # registers architecture for AutoModel
+from transformers import AutoModelForMaskedLM
+
+model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-brassicales")
+```
+
+* Play with the model: [examples/ss/basic_example.ipynb](examples/ss/basic_example.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/songlab-cal/gpn/blob/main/examples/ss/basic_example.ipynb)
+
+### Papers
+
+#### [Benegas, Batra and Song "DNA language models are powerful predictors of genome-wide variant effects" *PNAS* (2023)](https://doi.org/10.1073/pnas.2311219120)
+
+- **Collection:** [HuggingFace 🤗](https://huggingface.co/collections/songlab/gpn-653191edcb0270ed05ad2c3e)
+- **Pretraining dataset:** Arabidopsis and 7 other Brassicales ([genomes-brassicales-balanced-v1](https://huggingface.co/datasets/songlab/genomes-brassicales-balanced-v1))
+- **Models:** [gpn-brassicales](https://huggingface.co/songlab/gpn-brassicales)
+- **Code:** [analysis/gpn_arabidopsis](analysis/gpn_arabidopsis)
+- **Additional resources:** [processed-data-arabidopsis](https://huggingface.co/datasets/gonzalobenegas/processed-data-arabidopsis)
+
+#### [Benegas, Eraslan and Song "Benchmarking DNA sequence models for causal regulatory variant prediction in human genetics" *bioRxiv* (2025)](https://www.biorxiv.org/content/10.1101/2025.02.11.637758v2)
+
+- **Collection:** [HuggingFace 🤗](https://huggingface.co/collections/songlab/traitgym-6796d4fbb825d5b94e65d30f)
+- **Pretraining dataset:** Animal promoter sequences ([gpn-animal-promoter-dataset](https://huggingface.co/datasets/songlab/gpn-animal-promoter-dataset))
+- **Models:** [gpn-animal-promoter](https://huggingface.co/songlab/gpn-animal-promoter)
+- **Benchmark datasets:** [TraitGym](https://huggingface.co/datasets/songlab/TraitGym)
+- **Code:** [analysis/gpn_animal_promoter](analysis/gpn_animal_promoter)
+- **Additional resources:** [Checkpoints](https://huggingface.co/datasets/songlab/gpn-animal-promoter-checkpoints), [TraitGym Leaderboard](https://huggingface.co/spaces/songlab/TraitGym-leaderboard)
+
+#### Sorghum gene expression prediction (unpublished)
+
+- **Collection:** [HuggingFace 🤗](https://huggingface.co/collections/songlab/sorghum-gene-expression-prediction-68963dd31658bfb98c07ae1b)
+- **Finetuning dataset:** Sorghum gene expression data from Gene Expression Atlas ([gxa-sorghum-v1](https://huggingface.co/datasets/songlab/gxa-sorghum-v1))
+- **Models:** [gpn-brassicales-gxa-sorghum-v1](https://huggingface.co/songlab/gpn-brassicales-gxa-sorghum-v1) (fine-tuned from gpn-brassicales)
+- **Code:** [analysis/gpn_sorghum_expression](analysis/gpn_sorghum_expression)
 
 ### Training on your own data
-1. [Snakemake workflow to create a dataset](workflow/make_dataset)
-    - Can automatically download data from NCBI given a list of accessions, or use your own fasta files.
-2. Training
-    - Will automatically detect all available GPUs.
-    - Track metrics on [Weights & Biases](https://wandb.ai/)
-    - Implemented encoders: `convnet` (default), `roformer` (Transformer), `bytenet`
-    - Specify config overrides: e.g. `--config_overrides encoder=bytenet,num_hidden_layers=30`
-    - The number of steps that you can train without overfitting will be a function of the size and diversity of your dataset
-    - Example:
+
+<details>
+<summary><strong>1. Create a dataset</strong></summary>
+
+Use the [Snakemake workflow](workflow/make_dataset) to create a dataset:
+- Can automatically download data from NCBI given a list of accessions, or use your own fasta files
+- Navigate to `workflow/make_dataset/`, configure `config/config.yaml` and `config/assemblies.tsv`, then run:
+  ```bash
+  snakemake --cores all
+  ```
+
+</details>
+
+<details>
+<summary><strong>2. Train the model</strong></summary>
+
+Training features:
+- Automatically detects all available GPUs
+- Track metrics on [Weights & Biases](https://wandb.ai/)
+- Implemented encoders: `convnet` (default), `roformer` (Transformer), `bytenet`
+- Specify config overrides: e.g. `--config_overrides encoder=bytenet,num_hidden_layers=30`
+- The number of steps that you can train without overfitting will be a function of the size and diversity of your dataset
+
+Example command:
 ```bash
 WANDB_PROJECT=your_project torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{print NF}') -m gpn.ss.run_mlm --do_train --do_eval \
     --report_to wandb --prediction_loss_only True --remove_unused_columns False \
@@ -74,25 +113,41 @@ WANDB_PROJECT=your_project torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICE
     --eval_steps 10000 --logging_steps 10000 --max_steps 120000 --warmup_steps 1000 \
     --learning_rate 1e-3 --lr_scheduler_type constant_with_warmup \
     --run_name your_run --output_dir your_output_dir --model_type GPN \
-    --per_device_train_batch_size 512 --per_device_eval_batch_size 512 --gradient_accumulation_steps 1 --total_batch_size 2048 \ 
+    --per_device_train_batch_size 512 --per_device_eval_batch_size 512 --gradient_accumulation_steps 1 --total_batch_size 2048 \
     --torch_compile \
     --ddp_find_unused_parameters False \
-    --bf16 --bf16_full_eval \
+    --bf16 --bf16_full_eval
 ```
-3. Extract embeddings
-    - Input file requires `chrom`, `start`, `end`
-    - Example:
+
+</details>
+
+<details>
+<summary><strong>3. Extract embeddings</strong></summary>
+
+Input file requires `chrom`, `start`, `end` columns.
+
+Example command:
 ```bash
-torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{print NF}') -m gpn.ss.get_embeddings windows.parquet genome.fa.gz 100 your_output_dir \
-    results.parquet --per_device_batch_size 4000 --is_file --dataloader_num_workers 16
+torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{print NF}') -m gpn.ss.get_embeddings \
+    windows.parquet genome.fa.gz 100 your_output_dir results.parquet \
+    --per_device_batch_size 4000 --is_file --dataloader_num_workers 16
 ```
-4. Variant effect prediction
-    - Input file requires `chrom`, `pos`, `ref`, `alt`
-    - Example:
+
+</details>
+
+<details>
+<summary><strong>4. Variant effect prediction</strong></summary>
+
+Input file requires `chrom`, `pos`, `ref`, `alt` columns.
+
+Example command:
 ```bash
-torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{print NF}') -m gpn.ss.run_vep variants.parquet genome.fa.gz 512 your_output_dir results.parquet \
-    --per_device_batch-size 4000 --is_file --dataloader_num_workers 16
+torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{print NF}') -m gpn.ss.run_vep \
+    variants.parquet genome.fa.gz 512 your_output_dir results.parquet \
+    --per_device_batch_size 4000 --is_file --dataloader_num_workers 16
 ```
+
+</details>
 
 ## GPN-MSA
 
