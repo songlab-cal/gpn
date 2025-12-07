@@ -58,25 +58,35 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-brassicales")
 
 - **Collection:** [HuggingFace 🤗](https://huggingface.co/collections/songlab/gpn-653191edcb0270ed05ad2c3e)
 - **Pretraining dataset:** Arabidopsis and 7 other Brassicales ([genomes-brassicales-balanced-v1](https://huggingface.co/datasets/songlab/genomes-brassicales-balanced-v1))
-- **Models:** [gpn-brassicales](https://huggingface.co/songlab/gpn-brassicales)
-- **Analysis code:** [analysis/gpn_arabidopsis](analysis/gpn_arabidopsis)
-- **Additional resources:** [processed-data-arabidopsis](https://huggingface.co/datasets/gonzalobenegas/processed-data-arabidopsis)
+- **Models:**
+  - [gpn-brassicales](https://huggingface.co/songlab/gpn-brassicales)
+- **Analysis code:**
+  - [analysis/gpn_arabidopsis](analysis/gpn_arabidopsis)
+- **Additional resources:**
+  - [processed-data-arabidopsis](https://huggingface.co/datasets/gonzalobenegas/processed-data-arabidopsis)
 
 #### [Benegas, Eraslan and Song "Benchmarking DNA sequence models for causal regulatory variant prediction in human genetics" *bioRxiv* (2025)](https://www.biorxiv.org/content/10.1101/2025.02.11.637758v2)
 
 - **Collection:** [HuggingFace 🤗](https://huggingface.co/collections/songlab/traitgym-6796d4fbb825d5b94e65d30f)
 - **Pretraining dataset:** Animal promoter sequences ([gpn-animal-promoter-dataset](https://huggingface.co/datasets/songlab/gpn-animal-promoter-dataset))
-- **Models:** [gpn-animal-promoter](https://huggingface.co/songlab/gpn-animal-promoter)
-- **Benchmark datasets:** [TraitGym](https://huggingface.co/datasets/songlab/TraitGym)
-- **Analysis code:** [analysis/gpn_animal_promoter](analysis/gpn_animal_promoter)
-- **Additional resources:** [Checkpoints](https://huggingface.co/datasets/songlab/gpn-animal-promoter-checkpoints), [TraitGym Leaderboard](https://huggingface.co/spaces/songlab/TraitGym-leaderboard)
+- **Models:**
+  - [gpn-animal-promoter](https://huggingface.co/songlab/gpn-animal-promoter)
+- **Benchmark datasets:**
+  - [TraitGym](https://huggingface.co/datasets/songlab/TraitGym)
+- **Analysis code:**
+  - [analysis/gpn_animal_promoter](analysis/gpn_animal_promoter)
+- **Additional resources:**
+  - [Checkpoints](https://huggingface.co/datasets/songlab/gpn-animal-promoter-checkpoints)
+  - [TraitGym Leaderboard](https://huggingface.co/spaces/songlab/TraitGym-leaderboard)
 
 #### Sorghum gene expression prediction (unpublished)
 
 - **Collection:** [HuggingFace 🤗](https://huggingface.co/collections/songlab/sorghum-gene-expression-prediction-68963dd31658bfb98c07ae1b)
 - **Finetuning dataset:** Sorghum gene expression data from Gene Expression Atlas ([gxa-sorghum-v1](https://huggingface.co/datasets/songlab/gxa-sorghum-v1))
-- **Models:** [gpn-brassicales-gxa-sorghum-v1](https://huggingface.co/songlab/gpn-brassicales-gxa-sorghum-v1) (fine-tuned from gpn-brassicales)
-- **Analysis code:** [analysis/gpn_sorghum_expression](analysis/gpn_sorghum_expression)
+- **Models:**
+  - [gpn-brassicales-gxa-sorghum-v1](https://huggingface.co/songlab/gpn-brassicales-gxa-sorghum-v1) (fine-tuned from gpn-brassicales)
+- **Analysis code:**
+  - [analysis/gpn_sorghum_expression](analysis/gpn_sorghum_expression)
 
 ### Training on your own data
 
@@ -156,7 +166,7 @@ A genomic language model trained on whole-genome alignments across multiple spec
 ### Quick start
 
 ```python
-import gpn.model
+import gpn.model  # registers architecture for AutoModel
 from transformers import AutoModelForMaskedLM
 
 model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-msa-sapiens")
@@ -172,15 +182,21 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-msa-sapiens")
 #### [Benegas, Albors, Aw, Ye and Song "A DNA language model based on multispecies alignment predicts the effects of genome-wide variants" *Nature Biotechnology* (2025)](https://www.nature.com/articles/s41587-024-02511-w)
 
 - **Collection:** [HuggingFace 🤗](https://huggingface.co/collections/songlab/gpn-msa-65319280c93c85e11c803887)
-- **Pretraining dataset:** 100-way vertebrate alignment ([multiz100way](https://huggingface.co/datasets/songlab/multiz100way-pigz), [89.zarr](https://huggingface.co/datasets/lpigou/89.zarr)), training regions ([gpn-msa-sapiens-dataset](https://huggingface.co/datasets/songlab/gpn-msa-sapiens-dataset))
-- **Models:** [gpn-msa-sapiens](https://huggingface.co/songlab/gpn-msa-sapiens)
+- **Pretraining datasets:**
+  - 100-way vertebrate alignment: [multiz100way](https://huggingface.co/datasets/songlab/multiz100way-pigz), [89.zarr](https://huggingface.co/datasets/lpigou/89.zarr)
+  - Training regions: [gpn-msa-sapiens-dataset](https://huggingface.co/datasets/songlab/gpn-msa-sapiens-dataset)
+- **Models:**
+  - [gpn-msa-sapiens](https://huggingface.co/songlab/gpn-msa-sapiens)
 - **Benchmark datasets (including predictions from all models):**
   - [ClinVar](https://huggingface.co/datasets/songlab/clinvar) - Missense variants with clinical pathogenic/benign labels
   - [COSMIC](https://huggingface.co/datasets/songlab/cosmic) - Somatic missense mutations in cancer
   - [OMIM](https://huggingface.co/datasets/songlab/omim) - Regulatory variants implicated in Mendelian disorders
   - [gnomAD](https://huggingface.co/datasets/songlab/gnomad) - Genome-wide variants with allele frequency information
-- **Analysis code:** [analysis/gpn-msa_human](analysis/gpn-msa_human)
-- **Additional resources:** [hg38 genome-wide scores](https://huggingface.co/datasets/songlab/gpn-msa-hg38-scores), [Gene essentiality predictions](https://huggingface.co/datasets/songlab/gpn-msa-hg38-gene-essentiality-scores)
+- **Analysis code:**
+  - [analysis/gpn-msa_human](analysis/gpn-msa_human)
+- **Additional resources:**
+  - [hg38 genome-wide scores](https://huggingface.co/datasets/songlab/gpn-msa-hg38-scores)
+  - [Gene essentiality predictions](https://huggingface.co/datasets/songlab/gpn-msa-hg38-gene-essentiality-scores)
 
 ### Training on other species (e.g. other vertebrates, plants)
 * See https://github.com/songlab-cal/gpn/issues/28, https://github.com/songlab-cal/gpn/discussions/40, https://github.com/songlab-cal/gpn/issues/44
@@ -204,17 +220,71 @@ model = AutoModel.from_pretrained("songlab/PhyloGPN", trust_remote_code=True)
 
 #### [Albors, Li, Benegas, Ye and Song "A Phylogenetic Approach to Genomic Language Modeling" *RECOMB* (2025)](https://link.springer.com/chapter/10.1007/978-3-031-90252-9_7)
 
-- **Models:** [PhyloGPN](https://huggingface.co/songlab/PhyloGPN)
+- **Models:**
+  - [PhyloGPN](https://huggingface.co/songlab/PhyloGPN)
 
 ## GPN-Star
-*Under construction*
-### Examples
-* Play with the model: `examples/star/demo.ipynb`
-### Analyses
-* Main results on variant effect prediction: `analysis/gpn-star/train_and_eval/workflow/notebooks`
-* Complex trait heritability analysis (S-LDSC): `analysis/gpn-star/s-ldsc`
+A phylogeny-aware genomic language model trained on whole-genome alignments across multiple evolutionary timescales.
 
-More coming soon!
+### Quick start
+
+```python
+import gpn.star.model  # registers architecture for AutoModel
+from transformers import AutoModelForMaskedLM
+
+model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-star-hg38-p243-200m")
+```
+
+* Play with the model: [examples/star/demo.ipynb](examples/star/demo.ipynb)
+* Model implementation: [gpn/model.py](gpn/model.py), [gpn/star](gpn/star)
+
+### Papers
+
+#### [Ye, Benegas, Albors, Li, Prillo, Fields, Clarke and Song "Predicting functional constraints across evolutionary timescales with phylogeny-informed genomic language models" *bioRxiv* (2025)](https://doi.org/10.1101/2025.09.21.677619)
+
+- **Collection:** [HuggingFace 🤗](https://huggingface.co/collections/songlab/gpn-star-68c0c055acc2ee51d5c4f129)
+- **Pretraining datasets:**
+  - Vertebrate alignment: [multiz100way](https://huggingface.co/datasets/songlab/multiz100way-pigz) (100 species)
+  - Mammalian alignment: [cactus447way](https://huggingface.co/datasets/songlab/hg38_cactus447way) (447 species)
+- **Models:**
+  - Human (hg38):
+    - [gpn-star-hg38-v100-200m](https://huggingface.co/songlab/gpn-star-hg38-v100-200m) (vertebrate, 200M params)
+    - [gpn-star-hg38-m447-200m](https://huggingface.co/songlab/gpn-star-hg38-m447-200m) (mammalian, 200M params)
+    - [gpn-star-hg38-p243-200m](https://huggingface.co/songlab/gpn-star-hg38-p243-200m) (primate, 200M params)
+  - Model organisms:
+    - [gpn-star-mm39-v35-85m](https://huggingface.co/songlab/gpn-star-mm39-v35-85m) (mouse, 85M params)
+    - [gpn-star-galGal6-v77-85m](https://huggingface.co/songlab/gpn-star-galGal6-v77-85m) (chicken, 85M params)
+    - [gpn-star-dm6-i124-85m](https://huggingface.co/songlab/gpn-star-dm6-i124-85m) (fly, 85M params)
+    - [gpn-star-ce11-n135-25m](https://huggingface.co/songlab/gpn-star-ce11-n135-25m) (worm, 25M params)
+    - [gpn-star-tair10-b18-25m](https://huggingface.co/songlab/gpn-star-tair10-b18-25m) (arabidopsis, 25M params)
+- **Benchmark datasets (including predictions from all models):**
+  - Included in [collection](https://huggingface.co/collections/songlab/gpn-star-68c0c055acc2ee51d5c4f129)
+  - **Homo sapiens:**
+    - [clinvar_vs_benign](https://huggingface.co/datasets/songlab/clinvar_vs_benign) - Missense variant pathogenicity classification (Pathogenic vs. Benign)
+    - [cosmic](https://huggingface.co/datasets/songlab/cosmic) - Cancer somatic mutations (COSMIC frequent vs. gnomAD common missense)
+    - [omim_traitgym](https://huggingface.co/datasets/songlab/omim_traitgym) - Mendelian regulatory variants (pathogenic vs. common)
+    - [ukb_finemapped_coding](https://huggingface.co/datasets/songlab/ukb_finemapped_coding) - UK Biobank fine-mapped coding variants
+    - [ukb_finemapped_nc_traitgym](https://huggingface.co/datasets/songlab/ukb_finemapped_nc_traitgym) - UK Biobank fine-mapped non-coding variants
+    - [gnomad_balanced](https://huggingface.co/datasets/songlab/gnomad_balanced) - Allele frequency enrichment analysis (rare vs. common variants)
+    - [ldsc](https://huggingface.co/datasets/songlab/ldsc) - S-LDSC variants and model predictions for heritability analysis
+  - **Mus musculus:**
+    - [wmgp_balanced](https://huggingface.co/datasets/songlab/wmgp_balanced) - Wild Mouse Genome Project population allele frequencies
+    - [mmrdb](https://huggingface.co/datasets/songlab/mmrdb) - Mouse Mutant Resource Database pathogenic variants
+  - **Drosophila melanogaster:**
+    - [dest](https://huggingface.co/datasets/songlab/dest) - Drosophila Evolution in Space and Time allele frequencies
+    - [flybase_lethal](https://huggingface.co/datasets/songlab/flybase_lethal) - Experimentally validated lethal mutations
+  - **Caenorhabditis elegans:**
+    - [caendr](https://huggingface.co/datasets/songlab/caendr) - C. elegans Natural Diversity Resource allele frequencies
+    - [celegans_lethal](https://huggingface.co/datasets/songlab/celegans_lethal) - 72 experimentally validated lethal SNVs
+  - **Gallus gallus:**
+    - [galbase](https://huggingface.co/datasets/songlab/galbase) - Chicken population allele frequencies
+  - **Arabidopsis thaliana:**
+    - [1001gp](https://huggingface.co/datasets/songlab/1001gp) - Population allele frequencies from 1001 Genome Project
+- **Analysis code:**
+  - Model training and main results on variant effect prediction: [analysis/gpn-star/train_and_eval](analysis/gpn-star/train_and_eval)
+  - Complex trait heritability analysis (S-LDSC): [analysis/gpn-star/s-ldsc](analysis/gpn-star/s-ldsc)
+  - Whole-genome alignment processing: [analysis/gpn-star/wga_processing](analysis/gpn-star/wga_processing)
+  - Model interpretation: [analysis/gpn-star/interpretation](analysis/gpn-star/interpretation)
 
 ## Getting help
 
@@ -257,5 +327,17 @@ More coming soon!
   pages={99--117},
   year={2025},
   organization={Springer}
+}
+```
+
+[GPN-Star](https://doi.org/10.1101/2025.09.21.677619):
+```bibtex
+@article{ye2025predicting,
+  title={Predicting functional constraints across evolutionary timescales with phylogeny-informed genomic language models},
+  author={Ye, Chengzhong and Benegas, Gonzalo and Albors, Carlos and Li, Jianan Canal and Prillo, Sebastian and Fields, Peter D and Clarke, Brian and Song, Yun S},
+  journal={bioRxiv},
+  pages={2025--09},
+  year={2025},
+  publisher={Cold Spring Harbor Laboratory}
 }
 ```
