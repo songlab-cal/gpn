@@ -38,7 +38,7 @@ pip install -e .
 | GPN-Star | [Ye et al. 2025](https://doi.org/10.1101/2025.09.21.677619) | Requires aligned genomes for both training and inference |
 
 ## GPN
-Also known as GPN-SS (single sequence).
+A single-sequence genomic language model trained on unaligned genomes. Also known as GPN-SS.
 
 ### Quick start
 
@@ -150,11 +150,35 @@ torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{print NF}')
 </details>
 
 ## GPN-MSA
+A genomic language model trained on whole-genome alignments across multiple species.
 
-### Examples
-* Play with the model: `examples/msa/basic_example.ipynb`
-* Variant effect prediction: `examples/msa/vep.ipynb`
-* Training (human): `examples/msa/training.ipynb`
+### Quick start
+
+```python
+import gpn.model
+from transformers import AutoModelForMaskedLM
+
+model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-msa-sapiens")
+```
+
+* Play with the model: [examples/msa/basic_example.ipynb](examples/msa/basic_example.ipynb)
+* Variant effect prediction: [examples/msa/vep.ipynb](examples/msa/vep.ipynb)
+* Training (human): [examples/msa/training.ipynb](examples/msa/training.ipynb)
+
+### Papers
+
+#### [Benegas, Albors, Aw, Ye and Song "A DNA language model based on multispecies alignment predicts the effects of genome-wide variants" *Nature Biotechnology* (2025)](https://www.nature.com/articles/s41587-024-02511-w)
+
+- **Collection:** [HuggingFace 🤗](https://huggingface.co/collections/songlab/gpn-msa-65319280c93c85e11c803887)
+- **Pretraining dataset:** 100-way vertebrate alignment ([multiz100way](https://huggingface.co/datasets/songlab/multiz100way-pigz), [89.zarr](https://huggingface.co/datasets/lpigou/89.zarr)), training regions ([gpn-msa-sapiens-dataset](https://huggingface.co/datasets/songlab/gpn-msa-sapiens-dataset))
+- **Models:** [gpn-msa-sapiens](https://huggingface.co/songlab/gpn-msa-sapiens)
+- **Benchmark datasets (including predictions from all models):**
+  - [ClinVar](https://huggingface.co/datasets/songlab/clinvar) - Missense variants with clinical pathogenic/benign labels
+  - [COSMIC](https://huggingface.co/datasets/songlab/cosmic) - Somatic missense mutations in cancer
+  - [OMIM](https://huggingface.co/datasets/songlab/omim) - Regulatory variants implicated in Mendelian disorders
+  - [gnomAD](https://huggingface.co/datasets/songlab/gnomad) - Genome-wide variants with allele frequency information
+- **Code:** [analysis/gpn-msa_human](analysis/gpn-msa_human)
+- **Additional resources:** [hg38 genome-wide scores](https://huggingface.co/datasets/songlab/gpn-msa-hg38-scores), [Gene essentiality predictions](https://huggingface.co/datasets/songlab/gpn-msa-hg38-gene-essentiality-scores)
 
 ### Training on other species (e.g. other vertebrates, plants)
 * See https://github.com/songlab-cal/gpn/issues/28, https://github.com/songlab-cal/gpn/discussions/40, https://github.com/songlab-cal/gpn/issues/44
