@@ -50,6 +50,7 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-brassicales")
 ```
 
 * Play with the model: [examples/ss/basic_example.ipynb](examples/ss/basic_example.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/songlab-cal/gpn/blob/main/examples/ss/basic_example.ipynb)
+* Model implementation: [gpn/model.py](gpn/model.py), [gpn/ss](gpn/ss)
 
 ### Papers
 
@@ -58,7 +59,7 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-brassicales")
 - **Collection:** [HuggingFace 🤗](https://huggingface.co/collections/songlab/gpn-653191edcb0270ed05ad2c3e)
 - **Pretraining dataset:** Arabidopsis and 7 other Brassicales ([genomes-brassicales-balanced-v1](https://huggingface.co/datasets/songlab/genomes-brassicales-balanced-v1))
 - **Models:** [gpn-brassicales](https://huggingface.co/songlab/gpn-brassicales)
-- **Code:** [analysis/gpn_arabidopsis](analysis/gpn_arabidopsis)
+- **Analysis code:** [analysis/gpn_arabidopsis](analysis/gpn_arabidopsis)
 - **Additional resources:** [processed-data-arabidopsis](https://huggingface.co/datasets/gonzalobenegas/processed-data-arabidopsis)
 
 #### [Benegas, Eraslan and Song "Benchmarking DNA sequence models for causal regulatory variant prediction in human genetics" *bioRxiv* (2025)](https://www.biorxiv.org/content/10.1101/2025.02.11.637758v2)
@@ -67,7 +68,7 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-brassicales")
 - **Pretraining dataset:** Animal promoter sequences ([gpn-animal-promoter-dataset](https://huggingface.co/datasets/songlab/gpn-animal-promoter-dataset))
 - **Models:** [gpn-animal-promoter](https://huggingface.co/songlab/gpn-animal-promoter)
 - **Benchmark datasets:** [TraitGym](https://huggingface.co/datasets/songlab/TraitGym)
-- **Code:** [analysis/gpn_animal_promoter](analysis/gpn_animal_promoter)
+- **Analysis code:** [analysis/gpn_animal_promoter](analysis/gpn_animal_promoter)
 - **Additional resources:** [Checkpoints](https://huggingface.co/datasets/songlab/gpn-animal-promoter-checkpoints), [TraitGym Leaderboard](https://huggingface.co/spaces/songlab/TraitGym-leaderboard)
 
 #### Sorghum gene expression prediction (unpublished)
@@ -75,7 +76,7 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-brassicales")
 - **Collection:** [HuggingFace 🤗](https://huggingface.co/collections/songlab/sorghum-gene-expression-prediction-68963dd31658bfb98c07ae1b)
 - **Finetuning dataset:** Sorghum gene expression data from Gene Expression Atlas ([gxa-sorghum-v1](https://huggingface.co/datasets/songlab/gxa-sorghum-v1))
 - **Models:** [gpn-brassicales-gxa-sorghum-v1](https://huggingface.co/songlab/gpn-brassicales-gxa-sorghum-v1) (fine-tuned from gpn-brassicales)
-- **Code:** [analysis/gpn_sorghum_expression](analysis/gpn_sorghum_expression)
+- **Analysis code:** [analysis/gpn_sorghum_expression](analysis/gpn_sorghum_expression)
 
 ### Training on your own data
 
@@ -164,6 +165,7 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-msa-sapiens")
 * Play with the model: [examples/msa/basic_example.ipynb](examples/msa/basic_example.ipynb)
 * Variant effect prediction: [examples/msa/vep.ipynb](examples/msa/vep.ipynb)
 * Training (human): [examples/msa/training.ipynb](examples/msa/training.ipynb)
+* Model implementation: [gpn/model.py](gpn/model.py), [gpn/msa](gpn/msa)
 
 ### Papers
 
@@ -177,7 +179,7 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-msa-sapiens")
   - [COSMIC](https://huggingface.co/datasets/songlab/cosmic) - Somatic missense mutations in cancer
   - [OMIM](https://huggingface.co/datasets/songlab/omim) - Regulatory variants implicated in Mendelian disorders
   - [gnomAD](https://huggingface.co/datasets/songlab/gnomad) - Genome-wide variants with allele frequency information
-- **Code:** [analysis/gpn-msa_human](analysis/gpn-msa_human)
+- **Analysis code:** [analysis/gpn-msa_human](analysis/gpn-msa_human)
 - **Additional resources:** [hg38 genome-wide scores](https://huggingface.co/datasets/songlab/gpn-msa-hg38-scores), [Gene essentiality predictions](https://huggingface.co/datasets/songlab/gpn-msa-hg38-gene-essentiality-scores)
 
 ### Training on other species (e.g. other vertebrates, plants)
@@ -185,15 +187,24 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-msa-sapiens")
 * Another source for plant alignments: https://plantregmap.gao-lab.org/download.php#alignment-conservation
 
 ## PhyloGPN
-PhyloGPN is a convolutional neural network that takes encoded DNA sequences as input and outputs rate matrix parameters for [Felsenstein's 1981 model](https://en.wikipedia.org/wiki/Models_of_DNA_evolution#F81_model_(Felsenstein_1981)) (the F81 model, for short). It was trained to maximize the likelihood of columns in the [Zoonomia alignment](https://cglgenomics.ucsc.edu/november-2023-nature-zoonomia-with-expanded-primates-alignment/) given a phylogenetic tree. The stationary distribution of the substitution process described by the F81 model indicates the relative viability of each allele at any given locus. As a result, PhyloGPN is formally a (single-sequence) genomic language model. It can be used for transfer learning and zero-shot SNV deleteriousness prediction. It is especially useful for sequences that are not directly in the human reference genome.
+A phylogenetic genomic language model that uses an alignment during training but does not require it for inference or fine-tuning. PhyloGPN is a convolutional neural network that outputs rate matrix parameters for Felsenstein's F81 substitution model, trained on the Zoonomia alignment. It can be used for transfer learning and zero-shot variant deleteriousness prediction, especially useful for sequences not in reference genomes.
 
-* Quick start
+### Quick start
+
 ```python
-import gpn.model
 from transformers import AutoModel
 
 model = AutoModel.from_pretrained("songlab/PhyloGPN", trust_remote_code=True)
 ```
+
+* Play with the model: [examples/phylogpn/basic_example.ipynb](examples/phylogpn/basic_example.ipynb)
+* Model implementation: [gpn/phylogpn.py](gpn/phylogpn.py)
+
+### Papers
+
+#### [Albors, Li, Benegas, Ye and Song "A Phylogenetic Approach to Genomic Language Modeling" *RECOMB* (2025)](https://link.springer.com/chapter/10.1007/978-3-031-90252-9_7)
+
+- **Models:** [PhyloGPN](https://huggingface.co/songlab/PhyloGPN)
 
 ## GPN-Star
 *Under construction*
