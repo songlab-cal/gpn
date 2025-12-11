@@ -46,14 +46,14 @@ class MLMforVEPModel(torch.nn.Module):
         return llr
 
 
-def kmers(seq, k=6): #for codons, k = 6
+def kmers(seq, k=6):  # for codons, k = 6
     # splits a sequence into non-overlappnig k-mers
-    return [seq[i:i + k] for i in range(0, len(seq), k) if i + k <= len(seq)]
+    return [seq[i : i + k] for i in range(0, len(seq), k) if i + k <= len(seq)]
 
 
 def kmers_stride1(seq, k=6):
     # splits a sequence into overlapping k-mers
-    return [seq[i:i + k] for i in range(0, len(seq)-k+1)]
+    return [seq[i : i + k] for i in range(0, len(seq) - k + 1)]
 
 
 def run_vep(
@@ -69,10 +69,7 @@ def run_vep(
     assert window_size == 2000, "Only window_size=2000 is supported"
 
     def tokenize(seqs):
-        seqs = [
-            "homo_sapiens " + " ".join(kmers_stride1(seq))
-            for seq in seqs
-        ]
+        seqs = ["homo_sapiens " + " ".join(kmers_stride1(seq)) for seq in seqs]
         return tokenizer(
             seqs,
             padding=False,
@@ -120,15 +117,19 @@ def run_vep(
                 pos2 = pos - 1
             input_ids = input_ids_ref.clone()
             for i in range(n):
-                input_ids[i, pos-3:pos+3] = tokenizer.mask_token_id
+                input_ids[i, pos - 3 : pos + 3] = tokenizer.mask_token_id
             pos = [pos2] * n
             ref = [input_ids_ref[i, pos2] for i in range(n)]
             alt = [input_ids_alt[i, pos2] for i in range(n)]
             return input_ids, pos, ref, alt
 
         res = {}
-        res["input_ids_fwd"], res["pos_fwd"], res["ref_fwd"], res["alt_fwd"] = prepare_output(seq_fwd, pos_fwd, ref_fwd, alt_fwd)
-        res["input_ids_rev"], res["pos_rev"], res["ref_rev"], res["alt_rev"] = prepare_output(seq_rev, pos_rev, ref_rev, alt_rev)
+        res["input_ids_fwd"], res["pos_fwd"], res["ref_fwd"], res["alt_fwd"] = (
+            prepare_output(seq_fwd, pos_fwd, ref_fwd, alt_fwd)
+        )
+        res["input_ids_rev"], res["pos_rev"], res["ref_rev"], res["alt_rev"] = (
+            prepare_output(seq_rev, pos_rev, ref_rev, alt_rev)
+        )
         return res
 
     variants.set_transform(get_tokenized_seq)

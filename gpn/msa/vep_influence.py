@@ -19,18 +19,19 @@ class VEPInfluence(torch.nn.Module):
     def get_log_odds(self, input_ids, aux_features, pos):
         other_pos = torch.ones(input_ids.shape[1], dtype=torch.bool)
         other_pos[pos] = False
-        logits = (
-            self.model(input_ids=input_ids, aux_features=aux_features)
-            .logits[:, other_pos]
-        )
-        logits = logits[:, :, self.vocab_start:self.vocab_end]
+        logits = self.model(input_ids=input_ids, aux_features=aux_features).logits[
+            :, other_pos
+        ]
+        logits = logits[:, :, self.vocab_start : self.vocab_end]
         probs = F.softmax(logits, dim=2)
         return torch.log(probs / (1 - probs))
 
-    def get_score(self, input_ids_ref, aux_features_ref, input_ids_alt, aux_features_alt, pos):
+    def get_score(
+        self, input_ids_ref, aux_features_ref, input_ids_alt, aux_features_alt, pos
+    ):
         log_odds_ref = self.get_log_odds(input_ids_ref, aux_features_ref, pos)
         log_odds_alt = self.get_log_odds(input_ids_alt, aux_features_alt, pos)
-        res = torch.abs(log_odds_ref-log_odds_alt)
+        res = torch.abs(log_odds_ref - log_odds_alt)
         res, _ = torch.max(res, dim=2)
         res = torch.mean(res, dim=1)
         return res
@@ -49,13 +50,17 @@ class VEPInfluence(torch.nn.Module):
         pos_rev=None,
     ):
         fwd = self.get_score(
-            input_ids_ref_fwd, aux_features_ref_fwd,
-            input_ids_alt_fwd, aux_features_alt_fwd,
+            input_ids_ref_fwd,
+            aux_features_ref_fwd,
+            input_ids_alt_fwd,
+            aux_features_alt_fwd,
             pos_fwd,
         )
         rev = self.get_score(
-            input_ids_ref_rev, aux_features_ref_rev,
-            input_ids_alt_rev, aux_features_alt_rev,
+            input_ids_ref_rev,
+            aux_features_ref_rev,
+            input_ids_alt_rev,
+            aux_features_alt_rev,
             pos_rev,
         )
         return (fwd + rev) / 2
@@ -78,7 +83,7 @@ class VEPInfluenceInference(object):
         start = pos - self.window_size // 2
         end = pos + self.window_size // 2
         n = len(chrom)
-        
+
         msa_fwd, msa_rev = self.genome_msa.get_msa_batch_fwd_rev(
             chrom,
             start,
@@ -100,9 +105,9 @@ class VEPInfluenceInference(object):
         def prepare_output(msa, pos, ref, alt):
             ref, alt = self.tokenizer(ref.flatten()), self.tokenizer(alt.flatten())
             input_ids, aux_features = msa[:, :, 0], msa[:, :, 1:]
-            assert (
-                input_ids[:, pos] == ref
-            ).all(), f"{input_ids[:, pos].tolist()}, {ref.tolist()}"
+            assert (input_ids[:, pos] == ref).all(), (
+                f"{input_ids[:, pos].tolist()}, {ref.tolist()}"
+            )
             input_ids_alt = input_ids.copy()
             input_ids_alt[:, pos] = alt
             input_ids = input_ids.astype(np.int64)

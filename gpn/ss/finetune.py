@@ -209,7 +209,7 @@ class DataTrainingArguments:
     )
     pos_weight: Optional[float] = field(
         default=1.0,
-        metadata={"help": "Positive weight for binary token classification"}
+        metadata={"help": "Positive weight for binary token classification"},
     )
     token_classification: bool = field(
         default=False,
@@ -219,21 +219,15 @@ class DataTrainingArguments:
     )
     streaming: bool = field(
         default=False,
-        metadata={
-            "help": "Whether to use streaming datasets."
-        },
+        metadata={"help": "Whether to use streaming datasets."},
     )
     freeze_all_layers_except_last_n: Optional[int] = field(
         default=None,
-        metadata={
-            "help": "Freeze all layers except the last n layers."
-        },
+        metadata={"help": "Freeze all layers except the last n layers."},
     )
     subsample_train: Optional[float] = field(
         default=None,
-        metadata={
-            "help": "Subsample the training dataset to this proportion."
-        },
+        metadata={"help": "Subsample the training dataset to this proportion."},
     )
 
 
@@ -320,11 +314,18 @@ def main():
 
     if data_args.seq_column_name is not None and data_args.seq_column_name != "seq":
         for key in raw_datasets.keys():
-            raw_datasets[key] = raw_datasets[key].rename_column(data_args.seq_column_name, "seq")
+            raw_datasets[key] = raw_datasets[key].rename_column(
+                data_args.seq_column_name, "seq"
+            )
 
-    if data_args.label_column_name is not None and data_args.label_column_name != "labels":
+    if (
+        data_args.label_column_name is not None
+        and data_args.label_column_name != "labels"
+    ):
         for key in raw_datasets.keys():
-            raw_datasets[key] = raw_datasets[key].rename_column(data_args.label_column_name, "labels")
+            raw_datasets[key] = raw_datasets[key].rename_column(
+                data_args.label_column_name, "labels"
+            )
 
     labels = raw_datasets["train"][0]["labels"]
     if not data_args.token_classification:
@@ -386,7 +387,8 @@ def main():
         )
 
     model_class = (
-        AutoModelForSequenceClassification if not data_args.token_classification
+        AutoModelForSequenceClassification
+        if not data_args.token_classification
         else AutoModelForTokenClassification
     )
 
@@ -515,7 +517,9 @@ def main():
         try:
             df[[f"preds_{i}" for i in range(predictions.shape[1])]] = predictions
         except:
-            df[[f"preds_{i}" for i in range(predictions.shape[1])]] = np.squeeze(predictions)
+            df[[f"preds_{i}" for i in range(predictions.shape[1])]] = np.squeeze(
+                predictions
+            )
         os.makedirs(os.path.dirname(data_args.output_preds_path), exist_ok=True)
         df.to_parquet(data_args.output_preds_path, index=False)
 
@@ -524,9 +528,9 @@ def main():
         kwargs["dataset_tags"] = data_args.dataset_name
         if data_args.dataset_config_name is not None:
             kwargs["dataset_args"] = data_args.dataset_config_name
-            kwargs[
-                "dataset"
-            ] = f"{data_args.dataset_name} {data_args.dataset_config_name}"
+            kwargs["dataset"] = (
+                f"{data_args.dataset_name} {data_args.dataset_config_name}"
+            )
         else:
             kwargs["dataset"] = data_args.dataset_name
 

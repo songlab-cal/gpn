@@ -78,8 +78,12 @@ def run_vep(
             )
 
         res = {}
-        res["x_ref_fwd"], res["x_alt_fwd"] = prepare_output(seq_fwd, pos_fwd, ref_fwd, alt_fwd)
-        res["x_ref_rev"], res["x_alt_rev"] = prepare_output(seq_rev, pos_rev, ref_rev, alt_rev)
+        res["x_ref_fwd"], res["x_alt_fwd"] = prepare_output(
+            seq_fwd, pos_fwd, ref_fwd, alt_fwd
+        )
+        res["x_ref_rev"], res["x_alt_rev"] = prepare_output(
+            seq_rev, pos_rev, ref_rev, alt_rev
+        )
         return res
 
     variants.set_transform(transform)
@@ -94,9 +98,7 @@ def run_vep(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Variant effect prediction"
-    )
+    parser = argparse.ArgumentParser(description="Variant effect prediction")
     parser.add_argument(
         "variants_path",
         type=str,
@@ -140,7 +142,7 @@ if __name__ == "__main__":
     genome = Genome(args.genome_path)
 
     model = grelu.resources.load_model(project=args.project, model_name=args.model_name)
-    columns = model.data_params['tasks']["name"]
+    columns = model.data_params["tasks"]["name"]
     window_size = model.data_params["train_seq_len"]
     model = VEPModel(model.model)
 

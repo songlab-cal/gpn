@@ -446,9 +446,7 @@ def main():
             return_attention_mask=False,
         )
         res["loss_weight"] = np.ones_like(res["input_ids"], dtype=float)
-        res["loss_weight"][
-            np.char.islower([list(x) for x in seq])
-        ] = soft_masked_weight
+        res["loss_weight"][np.char.islower([list(x) for x in seq])] = soft_masked_weight
         return res
 
     soft_masked_weight = {
@@ -462,7 +460,8 @@ def main():
         train_dataset = raw_datasets["train"].shuffle(seed=training_args.seed)
         train_dataset = train_dataset.map(
             lambda examples: tokenize_function(
-                examples, data_args.soft_masked_loss_weight_train,
+                examples,
+                data_args.soft_masked_loss_weight_train,
                 data_augmentation=True,
             ),
             batched=True,
@@ -559,9 +558,9 @@ def main():
         kwargs["dataset_tags"] = data_args.dataset_name
         if data_args.dataset_config_name is not None:
             kwargs["dataset_args"] = data_args.dataset_config_name
-            kwargs[
-                "dataset"
-            ] = f"{data_args.dataset_name} {data_args.dataset_config_name}"
+            kwargs["dataset"] = (
+                f"{data_args.dataset_name} {data_args.dataset_config_name}"
+            )
         else:
             kwargs["dataset"] = data_args.dataset_name
 

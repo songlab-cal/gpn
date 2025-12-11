@@ -17,6 +17,7 @@ from gpn.msa.vep_euclidean_dist import VEPEuclideanDistInference
 from gpn.msa.vep_embeddings import VEPEmbeddingsInference
 
 import torch._dynamo
+
 torch._dynamo.config.suppress_errors = True
 
 

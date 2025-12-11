@@ -46,7 +46,7 @@ def read_meme(filename):
     return motifs
 
 
-#def compute_per_position_ic(ppm, background, pseudocount):
+# def compute_per_position_ic(ppm, background, pseudocount):
 #    alphabet_len = len(background)
 #    ic = (
 #        np.log((ppm + pseudocount) / (1 + pseudocount * alphabet_len)) / np.log(2)
@@ -79,7 +79,6 @@ def fetch_tomtom_matches(
     trim_threshold=0.3,
     trim_min_length=3,
 ):
-
     """Fetches top matches from a motifs database using TomTom.
     Args:
             ppm: position probability matrix- numpy matrix of dimension (N,4)
@@ -102,7 +101,8 @@ def fetch_tomtom_matches(
 
     ic = logomaker.transform_matrix(
         pd.DataFrame(chosen_distribution),
-        from_type="probability", to_type="information",
+        from_type="probability",
+        to_type="information",
     ).values
 
     score = np.sum(ic, axis=1)
@@ -142,7 +142,7 @@ def run_tomtom(
     tomtom_exec="tomtom",
     trim_threshold=0.3,
     trim_min_length=3,
-    background=[0.25,0.25,0.25,0.25],
+    background=[0.25, 0.25, 0.25, 0.25],
 ):
     modisco_results = h5py.File(modisco_h5py, "r")
 
@@ -159,7 +159,7 @@ def run_tomtom(
         key = lambda x: int(x[0].split("_")[-1])
         for pattern_name, pattern in sorted(metacluster.items(), key=key):
             ppm = np.array(pattern["sequence"][:])
-            
+
             model_pred = pattern["hypothetical_contribs"][:] + 0.25
 
             num_seqlets = pattern["seqlets"]["n_seqlets"][:][0]
@@ -214,14 +214,15 @@ def make_logo(match, logo_dir, motifs):
     if match == "NA":
         return
 
-    #background = np.array([0.25, 0.25, 0.25, 0.25])
+    # background = np.array([0.25, 0.25, 0.25, 0.25])
     ppm = motifs[match]
-    #ic = compute_per_position_ic(ppm, background, 0.001)
+    # ic = compute_per_position_ic(ppm, background, 0.001)
     ic = logomaker.transform_matrix(
         pd.DataFrame(ppm),
-        from_type="probability", to_type="information",
+        from_type="probability",
+        to_type="information",
     ).values
-    #_plot_weights(ppm * ic[:, None], path="{}/{}.png".format(logo_dir, match))
+    # _plot_weights(ppm * ic[:, None], path="{}/{}.png".format(logo_dir, match))
     _plot_weights(ic, path="{}/{}.png".format(logo_dir, match))
 
 
@@ -274,11 +275,13 @@ def create_modisco_logos(modisco_file, modisco_logo_dir, trim_threshold):
             pass_inds_fwd = np.where(score_fwd >= trim_thresh_fwd)[0]
             pass_inds_rev = np.where(score_rev >= trim_thresh_rev)[0]
 
-            start_fwd, end_fwd = max(np.min(pass_inds_fwd) - 4, 0), min(
-                np.max(pass_inds_fwd) + 4 + 1, len(score_fwd) + 1
+            start_fwd, end_fwd = (
+                max(np.min(pass_inds_fwd) - 4, 0),
+                min(np.max(pass_inds_fwd) + 4 + 1, len(score_fwd) + 1),
             )
-            start_rev, end_rev = max(np.min(pass_inds_rev) - 4, 0), min(
-                np.max(pass_inds_rev) + 4 + 1, len(score_rev) + 1
+            start_rev, end_rev = (
+                max(np.min(pass_inds_rev) - 4, 0),
+                min(np.max(pass_inds_rev) + 4 + 1, len(score_rev) + 1),
             )
 
             trimmed_cwm_fwd = cwm_fwd[start_fwd:end_fwd]
@@ -304,7 +307,6 @@ def report_motifs(
     trim_min_length=3,
     background=[0.25, 0.25, 0.25, 0.25],
 ):
-
     if not os.path.isdir(output_dir):
         os.mkdir(output_dir)
 
@@ -372,8 +374,8 @@ def report_motifs(
 report_motifs(
     snakemake.input[0],
     snakemake.output[0] + "/",
-    suffix="",#snakemake.output[0] + "/",
+    suffix="",  # snakemake.output[0] + "/",
     top_n_matches=1,
     meme_motif_db=snakemake.input[1],
-    background=[0.33230, 0.16770, 0.16770, 0.33230], 
+    background=[0.33230, 0.16770, 0.16770, 0.33230],
 )

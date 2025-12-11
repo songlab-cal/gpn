@@ -31,9 +31,11 @@ def load_fasta(path, subset_chroms=None):
 
 
 def save_fasta(path, genome):
-    with bgzf.BgzfWriter(path, "wb") if path.endswith(".gz") else open(
-        path, "w"
-    ) as handle:
+    with (
+        bgzf.BgzfWriter(path, "wb")
+        if path.endswith(".gz")
+        else open(path, "w") as handle
+    ):
         SeqIO.write(genome.values(), handle, "fasta")
 
 
@@ -93,10 +95,12 @@ class Genome:
 
     def get_seq(self, chrom, start, end, strand="+"):
         chrom_size = self.chrom_sizes[chrom]
-        seq = self._genome[chrom][max(start,0):min(end,chrom_size)]
+        seq = self._genome[chrom][max(start, 0) : min(end, chrom_size)]
 
-        if start < 0: seq = "N" * (-start) + seq  # left padding
-        if end > chrom_size: seq = seq + "N" * (end - chrom_size)  # right padding
+        if start < 0:
+            seq = "N" * (-start) + seq  # left padding
+        if end > chrom_size:
+            seq = seq + "N" * (end - chrom_size)  # right padding
 
         if strand == "-":
             seq = str(Seq(seq).reverse_complement())
@@ -377,11 +381,15 @@ class BigWig(object):
 
 
 def _get_msa(i, chroms, starts, ends, strands, obj, tokenize, kwargs):
-    return obj.get_msa(chroms[i], starts[i], ends[i], strand=strands[i], tokenize=tokenize, **kwargs)
+    return obj.get_msa(
+        chroms[i], starts[i], ends[i], strand=strands[i], tokenize=tokenize, **kwargs
+    )
 
 
 def _get_msa_fwd_rev(i, chroms, starts, ends, obj, tokenize, kwargs):
-    return obj.get_msa_fwd_rev(chroms[i], starts[i], ends[i], tokenize=tokenize, **kwargs)
+    return obj.get_msa_fwd_rev(
+        chroms[i], starts[i], ends[i], tokenize=tokenize, **kwargs
+    )
 
 
 def _run_vep(i, chroms, poss, refs, alts, obj, kwargs):
@@ -393,7 +401,7 @@ class GenomeMSA(object):
         self.reverse_complementer = ReverseComplementer()
         self.tokenizer = Tokenizer()
         self.n_species = n_species
-        
+
         print("Loading MSA...")
         self.f = zarr.open(path, mode="r")
         chroms = self.f.keys()
@@ -401,7 +409,7 @@ class GenomeMSA(object):
             chroms = [chrom for chrom in chroms if chrom in subset_chroms]
         if in_memory:
             self.data = pd.Series({chrom: self.f[chrom][:] for chrom in tqdm(chroms)})
-            #self.f.close()
+            # self.f.close()
         else:
             # pd.Series does not work with h5py/zarr object
             # (attempts to load all data into memory)
@@ -413,13 +421,20 @@ class GenomeMSA(object):
         max_len = self.data[chrom].shape[0]
         # handle start < 0, end > max
         if start > max_len:
-            msa = np.tile(self.n_species * [b'-'], (end-start, 1)).view('|S1')
+            msa = np.tile(self.n_species * [b"-"], (end - start, 1)).view("|S1")
         elif start < 0:
-            msa = np.concatenate((np.tile(self.n_species * [b'-'], (-start, 1)), self.data[chrom][0:end])).view('|S1')
+            msa = np.concatenate(
+                (np.tile(self.n_species * [b"-"], (-start, 1)), self.data[chrom][0:end])
+            ).view("|S1")
         elif end > max_len:
-            msa = np.concatenate((self.data[chrom][start:max_len], np.tile(self.n_species * [b'-'], (end-max_len, 1)))).view('|S1')
+            msa = np.concatenate(
+                (
+                    self.data[chrom][start:max_len],
+                    np.tile(self.n_species * [b"-"], (end - max_len, 1)),
+                )
+            ).view("|S1")
         else:
-            msa = self.data[chrom][start:end].view('|S1')
+            msa = self.data[chrom][start:end].view("|S1")
 
         if strand == "-":
             msa = self.reverse_complementer(msa, position_axis=0)
@@ -436,7 +451,15 @@ class GenomeMSA(object):
         return msa_fwd, msa_rev
 
     def get_msa_batch(
-        self, chroms, starts, ends, strands, backend=None, n_jobs=None, tokenize=False, **kwargs
+        self,
+        chroms,
+        starts,
+        ends,
+        strands,
+        backend=None,
+        n_jobs=None,
+        tokenize=False,
+        **kwargs,
     ):
         if backend == "multiprocessing":
             with mp.Pool(processes=n_jobs) as pool:
@@ -449,7 +472,9 @@ class GenomeMSA(object):
                 )
         elif backend == "joblib":
             msa_batch = Parallel(n_jobs=n_jobs)(
-                delayed(_get_msa)(i, chroms, starts, ends, strands, self, tokenize, kwargs)
+                delayed(_get_msa)(
+                    i, chroms, starts, ends, strands, self, tokenize, kwargs
+                )
                 for i in range(len(chroms))
             )
         elif backend is None:
@@ -460,13 +485,13 @@ class GenomeMSA(object):
         try:
             msa_batch = np.array(msa_batch)
         except:
-            print('MSA incomplete in a block')
+            print("MSA incomplete in a block")
             B = len(chroms)
             L = ends[0] - starts[0]
             msa_gapped = np.zeros((B, L, self.n_species), dtype=np.uint8)
             if not tokenize:
-                msa_gapped = msa_gapped.astype('S1')
-                msa_gapped[:] = b'-'
+                msa_gapped = msa_gapped.astype("S1")
+                msa_gapped[:] = b"-"
             for i in range(B):
                 msa_gapped[i, :, 0] = msa_batch[i][:L, 0]
             msa_batch = msa_gapped
@@ -497,16 +522,16 @@ class GenomeMSA(object):
             msa_batch_fwd = np.array(msa_batch_fwd)
             msa_batch_rev = np.array(msa_batch_rev)
         except:
-            print('MSA incomplete in a block')
+            print("MSA incomplete in a block")
             B = len(chroms)
             L = ends[0] - starts[0]
             msa_gapped_fwd = np.zeros((B, L, self.n_species), dtype=np.uint8)
             msa_gapped_rev = np.zeros((B, L, self.n_species), dtype=np.uint8)
             if not tokenize:
-                msa_gapped_fwd = msa_gapped_fwd.astype('S1')
-                msa_gapped_rev = msa_gapped_rev.astype('S1')
-                msa_gapped_fwd[:] = b'-'
-                msa_gapped_rev[:] = b'-'
+                msa_gapped_fwd = msa_gapped_fwd.astype("S1")
+                msa_gapped_rev = msa_gapped_rev.astype("S1")
+                msa_gapped_fwd[:] = b"-"
+                msa_gapped_rev[:] = b"-"
             for i in range(B):
                 msa_gapped_fwd[i, :, 0] = msa_batch_fwd[i][:L, 0]
                 msa_gapped_rev[i, :, 0] = msa_batch_rev[i][:L, 0]

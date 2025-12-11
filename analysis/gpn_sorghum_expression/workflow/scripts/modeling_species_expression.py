@@ -14,7 +14,9 @@ class _Activation(nn.Module):
     def __init__(self, name: str):
         super().__init__()
         if name not in ACT2FN:
-            raise ValueError(f"Unsupported activation '{name}'. Available: {list(ACT2FN.keys())}")
+            raise ValueError(
+                f"Unsupported activation '{name}'. Available: {list(ACT2FN.keys())}"
+            )
         self.name = name
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -103,7 +105,10 @@ class SpeciesSpecificProjectionHead(nn.Module):
 
         # Sort species by their assigned index to keep ModuleList ordering deterministic.
         ordered_species = sorted(species_to_idx.items(), key=lambda kv: kv[1])
-        if ordered_species[0][1] != 0 or ordered_species[-1][1] != len(ordered_species) - 1:
+        if (
+            ordered_species[0][1] != 0
+            or ordered_species[-1][1] != len(ordered_species) - 1
+        ):
             raise ValueError(
                 "species_to_idx indices must be contiguous starting from 0. "
                 f"Received indices: {[idx for _, idx in ordered_species]}"
@@ -133,9 +138,13 @@ class SpeciesSpecificProjectionHead(nn.Module):
             return hidden_states[:, 0, :]
         raise ValueError(f"Unsupported pooling strategy '{self.pooling}'")
 
-    def forward(self, hidden_states: torch.Tensor, species_idx: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, hidden_states: torch.Tensor, species_idx: torch.Tensor
+    ) -> torch.Tensor:
         if species_idx is None:
-            raise ValueError("species_idx must be provided for species-specific projection.")
+            raise ValueError(
+                "species_idx must be provided for species-specific projection."
+            )
 
         if species_idx.dim() == 2 and species_idx.size(-1) == 1:
             species_idx = species_idx.squeeze(-1)
@@ -207,7 +216,9 @@ class GPNForSpeciesExpression(GPNPreTrainedModel):
         species_idx: torch.LongTensor | None = None,
         labels: torch.Tensor | None = None,
     ) -> SequenceClassifierOutput:
-        hidden_states = self.model(input_ids=input_ids, aux_features=aux_features).last_hidden_state
+        hidden_states = self.model(
+            input_ids=input_ids, aux_features=aux_features
+        ).last_hidden_state
         logits = self.species_projection(hidden_states, species_idx=species_idx)
 
         if self.regression_softplus:
@@ -226,4 +237,3 @@ class GPNForSpeciesExpression(GPNPreTrainedModel):
             loss=loss,
             logits=logits,
         )
-

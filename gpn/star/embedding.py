@@ -14,7 +14,9 @@ class ModelCenterEmbedding(torch.nn.Module):
 
     def get_center_embedding(self, input_ids, source_ids, target_species):
         embedding = self.model.forward(
-            input_ids=input_ids, source_ids=source_ids, target_species=target_species,
+            input_ids=input_ids,
+            source_ids=source_ids,
+            target_species=target_species,
         ).last_hidden_state
         center = embedding.shape[1] // 2
         left = center - self.center_window_size // 2
@@ -31,8 +33,12 @@ class ModelCenterEmbedding(torch.nn.Module):
         source_ids_rev=None,
         target_species=None,
     ):
-        embedding_fwd = self.get_center_embedding(input_ids_fwd, source_ids_fwd, target_species)
-        embedding_rev = self.get_center_embedding(input_ids_rev, source_ids_rev, target_species)
+        embedding_fwd = self.get_center_embedding(
+            input_ids_fwd, source_ids_fwd, target_species
+        )
+        embedding_rev = self.get_center_embedding(
+            input_ids_rev, source_ids_rev, target_species
+        )
         embedding = (embedding_fwd + embedding_rev) / 2
         return embedding
 
@@ -58,11 +64,13 @@ class EmbeddingInference(object):
         chrom = np.array(V["chrom"])
         start = np.array(V["start"])
         end = np.array(V["end"])
-        
-        msa_fwd, msa_rev = zip(*[
-            genome_msa.get_msa_batch_fwd_rev(chrom, start, end, tokenize=True)
-            for genome_msa in self.genome_msa_list
-        ])
+
+        msa_fwd, msa_rev = zip(
+            *[
+                genome_msa.get_msa_batch_fwd_rev(chrom, start, end, tokenize=True)
+                for genome_msa in self.genome_msa_list
+            ]
+        )
         msa_fwd = np.concatenate(msa_fwd, axis=-1)
         msa_rev = np.concatenate(msa_rev, axis=-1)
 
@@ -80,9 +88,9 @@ class EmbeddingInference(object):
             res["input_ids_rev"],
             res["source_ids_rev"],
         ) = prepare_output(msa_rev)
-        
+
         res["target_species"] = np.zeros((chrom.shape[0], 1), dtype=int)
-        
+
         if self.disable_aux_features:
             del res["source_ids_fwd"]
             del res["source_ids_rev"]
