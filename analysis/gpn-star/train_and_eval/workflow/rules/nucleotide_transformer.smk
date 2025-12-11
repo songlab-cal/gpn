@@ -4,8 +4,7 @@ rule nucleotide_transformer_run_vep_llr:
         "results/genome/{genome}.fa.gz",
     output:
         "results/preds/{dataset}/{genome}/NucleotideTransformer_LLR.parquet",
-    threads:
-        workflow.cores
+    threads: workflow.cores
     priority: 20
     shell:
         """
@@ -21,8 +20,7 @@ rule nucleotide_transformer_run_vep_inner_products:
         "results/genome/{genome}.fa.gz",
     output:
         "results/preds/{dataset}/{genome}/NucleotideTransformer_InnerProducts.parquet",
-    threads:
-        workflow.cores
+    threads: workflow.cores
     priority: 20
     shell:
         """

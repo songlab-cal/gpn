@@ -59,6 +59,7 @@ import numpy as np
 
 disable_caching()
 
+
 class DataCollatorForLanguageModelingSimplified(DataCollatorForLanguageModeling):
     # gbenegas: Simplified to skip padding since we'll assume all sequences have the same length
     def __init__(self, tokenizer, clades, mlm=True, mlm_probability=0.15):
@@ -80,30 +81,32 @@ class DataCollatorForLanguageModelingSimplified(DataCollatorForLanguageModeling)
 
         flip_p = batch.pop("flip_p", None)
         if self.mlm:
-            batch["input_ids"], batch["labels"], batch["source_ids"] = self.torch_mask_tokens(
-                batch["input_ids"],
-                batch["source_ids"],
-                batch["target_species"],
-                flip_p=flip_p,
+            batch["input_ids"], batch["labels"], batch["source_ids"] = (
+                self.torch_mask_tokens(
+                    batch["input_ids"],
+                    batch["source_ids"],
+                    batch["target_species"],
+                    flip_p=flip_p,
+                )
             )
         else:
             labels = batch["input_ids"].clone()
             if self.tokenizer.pad_token_id is not None:
                 labels[labels == self.tokenizer.pad_token_id] = -100
             batch["labels"] = labels
-        
+
         return batch
 
     def torch_mask_tokens(
         self,
-        inputs: torch.Tensor, # (B, L, T)
-        source_ids: torch.Tensor, # (B, L, N)
-        target_species: torch.Tensor, # (B, T)
+        inputs: torch.Tensor,  # (B, L, T)
+        source_ids: torch.Tensor,  # (B, L, N)
+        target_species: torch.Tensor,  # (B, T)
         flip_p=None,
     ) -> Tuple[Any, Any]:
         """
         Prepare masked tokens inputs/labels for masked language modeling: 80% MASK, 10% random, 10% original.
-        """        
+        """
         # these come from the tokenizer, for now hardcoding
         nuc_min, nuc_max = (
             self.tokenizer.nucleotide_token_id_start(),
@@ -113,20 +116,22 @@ class DataCollatorForLanguageModelingSimplified(DataCollatorForLanguageModeling)
         C = clades.unique().size(0)
         B, L, T = inputs.shape
         labels = inputs.clone()
-        
+
         # We sample a few tokens in each sequence for MLM training (with probability `self.mlm_probability`)
         # Mask the same positions in each clade
         probability_matrix = torch.full((B, L, C), self.mlm_probability)
 
         # Bernoulli sampling of masked positions
-        masked_indices_clades = torch.bernoulli(probability_matrix).bool() # (B, L, C)
-        
+        masked_indices_clades = torch.bernoulli(probability_matrix).bool()  # (B, L, C)
+
         # Get masks for the target species
-        target_clades = clades[target_species] # (B, T)
-        masked_indices = torch.gather(masked_indices_clades, 
-                                      dim=2, 
-                                      index=target_clades[:, None, :].expand(-1, L, -1))
-        
+        target_clades = clades[target_species]  # (B, T)
+        masked_indices = torch.gather(
+            masked_indices_clades,
+            dim=2,
+            index=target_clades[:, None, :].expand(-1, L, -1),
+        )
+
         # Do not mask gap tokens
         gap_mask = labels == 0
         masked_indices = masked_indices & ~gap_mask
@@ -141,18 +146,23 @@ class DataCollatorForLanguageModelingSimplified(DataCollatorForLanguageModeling)
 
         # For non-conserved columns, random flip the token into other nucleotides
         if flip_p is not None:
-            indices_random_labels = (torch.bernoulli(flip_p).bool()[:, :, None] & masked_indices)
+            indices_random_labels = (
+                torch.bernoulli(flip_p).bool()[:, :, None] & masked_indices
+            )
             random_nucs_labels = torch.randint(
                 nuc_min, nuc_max, labels.shape, dtype=labels.dtype
             )
             labels[indices_random_labels] = random_nucs_labels[indices_random_labels]
 
         # We also mask the tokens in the corresponding clades in source_ids to avoid in-clade copying
-        target_clades = clades[target_species] # (B, T) # each species in T is from a unique clade
-        masked_indices_all_species = get_all_species_mask(masked_indices, target_clades, clades)
+        target_clades = clades[
+            target_species
+        ]  # (B, T) # each species in T is from a unique clade
+        masked_indices_all_species = get_all_species_mask(
+            masked_indices, target_clades, clades
+        )
         source_ids[masked_indices_all_species] = self.tokenizer.mask_token_id()
-        
-        
+
         # We only compute loss on masked (thus also non-gap) tokens
         labels[~masked_indices] = -100
 
@@ -270,7 +280,7 @@ class DataTrainingArguments:
     soft_masked_loss_weight_train: Optional[float] = field(default=1.0)
     soft_masked_loss_weight_evaluation: Optional[float] = field(default=1.0)
     use_aux_features: Optional[bool] = field(default=True)
-    weight_conserved: Optional[str] = field(default='True')
+    weight_conserved: Optional[str] = field(default="True")
     flip_nonconserved: Optional[float] = field(default=0)
 
 
@@ -376,8 +386,8 @@ def main():
         config.update_from_string(model_args.config_overrides)
         logger.info(f"New config: {config}")
 
-    print('CONFIG: ', config)
-    
+    print("CONFIG: ", config)
+
     if model_args.model_name_or_path:
         model = AutoModelForMaskedLM.from_pretrained(
             model_args.model_name_or_path,
@@ -395,22 +405,28 @@ def main():
     # Read MSA file
     msa_paths = find_directory_sum_paths(data_args.msa_path)
     print(msa_paths)
-    genome_msa_list = [GenomeMSA(path, n_species=n_species, in_memory=False) for n_species, path in msa_paths.items()]
+    genome_msa_list = [
+        GenomeMSA(path, n_species=n_species, in_memory=False)
+        for n_species, path in msa_paths.items()
+    ]
 
     # Get clade info from the phylo info module in the initialized model
     clade_dict = model.model.phylo_info.clade_dict
     clades = model.model.phylo_info.clade_labels
-    print('Num clades', len(clade_dict))
+    print("Num clades", len(clade_dict))
     print(clade_dict)
-    
+
     def tokenize_function(examples, soft_masked_weight, split):
-        msa = [genome_msa.get_msa_batch(
-            examples["chrom"],
-            examples["start"],
-            examples["end"],
-            examples["strand"],
-            tokenize=True,  # n_jobs=0,
-        ) for genome_msa in genome_msa_list]
+        msa = [
+            genome_msa.get_msa_batch(
+                examples["chrom"],
+                examples["start"],
+                examples["end"],
+                examples["strand"],
+                tokenize=True,  # n_jobs=0,
+            )
+            for genome_msa in genome_msa_list
+        ]
         msa = np.concatenate(msa, axis=-1)
 
         # Sample species in MSA
@@ -419,33 +435,36 @@ def main():
         phastCons = np.array(examples["phastCons"], dtype=float)
         phastCons = max_smooth(np.nan_to_num(phastCons, nan=0.0), 7)
         phyloP = np.array(examples["phyloP"], dtype=float)
-        
+
         # Sample target species
         # Sample 19 clades
         # Sample 1 species per selected clade
         # Always include human
         # In total 20 species
         num_targets = 20
-        
-        if len(list(clade_dict[0])) == 1: # if the first clade has only human
-            all_clades = np.arange(1, len(clade_dict)) # do not sample human again
+
+        if len(list(clade_dict[0])) == 1:  # if the first clade has only human
+            all_clades = np.arange(1, len(clade_dict))  # do not sample human again
         else:
             all_clades = np.arange(len(clade_dict))
-        
 
         target_clades = []
-        with_replacement = len(all_clades) < num_targets-1
+        with_replacement = len(all_clades) < num_targets - 1
         for i in range(B):
-            target_clades.append(np.random.choice(all_clades, size=num_targets-1, replace=with_replacement))
-        target_clades = np.stack(target_clades) # (B, T-1)
-        
+            target_clades.append(
+                np.random.choice(
+                    all_clades, size=num_targets - 1, replace=with_replacement
+                )
+            )
+        target_clades = np.stack(target_clades)  # (B, T-1)
+
         target_species = np.zeros((B, num_targets), dtype=np.int32)
         for i in range(B):
             for j in range(1, num_targets):
-                clade = target_clades[i, j-1]
-                species = clade_dict[clade] - {0} # do not sample human again
+                clade = target_clades[i, j - 1]
+                species = clade_dict[clade] - {0}  # do not sample human again
                 target_species[i, j] = np.random.choice(list(species), 1)[0]
-        
+
         # subsample
         input_ids = np.take_along_axis(msa, target_species[:, np.newaxis, :], axis=2)
 
@@ -453,30 +472,32 @@ def main():
         loss_weight = np.ones((B, L), dtype=float)
         loss_weight[np.array(examples["lowercase"])] *= soft_masked_weight
 
-        if data_args.weight_conserved == 'True':
+        if data_args.weight_conserved == "True":
             loss_weight *= np.fmax(phyloP, 1.0)  # ignores nan
             loss_weight *= 0.1 + phastCons
-        elif data_args.weight_conserved == 'neutral':
-            loss_weight *= np.fmax(1.0+5*(1.0-np.abs(phyloP)), 1.0)  # ignores nan
-            loss_weight *= 0.1 + (1-phastCons)
+        elif data_args.weight_conserved == "neutral":
+            loss_weight *= np.fmax(1.0 + 5 * (1.0 - np.abs(phyloP)), 1.0)  # ignores nan
+            loss_weight *= 0.1 + (1 - phastCons)
 
         # species-wise loss
         loss_weight_species = np.ones(num_targets, dtype=float)
-        
-        loss_weight = loss_weight[:, :, None] * loss_weight_species[None, None, :] # (B, L, C)
-        
-        res = dict(input_ids=input_ids,
-                   loss_weight=loss_weight, 
-                   target_species = target_species,
-                   )
-        
-        res['source_ids'] = msa
 
+        loss_weight = (
+            loss_weight[:, :, None] * loss_weight_species[None, None, :]
+        )  # (B, L, C)
+
+        res = dict(
+            input_ids=input_ids,
+            loss_weight=loss_weight,
+            target_species=target_species,
+        )
+
+        res["source_ids"] = msa
 
         if data_args.flip_nonconserved > 0:
             flip_p = 0.5 * (phastCons < data_args.flip_nonconserved)
             res["flip_p"] = flip_p
-                
+
         return res
 
     soft_masked_weight = {
@@ -493,7 +514,7 @@ def main():
             lambda examples, w=w, split=split: tokenize_function(examples, w, split),
         )
     # Should evaluation be done without sampling MSAs?
-    
+
     tokenized_datasets = raw_datasets
 
     if training_args.do_train:
@@ -506,9 +527,7 @@ def main():
     # This one will take care of randomly masking the tokens.
 
     data_collator = DataCollatorForLanguageModelingSimplified(
-        Tokenizer(),
-        mlm_probability=data_args.mlm_probability,
-        clades = clades
+        Tokenizer(), mlm_probability=data_args.mlm_probability, clades=clades
     )
 
     # Initialize our Trainer
@@ -554,9 +573,9 @@ def main():
         kwargs["dataset_tags"] = data_args.dataset_name
         if data_args.dataset_config_name is not None:
             kwargs["dataset_args"] = data_args.dataset_config_name
-            kwargs[
-                "dataset"
-            ] = f"{data_args.dataset_name} {data_args.dataset_config_name}"
+            kwargs["dataset"] = (
+                f"{data_args.dataset_name} {data_args.dataset_config_name}"
+            )
         else:
             kwargs["dataset"] = data_args.dataset_name
 

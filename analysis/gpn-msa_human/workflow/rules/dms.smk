@@ -51,7 +51,10 @@ rule dms_process:
         dms="|".join(all_dms),
     run:
         V = pd.read_csv(
-            input[0], sep="\t", header=None, dtype={"chrom": "str"},
+            input[0],
+            sep="\t",
+            header=None,
+            dtype={"chrom": "str"},
             names=["chrom", "pos", "id", "ref", "alt", "label"],
         ).drop(columns=["id"])
         V["DMS"] = wildcards.dms
@@ -79,13 +82,22 @@ rule dms_fix_chrom:
     run:
         V = pd.read_parquet(input[0])
         V.chrom = V.chrom.astype(str)
-        assert ((V.ref.isin(NUCLEOTIDES).all()) and (V.alt.isin(NUCLEOTIDES)).all())
+        assert (V.ref.isin(NUCLEOTIDES).all()) and (V.alt.isin(NUCLEOTIDES)).all()
         assert (V.ref != V.alt).all()
         genome = Genome(input[1])
-        V["fasta_ref"] = V.progress_apply(lambda v: genome.get_nuc(v.chrom, v.pos).upper(), axis=1)
+        V["fasta_ref"] = V.progress_apply(
+            lambda v: genome.get_nuc(v.chrom, v.pos).upper(), axis=1
+        )
         V["mismatched"] = V.ref != V.fasta_ref
         for col in ["ref", "alt"]:
-            V[col] = V.apply(lambda v: v[col] if not v.mismatched else str(Seq(v[col]).reverse_complement()), axis=1)
+            V[col] = V.apply(
+                lambda v: (
+                    v[col]
+                    if not v.mismatched
+                    else str(Seq(v[col]).reverse_complement())
+                ),
+                axis=1,
+            )
         assert (V.ref == V.fasta_ref).all()
         assert (V.ref != V.alt).all()
         V = V.drop(columns=["fasta_ref"])
@@ -106,10 +118,12 @@ rule dms2_get_precomputed_scores:
     threads: workflow.cores
     run:
         V = pl.read_parquet(input[0], columns=COORDINATES)
-        preds = pl.concat([
-            pl.read_parquet(path).join(V, on=COORDINATES, how="inner")
-            for path in tqdm(input[1:])
-        ])
+        preds = pl.concat(
+            [
+                pl.read_parquet(path).join(V, on=COORDINATES, how="inner")
+                for path in tqdm(input[1:])
+            ]
+        )
         V = V.join(preds, on=COORDINATES, how="left")
         print(V)
         V.select("score").write_parquet(output[0])

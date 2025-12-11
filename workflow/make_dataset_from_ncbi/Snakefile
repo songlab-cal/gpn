@@ -6,6 +6,7 @@ import math
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+
 tqdm.pandas()
 
 
@@ -13,16 +14,27 @@ tqdm.pandas()
 # (https://www.ncbi.nlm.nih.gov/data-hub/genome).
 # You can choose a set of taxa and apply filters such as annotation level,
 # assembly level.
-# Checkout the script gpn/ss/filter_assemblies.py for more details, such as 
+# Checkout the script gpn/ss/filter_assemblies.py for more details, such as
 # how to subsample, or how to keep only one assembly per genus.
 assemblies = pd.read_csv(config["assemblies_path"], sep="\t", index_col=0)
 assemblies["Assembly Name"] = assemblies["Assembly Name"].str.replace(" ", "_")
 assemblies["genome_path"] = (
-    "tmp/" + assemblies.index + "/ncbi_dataset/data/" + assemblies.index + "/" +
-    assemblies.index + "_" + assemblies["Assembly Name"] + "_genomic.fna"
+    "tmp/"
+    + assemblies.index
+    + "/ncbi_dataset/data/"
+    + assemblies.index
+    + "/"
+    + assemblies.index
+    + "_"
+    + assemblies["Assembly Name"]
+    + "_genomic.fna"
 )
 assemblies["annotation_path"] = (
-    "tmp/" + assemblies.index + "/ncbi_dataset/data/" + assemblies.index + "/genomic.gff"
+    "tmp/"
+    + assemblies.index
+    + "/ncbi_dataset/data/"
+    + assemblies.index
+    + "/genomic.gff"
 )
 
 splits = ["train", "validation", "test"]
@@ -50,7 +62,9 @@ rule download_genome:
     params:
         tmp_dir=directory("tmp/{assembly}"),
         genome_path=lambda wildcards: assemblies.loc[wildcards.assembly, "genome_path"],
-        annotation_path=lambda wildcards: assemblies.loc[wildcards.assembly, "annotation_path"],
+        annotation_path=lambda wildcards: assemblies.loc[
+            wildcards.assembly, "annotation_path"
+        ],
     shell:
         """
         mkdir -p {params.tmp_dir} && cd {params.tmp_dir} && 
@@ -82,7 +96,9 @@ rule make_balanced_intervals:
         defined_intervals = load_table(input[0])
         annotation = load_table(input[1])
         intervals = get_balanced_intervals(
-            defined_intervals, annotation, int(wildcards.window_size),
+            defined_intervals,
+            annotation,
+            int(wildcards.window_size),
             config.get("promoter_upstream", 1000),
         )
         intervals.to_parquet(output[0], index=False)
@@ -93,14 +109,19 @@ rule make_dataset_assembly:
         "output/intervals/{window_size}/{assembly}/{anything}.parquet",
         "output/genome/{assembly}.fa.gz",
     output:
-        expand("output/dataset/{{window_size}}/{{step_size}}/{{add_rc}}/{{assembly}}/{{anything}}/{split}.parquet", split=splits),
+        expand(
+            "output/dataset/{{window_size}}/{{step_size}}/{{add_rc}}/{{assembly}}/{{anything}}/{split}.parquet",
+            split=splits,
+        ),
     threads: 2
     run:
         intervals = pd.read_parquet(input[0])
         genome = Genome(input[1])
         intervals = make_windows(
-            intervals, int(wildcards.window_size), int(wildcards.step_size),
-            wildcards.add_rc=="True",
+            intervals,
+            int(wildcards.window_size),
+            int(wildcards.step_size),
+            wildcards.add_rc == "True",
         )
         print(intervals)
         intervals = intervals.sample(frac=1.0, random_state=42)
@@ -114,7 +135,9 @@ rule make_dataset_assembly:
 
         chroms = intervals.chrom.unique()
         chrom_split = np.random.choice(
-            splits, p=split_proportions, size=len(chroms),
+            splits,
+            p=split_proportions,
+            size=len(chroms),
         )
         chrom_split[np.isin(chroms, whitelist_validation_chroms)] = "validation"
         chrom_split[np.isin(chroms, whitelist_test_chroms)] = "test"
@@ -125,17 +148,23 @@ rule make_dataset_assembly:
         for path, split in zip(output, splits):
             print(path, split)
             # to parquet to be able to load faster later
-            intervals[(intervals_split==split).values].to_parquet(
-                path, index=False,
+            intervals[(intervals_split == split).values].to_parquet(
+                path,
+                index=False,
             )
 
 
 # before uploading, remove data/split/.snakemake_timestamp files
 rule merge_datasets:
     input:
-        expand("output/dataset/{{window_size}}/{{step_size}}/{{add_rc}}/{assembly}/{{anything}}/{{split}}.parquet", assembly=assemblies.index),
+        expand(
+            "output/dataset/{{window_size}}/{{step_size}}/{{add_rc}}/{assembly}/{{anything}}/{{split}}.parquet",
+            assembly=assemblies.index,
+        ),
     output:
-        directory("output/merged_dataset/{window_size}/{step_size}/{add_rc}/{anything}/data/{split}"),
+        directory(
+            "output/merged_dataset/{window_size}/{step_size}/{add_rc}/{anything}/data/{split}"
+        ),
     threads: workflow.cores
     run:
         intervals = pd.concat(
@@ -145,10 +174,12 @@ rule merge_datasets:
         print(intervals)
 
         if config.get("subsample_to_target", False) and wildcards.split == "train":
-            n_target = (intervals.assembly==config["target_assembly"]).sum()
-            intervals = intervals.groupby("assembly").sample(
-                n=n_target, random_state=42
-            ).sample(frac=1, random_state=42)
+            n_target = (intervals.assembly == config["target_assembly"]).sum()
+            intervals = (
+                intervals.groupby("assembly")
+                .sample(n=n_target, random_state=42)
+                .sample(frac=1, random_state=42)
+            )
             print(wildcards.split, intervals.assembly.value_counts())
             print(intervals)
 
@@ -158,6 +189,8 @@ rule merge_datasets:
         for i in tqdm(range(n_shards)):
             path = Path(output[0]) / f"shard_{i:05}.jsonl.zst"
             intervals.iloc[i::n_shards].to_json(
-                path, orient="records", lines=True,
-                compression={'method': 'zstd', 'threads': -1}
+                path,
+                orient="records",
+                lines=True,
+                compression={"method": "zstd", "threads": -1},
             )

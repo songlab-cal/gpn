@@ -4,13 +4,21 @@ import pandas as pd
 # downloaded from https://www.ncbi.nlm.nih.gov/datasets/genome/?taxon=33208&reference_only=true&annotated_only=true&refseq_annotation=true&typical_only=true
 # make sure to "Select columns" -> Size (Mb)
 genomes = pd.read_csv(
-    "all.tsv", sep="\t", index_col=0,
-    usecols=["Assembly Accession", "Assembly Name", "Organism Name", "Assembly Level", "Assembly Stats Total Sequence Length"]
+    "all.tsv",
+    sep="\t",
+    index_col=0,
+    usecols=[
+        "Assembly Accession",
+        "Assembly Name",
+        "Organism Name",
+        "Assembly Level",
+        "Assembly Stats Total Sequence Length",
+    ],
 )
 print(genomes)
 
 priority_genomes = [
-    "GCF_000002985.6", # WBcel235	Caenorhabditis elegans
+    "GCF_000002985.6",  # WBcel235	Caenorhabditis elegans
     "GCF_000001405.40",  # GRCh38.p14	Homo sapiens
     "GCF_000001635.27",  # GRCm39	Mus musculus
     "GCF_000001215.4",  # Release 6 plus ISO1 MT	Drosophila melanogaster
@@ -31,7 +39,9 @@ rule get_names:
     output:
         "names.csv",
     run:
-        genomes[["Organism Name"]].drop_duplicates().to_csv(output[0], index=False, header=False)
+        genomes[["Organism Name"]].drop_duplicates().to_csv(
+            output[0], index=False, header=False
+        )
 
 
 rule download_taxonomy:
@@ -54,12 +64,14 @@ rule process_taxonomy:
         df["classification"] = df["taxonomy"].apply(lambda x: x["classification"])
         levels = ["genus", "family", "order"]
 
+
         def get_level(x, level):
             try:
                 return x[level]["name"]
             except:
                 print(f"Missing level {x} {level}")
                 return None
+
 
         for level in levels:
             df[level] = df.classification.apply(lambda x: get_level(x, level))
@@ -74,7 +86,7 @@ rule add_taxonomy:
         "all.annot.tsv",
     run:
         taxonomy = pd.read_csv(input[0], sep="\t")
-        res = genomes.reset_index().merge(taxonomy, on="Organism Name", how="left") 
+        res = genomes.reset_index().merge(taxonomy, on="Organism Name", how="left")
         res.to_csv(output[0], sep="\t", index=False)
 
 
@@ -98,9 +110,13 @@ rule filter_genomes:
         df = df[df["Assembly Stats Total Sequence Length"] < 4e9]
         df.loc[:, "Priority"] = "1_Low"
         df.loc[priority_genomes, "Priority"] = "0_High"
-        df = (
-            df.sort_values(["Priority", "Assembly Level", "Assembly Stats Total Sequence Length", "Organism Name"])
-            .drop_duplicates(subsample_taxonomic_level)
-        )
+        df = df.sort_values(
+            [
+                "Priority",
+                "Assembly Level",
+                "Assembly Stats Total Sequence Length",
+                "Organism Name",
+            ]
+        ).drop_duplicates(subsample_taxonomic_level)
         print(df)
         df.to_csv(output[0], sep="\t")

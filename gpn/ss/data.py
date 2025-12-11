@@ -25,12 +25,20 @@ def create_masked_input_and_labels(
     labels[~masked_indices] = -100  # We only compute loss on masked tokens
 
     # 80% of the time, we replace masked input tokens with tokenizer.mask_token ([MASK])
-    indices_replaced = torch.bernoulli(torch.full(labels.shape, 0.8)).bool() & masked_indices
+    indices_replaced = (
+        torch.bernoulli(torch.full(labels.shape, 0.8)).bool() & masked_indices
+    )
     input_ids[indices_replaced] = tokenizer.mask_token_id()
 
     # 10% of the time, we replace masked input tokens with random word
-    indices_random = torch.bernoulli(torch.full(labels.shape, 0.5)).bool() & masked_indices & ~indices_replaced
-    random_words = torch.randint(tokenizer.vocab_size(), labels.shape, dtype=torch.uint8)
+    indices_random = (
+        torch.bernoulli(torch.full(labels.shape, 0.5)).bool()
+        & masked_indices
+        & ~indices_replaced
+    )
+    random_words = torch.randint(
+        tokenizer.vocab_size(), labels.shape, dtype=torch.uint8
+    )
     input_ids[indices_random] = random_words[indices_random]
 
     # The rest of the time (10% of the time) we keep the masked input tokens unchanged
@@ -51,7 +59,9 @@ def load_dataset_training(
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
 
     def tokenize_function(
-        examples, soft_masked_weight, data_augmentation=False,
+        examples,
+        soft_masked_weight,
+        data_augmentation=False,
         do_create_masked_input_and_labels=True,
     ):
         seq = examples["seq"]
@@ -84,26 +94,32 @@ def load_dataset_training(
     train_dataset = raw_datasets["train"].shuffle(seed=seed)
     train_dataset = train_dataset.map(
         lambda examples: tokenize_function(
-            examples, soft_masked_loss_weight_train, data_augmentation=True,
+            examples,
+            soft_masked_loss_weight_train,
+            data_augmentation=True,
         ),
-        batched=True, remove_columns=remove_columns,
+        batched=True,
+        remove_columns=remove_columns,
         # This takes care of some issues when using torch_compile
         # I think it's a bug in IterableDataset in the datasets library
         # When the last batch is smaller than the batch size
         # Hopefully it will be fixed soon
-        drop_last_batch=True, batch_size=batch_size,
+        drop_last_batch=True,
+        batch_size=batch_size,
     )
     validation_dataset = raw_datasets["validation"].map(
         lambda examples: tokenize_function(
             examples, soft_masked_loss_weight_evaluation
         ),
-        batched=True, remove_columns=remove_columns,
+        batched=True,
+        remove_columns=remove_columns,
     )
     test_dataset = raw_datasets["test"].map(
         lambda examples: tokenize_function(
             examples, soft_masked_loss_weight_evaluation
         ),
-        batched=True, remove_columns=remove_columns,
+        batched=True,
+        remove_columns=remove_columns,
     )
 
     return IterableDatasetDict(

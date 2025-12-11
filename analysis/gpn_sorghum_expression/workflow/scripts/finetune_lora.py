@@ -244,7 +244,7 @@ class DataTrainingArguments:
     )
     pos_weight: Optional[float] = field(
         default=1.0,
-        metadata={"help": "Positive weight for binary token classification"}
+        metadata={"help": "Positive weight for binary token classification"},
     )
     token_classification: bool = field(
         default=False,
@@ -254,15 +254,11 @@ class DataTrainingArguments:
     )
     streaming: bool = field(
         default=False,
-        metadata={
-            "help": "Whether to use streaming datasets."
-        },
+        metadata={"help": "Whether to use streaming datasets."},
     )
     subsample_train: Optional[float] = field(
         default=None,
-        metadata={
-            "help": "Subsample the training dataset to this proportion."
-        },
+        metadata={"help": "Subsample the training dataset to this proportion."},
     )
 
 
@@ -354,12 +350,17 @@ def main():
         for key in d.keys():
             d[key] = d[key].rename_column(data_args.seq_column_name, "seq")
 
-    if data_args.label_column_name is not None and data_args.label_column_name != "labels":
+    if (
+        data_args.label_column_name is not None
+        and data_args.label_column_name != "labels"
+    ):
         for key in d.keys():
             d[key] = d[key].rename_column(data_args.label_column_name, "labels")
 
     if data_args.streaming:
-        raise ValueError("Species-specific projection currently does not support streaming datasets.")
+        raise ValueError(
+            "Species-specific projection currently does not support streaming datasets."
+        )
 
     species_column = data_args.species_column_name or "species_id"
     if species_column not in d["train"].column_names:
@@ -469,7 +470,7 @@ def main():
 
     peft_config = LoraConfig(
         task_type="SEQ_CLS",
-        #target_modules="all-linear",
+        # target_modules="all-linear",
         target_modules=r"^model\.encoder\.\d+\.conv\.1$|^model\.encoder\.\d+\.ffn\.0$",
         modules_to_save=["species_projection"],
     )
@@ -560,9 +561,9 @@ def main():
         kwargs["dataset_tags"] = data_args.dataset_name
         if data_args.dataset_config_name is not None:
             kwargs["dataset_args"] = data_args.dataset_config_name
-            kwargs[
-                "dataset"
-            ] = f"{data_args.dataset_name} {data_args.dataset_config_name}"
+            kwargs["dataset"] = (
+                f"{data_args.dataset_name} {data_args.dataset_config_name}"
+            )
         else:
             kwargs["dataset"] = data_args.dataset_name
 

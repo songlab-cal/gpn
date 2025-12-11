@@ -14,7 +14,7 @@ rule download_phastCons:
 
 rule donwload_phyloP_zoonomia:
     output:
-        "results/conservation/phyloP-Zoonomia.bw"
+        "results/conservation/phyloP-Zoonomia.bw",
     shell:
         "wget https://hgdownload.soe.ucsc.edu/goldenPath/hg38/cactus241way/cactus241way.phyloP.bw -O {output}"
 
@@ -31,8 +31,7 @@ rule run_vep_conservation:
         df = load_dataset(wildcards["dataset"], split="test").to_pandas()
         bw = pyBigWig.open(input[0])
         df["score"] = df.progress_apply(
-            lambda v: -bw.values(f"chr{v.chrom}", v.pos-1, v.pos)[0],
-            axis=1
+            lambda v: -bw.values(f"chr{v.chrom}", v.pos - 1, v.pos)[0], axis=1
         )
         print(df)
         df = df[["score"]]
@@ -49,15 +48,16 @@ rule run_vep_conservation_combination:
     run:
         import pyBigWig
 
-        df = load_dataset(
-            wildcards["dataset"], split="test"
-        ).to_pandas()[["chrom", "pos"]]
+        df = load_dataset(wildcards["dataset"], split="test").to_pandas()[
+            ["chrom", "pos"]
+        ]
         df.chrom = "chr" + df.chrom
         phyloP = pyBigWig.open(input[0])
         phastCons = pyBigWig.open(input[1])
 
-        get_phyloP = lambda v: phyloP.values(v.chrom, v.pos-1, v.pos)[0]
+        get_phyloP = lambda v: phyloP.values(v.chrom, v.pos - 1, v.pos)[0]
         df["phyloP"] = df.progress_apply(get_phyloP, axis=1)
+
 
         def get_phastCons(v):
             pos = v.pos - 1
@@ -65,6 +65,7 @@ rule run_vep_conservation_combination:
             start = pos - kernel // 2
             end = pos + kernel // 2 + 1
             return np.nanmax(phastCons.values(v.chrom, start, end))
+
 
         df["phastCons"] = df.progress_apply(get_phastCons, axis=1)
 

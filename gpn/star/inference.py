@@ -73,7 +73,7 @@ if __name__ == "__main__":
         type=str,
         help="Genome MSA path (zarr)",
     )
-    parser.add_argument("window_size", type=int, help="Genomic window size")    
+    parser.add_argument("window_size", type=int, help="Genomic window size")
     parser.add_argument("model_path", help="Model path (local or on HF hub)", type=str)
     parser.add_argument("output_path", help="Output path (parquet)", type=str)
     parser.add_argument(
@@ -115,12 +115,21 @@ if __name__ == "__main__":
             is_file=args.is_file,
         )
     except:
-        dataset = Dataset.from_pandas(pd.read_parquet(args.input_path+'/test.parquet'))
+        dataset = Dataset.from_pandas(
+            pd.read_parquet(args.input_path + "/test.parquet")
+        )
 
     msa_paths = find_directory_sum_paths(args.msa_path)
-    genome_msa_list = [GenomeMSA(path, n_species=n_species, subset_chroms=dataset.unique("chrom"), in_memory=False) 
-                       for n_species, path in msa_paths.items()]
-    
+    genome_msa_list = [
+        GenomeMSA(
+            path,
+            n_species=n_species,
+            subset_chroms=dataset.unique("chrom"),
+            in_memory=False,
+        )
+        for n_species, path in msa_paths.items()
+    ]
+
     # sorry this is hacky, should use subparsers
     kwargs = (
         dict(center_window_size=args.center_window_size)

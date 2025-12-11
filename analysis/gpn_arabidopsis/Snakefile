@@ -3,9 +3,17 @@ from Bio.Seq import Seq
 import bioframe as bf
 from collections import defaultdict
 from gpn.data import (
-    filter_defined, filter_length, load_table, add_flank, get_annotation_features,
-    add_jitter, get_promoters, get_random_intervals, union_intervals,
-    intersect_intervals, intervals_size
+    filter_defined,
+    filter_length,
+    load_table,
+    add_flank,
+    get_annotation_features,
+    add_jitter,
+    get_promoters,
+    get_random_intervals,
+    union_intervals,
+    intersect_intervals,
+    intervals_size,
 )
 import gzip
 import h5py
@@ -22,6 +30,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 import torch
 from tqdm import tqdm
+
 tqdm.pandas()
 
 from gpn.data import make_windows, get_seq
@@ -29,6 +38,7 @@ from gpn.data import load_fasta, save_fasta, load_table, load_repeatmasker, Geno
 
 
 configfile: "config.yaml"
+
 
 WINDOW_SIZE = config["window_size"]
 PRIORITY_ASSEMBLIES = [
@@ -41,7 +51,7 @@ CHROMS = ["1", "2", "3", "4", "5"]
 NUCLEOTIDES = list("ACGT")
 models = [
     "gonzalobenegas/gpn-brassicales",
-    #"/scratch/users/gbenegas/checkpoints/GPN_Arabidopsis_multispecies/ConvNet_ss_12k/checkpoint-12000",
+    # "/scratch/users/gbenegas/checkpoints/GPN_Arabidopsis_multispecies/ConvNet_ss_12k/checkpoint-12000",
 ]
 all_radius = [
     100_000,
@@ -50,7 +60,9 @@ all_threshold = [
     0.1,
 ]
 
+
 ruleorder: get_kmer_spectrum > get_embeddings
+
 
 rule all:
     input:
@@ -104,7 +116,8 @@ rule filter_assemblies:
 module make_dataset_from_ncbi:
     snakefile:
         "https://raw.githubusercontent.com/songlab-cal/gpn/main/workflow/make_dataset_from_ncbi/Snakefile"
-    config: config
+    config:
+        config
 
 
 use rule * from make_dataset_from_ncbi as make_dataset_from_ncbi_*
@@ -117,12 +130,17 @@ rule make_assemblies_latex_table:
         "output/assemblies.tex",
     run:
         df = pd.read_csv(
-            input[0], sep="\t",
+            input[0],
+            sep="\t",
             usecols=["Assembly Accession", "Assembly Name", "Organism Name"],
         )
-        df["Assembly Accession"] = r"\texttt{"  + df["Assembly Accession"].str.replace("_", "\_") + "}"
-        df["Assembly Name"] = r"\texttt{"  + df["Assembly Name"].str.replace("_", "\_") + "}"
-        df["Organism Name"] = r"\textit{"  + df["Organism Name"] + "}"
+        df["Assembly Accession"] = (
+            r"\texttt{" + df["Assembly Accession"].str.replace("_", "\_") + "}"
+        )
+        df["Assembly Name"] = (
+            r"\texttt{" + df["Assembly Name"].str.replace("_", "\_") + "}"
+        )
+        df["Organism Name"] = r"\textit{" + df["Organism Name"] + "}"
         print(df)
         df.to_latex(output[0], index=False, escape=False)
 
@@ -146,7 +164,8 @@ rule rename_reference:
     run:
         genome = load_fasta(input[0])
         id_mapping = pd.read_csv(
-            input[1], sep="\t", header=None, index_col=0, squeeze=True)
+            input[1], sep="\t", header=None, index_col=0, squeeze=True
+        )
         for chrom in genome.keys():
             genome[chrom].id = id_mapping[genome[chrom].id]
         save_fasta(output[0], genome)
@@ -168,7 +187,9 @@ rule expand_annotation:
     run:
         gtf = load_table(input[0])
 
-        repeats = pd.read_csv(input[1], sep="\t").rename(columns=dict(genoName="chrom", genoStart="start", genoEnd="end"))[["chrom", "start", "end"]]
+        repeats = pd.read_csv(input[1], sep="\t").rename(
+            columns=dict(genoName="chrom", genoStart="start", genoEnd="end")
+        )[["chrom", "start", "end"]]
         # TODO: figure out if repeatmasker coordinates are 0-based vs. 1-based
         # shouldn't matter much though
         repeats.chrom = repeats.chrom.str.replace("Chr", "")
@@ -176,22 +197,36 @@ rule expand_annotation:
         repeats["feature"] = "Repeat"
         gtf = pd.concat([gtf, repeats], ignore_index=True)
 
-        gtf_intergenic = bf.subtract(gtf.query('feature=="chromosome"'), gtf[gtf.feature.isin(["gene", "ncRNA_gene", "Repeat"])])
+        gtf_intergenic = bf.subtract(
+            gtf.query('feature=="chromosome"'),
+            gtf[gtf.feature.isin(["gene", "ncRNA_gene", "Repeat"])],
+        )
         gtf_intergenic.feature = "intergenic"
         gtf = pd.concat([gtf, gtf_intergenic], ignore_index=True)
 
-        gtf_exon = gtf[gtf.feature=="exon"]
-        gtf_exon["transcript_id"] = gtf_exon.attribute.str.split(";").str[0].str.split(":").str[-1]
+        gtf_exon = gtf[gtf.feature == "exon"]
+        gtf_exon["transcript_id"] = (
+            gtf_exon.attribute.str.split(";").str[0].str.split(":").str[-1]
+        )
+
 
         def get_transcript_introns(df_transcript):
             df_transcript = df_transcript.sort_values("start")
-            exon_pairs = more_itertools.pairwise(df_transcript.loc[:, ["start", "end"]].values)
+            exon_pairs = more_itertools.pairwise(
+                df_transcript.loc[:, ["start", "end"]].values
+            )
             introns = [[e1[1], e2[0]] for e1, e2 in exon_pairs]
             introns = pd.DataFrame(introns, columns=["start", "end"])
             introns["chrom"] = df_transcript.chrom.iloc[0]
             return introns
 
-        gtf_introns = gtf_exon.groupby("transcript_id").apply(get_transcript_introns).reset_index().drop_duplicates(subset=["chrom", "start", "end"])
+
+        gtf_introns = (
+            gtf_exon.groupby("transcript_id")
+            .apply(get_transcript_introns)
+            .reset_index()
+            .drop_duplicates(subset=["chrom", "start", "end"])
+        )
         gtf_introns["feature"] = "intron"
         gtf = pd.concat([gtf, gtf_introns], ignore_index=True)
         gtf.to_parquet(output[0], index=False)
@@ -212,29 +247,35 @@ rule define_embedding_windows:
         windows = make_windows(defined_intervals, WINDOW_SIZE, EMBEDDING_WINDOW_SIZE)
         windows.rename(columns={"start": "full_start", "end": "full_end"}, inplace=True)
 
-        windows["start"] = (windows.full_start+windows.full_end)//2 - EMBEDDING_WINDOW_SIZE//2
+        windows["start"] = (
+            windows.full_start + windows.full_end
+        ) // 2 - EMBEDDING_WINDOW_SIZE // 2
         windows["end"] = windows.start + EMBEDDING_WINDOW_SIZE
 
         features_of_interest = [
             "intergenic",
-            'CDS',
-            'intron',
-            'three_prime_UTR',
-            'five_prime_UTR',
+            "CDS",
+            "intron",
+            "three_prime_UTR",
+            "five_prime_UTR",
             "ncRNA_gene",
             "Repeat",
         ]
 
         for f in features_of_interest:
             print(f)
-            windows = bf.coverage(windows, gtf[gtf.feature==f])
+            windows = bf.coverage(windows, gtf[gtf.feature == f])
             windows.rename(columns=dict(coverage=f), inplace=True)
-        
-        windows = windows[(windows[features_of_interest]==EMBEDDING_WINDOW_SIZE).sum(axis=1)==1]
+
+        windows = windows[
+            (windows[features_of_interest] == EMBEDDING_WINDOW_SIZE).sum(axis=1) == 1
+        ]
         windows["Region"] = windows[features_of_interest].idxmax(axis=1)
         windows.drop(columns=features_of_interest, inplace=True)
 
-        windows.rename(columns={"start": "center_start", "end": "center_end"}, inplace=True)
+        windows.rename(
+            columns={"start": "center_start", "end": "center_end"}, inplace=True
+        )
         windows.rename(columns={"full_start": "start", "full_end": "end"}, inplace=True)
         print(windows)
         windows.to_parquet(output[0], index=False)
@@ -257,6 +298,7 @@ rule get_embeddings:
 
 from functools import cache
 
+
 # source: https://github.com/MindAI/kmer
 class kmer_featurization:
     def __init__(self, k):
@@ -265,15 +307,19 @@ class kmer_featurization:
         k: the "k" in k-mer
         """
         self.k = k
-        self.letters = ['A', 'T', 'C', 'G']
-        self.multiplyBy = 4 ** np.arange(k-1, -1, -1) # the multiplying number for each digit position in the k-number system
-        self.n = 4**k # number of possible k-mers
+        self.letters = ["A", "T", "C", "G"]
+        self.multiplyBy = 4 ** np.arange(
+            k - 1, -1, -1
+        )  # the multiplying number for each digit position in the k-number system
+        self.n = 4**k  # number of possible k-mers
 
-    def obtain_kmer_feature_for_one_sequence(self, seq, write_number_of_occurrences=False):
+    def obtain_kmer_feature_for_one_sequence(
+        self, seq, write_number_of_occurrences=False
+    ):
         """
         Given a DNA sequence, return the 1-hot representation of its kmer feature.
         Args:
-          seq: 
+          seq:
             a string, a DNA sequence
           write_number_of_occurrences:
             a boolean. If False, then in the 1-hot representation, the percentage of the occurrence of a kmer will be recorded; otherwise the number of occurrences will be recorded. Default False.
@@ -283,12 +329,12 @@ class kmer_featurization:
         kmer_feature = np.zeros(self.n)
 
         for i in range(number_of_kmers):
-          this_kmer = seq[i:(i+self.k)]
-          this_numbering = self.kmer_numbering_for_one_kmer(this_kmer)
-          kmer_feature[this_numbering] += 1
+            this_kmer = seq[i : (i + self.k)]
+            this_numbering = self.kmer_numbering_for_one_kmer(this_kmer)
+            kmer_feature[this_numbering] += 1
 
         if not write_number_of_occurrences:
-          kmer_feature = kmer_feature / number_of_kmers
+            kmer_feature = kmer_feature / number_of_kmers
 
         return kmer_feature
 
@@ -299,7 +345,7 @@ class kmer_featurization:
         """
         digits = []
         for letter in kmer:
-          digits.append(self.letters.index(letter))
+            digits.append(self.letters.index(letter))
 
         digits = np.array(digits)
 
@@ -322,10 +368,13 @@ rule get_kmer_spectrum:
         k = int(wildcards["k"])
         k_f = kmer_featurization(k)
         kmers = windows.progress_apply(
-            lambda x: np.array(k_f.obtain_kmer_feature_for_one_sequence(
-                genome.get_seq(x.chrom, x.center_start, x.center_end).upper()
-            )),
-            axis=1, result_type="expand",
+            lambda x: np.array(
+                k_f.obtain_kmer_feature_for_one_sequence(
+                    genome.get_seq(x.chrom, x.center_start, x.center_end).upper()
+                )
+            ),
+            axis=1,
+            result_type="expand",
         )
         kmers.columns = kmers.columns.astype(str)
         print(kmers)
@@ -341,9 +390,9 @@ rule subset_windows:
         windows = pd.read_parquet(input[0])
         print(windows)
         if wildcards.region == "no_repeats":
-            mask = windows.Region!="Repeat"
+            mask = windows.Region != "Repeat"
         else:
-            mask = windows.Region==wildcards.region
+            mask = windows.Region == wildcards.region
         windows = windows[mask]
         print(windows)
         windows.to_parquet(output[0], index=False)
@@ -360,9 +409,9 @@ rule subset_embeddings:
         embeddings = pd.read_parquet(input[1])
         print(windows, embeddings)
         if wildcards.region == "no_repeats":
-            mask = windows.Region!="Repeat"
+            mask = windows.Region != "Repeat"
         else:
-            mask = windows.Region==wildcards.region
+            mask = windows.Region == wildcards.region
         windows = windows[mask]
         embeddings = embeddings[mask]
         print(windows, embeddings)
@@ -378,10 +427,12 @@ rule run_umap:
         from umap import UMAP
 
         embeddings = pd.read_parquet(input[0])
-        proj = Pipeline([
-            ("scaler", StandardScaler()),
-            ("umap", UMAP(random_state=42, verbose=True)),
-        ]).fit_transform(embeddings)
+        proj = Pipeline(
+            [
+                ("scaler", StandardScaler()),
+                ("umap", UMAP(random_state=42, verbose=True)),
+            ]
+        ).fit_transform(embeddings)
         proj = pd.DataFrame(proj, columns=["UMAP1", "UMAP2"])
         proj.to_parquet(output[0], index=False)
 
@@ -402,17 +453,28 @@ rule run_classification:
         windows = pd.read_parquet(input[0])
         features = pd.read_parquet(input[1])
 
-        clf = Pipeline([
-            ("scaler", StandardScaler()),
-            ("linear", LogisticRegressionCV(
-                random_state=42, verbose=True, max_iter=1000,
-                class_weight="balanced", n_jobs=-1
-                )
-            ),
-        ])
+        clf = Pipeline(
+            [
+                ("scaler", StandardScaler()),
+                (
+                    "linear",
+                    LogisticRegressionCV(
+                        random_state=42,
+                        verbose=True,
+                        max_iter=1000,
+                        class_weight="balanced",
+                        n_jobs=-1,
+                    ),
+                ),
+            ]
+        )
         preds = cross_val_predict(
-            clf, features, windows.Region, groups=windows.chrom,
-            cv=LeaveOneGroupOut(), verbose=True,
+            clf,
+            features,
+            windows.Region,
+            groups=windows.chrom,
+            cv=LeaveOneGroupOut(),
+            verbose=True,
         )
         pd.DataFrame({"pred_Region": preds}).to_parquet(output[0], index=False)
 
@@ -459,7 +521,9 @@ rule make_positions_promoter:
         intervals = get_promoters(annotation, 500)
         print(intervals)
 
-        exons = bf.merge(annotation.query("feature == 'exon'")).drop(columns="n_intervals")
+        exons = bf.merge(annotation.query("feature == 'exon'")).drop(
+            columns="n_intervals"
+        )
         intervals = bf.subtract(intervals, exons)
         print(intervals)
 
@@ -470,7 +534,7 @@ rule make_positions_promoter:
         print(intervals)
 
         intervals = intersect_intervals(
-            intervals, bf.expand(genome.get_defined_intervals(), pad=-WINDOW_SIZE//2)
+            intervals, bf.expand(genome.get_defined_intervals(), pad=-WINDOW_SIZE // 2)
         )
         print(intervals)
 
@@ -500,7 +564,9 @@ rule make_positions_promoter2:
         intervals = get_promoters(annotation, 1000, 1000)
         print(intervals)
 
-        exons = bf.merge(annotation.query("feature == 'CDS'")).drop(columns="n_intervals")
+        exons = bf.merge(annotation.query("feature == 'CDS'")).drop(
+            columns="n_intervals"
+        )
         intervals = bf.subtract(intervals, exons)
         print(intervals)
 
@@ -511,7 +577,7 @@ rule make_positions_promoter2:
         print(intervals)
 
         intervals = intersect_intervals(
-            intervals, bf.expand(genome.get_defined_intervals(), pad=-WINDOW_SIZE//2)
+            intervals, bf.expand(genome.get_defined_intervals(), pad=-WINDOW_SIZE // 2)
         )
         print(intervals)
 
@@ -532,8 +598,20 @@ rule make_positions_funtfbs:
         "output/funtfbs/positions.parquet",
     run:
         tfbs = pd.read_csv(
-            input[0], sep="\t", header=None,
-            names=["chrom", "source1", "source2", "start", "end", "score", "strand", "unknown", "annotation"],
+            input[0],
+            sep="\t",
+            header=None,
+            names=[
+                "chrom",
+                "source1",
+                "source2",
+                "start",
+                "end",
+                "score",
+                "strand",
+                "unknown",
+                "annotation",
+            ],
             usecols=["chrom", "start", "end", "strand", "annotation"],
         )
         print(tfbs)
@@ -579,7 +657,7 @@ rule make_positions_whole_genome:
     run:
         genome = Genome(input[0])
         genome.filter_chroms(CHROMS)
-        intervals = bf.expand(genome.get_defined_intervals(), pad=-WINDOW_SIZE//2)
+        intervals = bf.expand(genome.get_defined_intervals(), pad=-WINDOW_SIZE // 2)
         intervals = filter_length(intervals, 1)
         print(intervals)
         positions = pd.concat(
@@ -632,17 +710,20 @@ rule make_bed_probs:
     run:
         df = pd.read_parquet(input[0])
         df.loc[:, NUCLEOTIDES] = softmax(pd.read_parquet(input[1]), axis=1)
-        #df = df.head(1000) # just to iterate faster
+        # df = df.head(1000) # just to iterate faster
         df["entropy"] = entropy(df[NUCLEOTIDES], base=2, axis=1)
         print(df)
-        df.loc[:, NUCLEOTIDES] = df[NUCLEOTIDES].values * (2-df[["entropy"]].values)
+        df.loc[:, NUCLEOTIDES] = df[NUCLEOTIDES].values * (2 - df[["entropy"]].values)
         print(df)
-        df["start"] = df.pos-1
+        df["start"] = df.pos - 1
         df["end"] = df.pos
         df.chrom = "chr" + df.chrom
         for nuc, path in zip(NUCLEOTIDES, output):
             df.to_csv(
-                path, sep="\t", index=False, header=False,
+                path,
+                sep="\t",
+                index=False,
+                header=False,
                 columns=["chrom", "start", "end", nuc],
             )
 
@@ -656,7 +737,10 @@ rule make_chrom_sizes:
         intervals = Genome(input[0]).get_all_intervals()
         intervals.chrom = "chr" + intervals.chrom
         intervals.to_csv(
-            output[0], sep="\t", index=False, header=False,
+            output[0],
+            sep="\t",
+            index=False,
+            header=False,
             columns=["chrom", "end"],
         )
 
@@ -666,14 +750,14 @@ rule convert_bed_to_bigwig:
         "{anything}.bed",
         "output/chrom.sizes",
     output:
-        "{anything}.bw"
+        "{anything}.bw",
     shell:
         # using a local download because conda version didn't work
         "./bedGraphToBigWig {input} {output}"
 
 
 # example:
-# snakemake --cores all --use-conda --conda-frontend mamba 
+# snakemake --cores all --use-conda --conda-frontend mamba
 rule run_modisco:
     input:
         "{anything}/positions.parquet",
@@ -747,20 +831,29 @@ rule process_variants:
     output:
         "output/variants/filt.processed.parquet",
     run:
-        variants = pd.read_csv(input[0], sep="\t", header=0, names=["chrom", "pos", "N_ALLELES", "AN", "ref_count", "alt_count"]).drop(columns="N_ALLELES")
+        variants = pd.read_csv(
+            input[0],
+            sep="\t",
+            header=0,
+            names=["chrom", "pos", "N_ALLELES", "AN", "ref_count", "alt_count"],
+        ).drop(columns="N_ALLELES")
         print(variants)
         variants.chrom = variants.chrom.astype(str)
         print(variants)
         genome = Genome(input[1])
 
+
         def find_ref_alt_AC(row):
             ref = genome.get_nuc(row.chrom, row.pos).upper()
-            assert(ref == row.ref_count[0])
+            assert ref == row.ref_count[0]
             alt, AC = row.alt_count.split(":")
             AC = int(AC)
             return ref, alt, AC
 
-        variants["ref"], variants["alt"], variants["AC"] = zip(*variants.progress_apply(find_ref_alt_AC, axis=1))
+
+        variants["ref"], variants["alt"], variants["AC"] = zip(
+            *variants.progress_apply(find_ref_alt_AC, axis=1)
+        )
         print(variants)
         variants = variants[["chrom", "pos", "ref", "alt", "AC", "AN"]]
         variants.to_parquet(output[0], index=False)
@@ -784,15 +877,25 @@ rule process_ensembl_vep:
         i = 0
         rows = []
         for variant in VCF(input[0]):
-            if variant.INFO.get("TSA") != "SNV": continue
-            if len(variant.ALT) > 1: continue
-            if variant.FILTER is not None: continue  # this is supposed to mean PASS
+            if variant.INFO.get("TSA") != "SNV":
+                continue
+            if len(variant.ALT) > 1:
+                continue
+            if variant.FILTER is not None:
+                continue  # this is supposed to mean PASS
             VEP = variant.INFO.get("VE").split(",")
-            consequence = ",".join(np.unique([transcript_vep.split("|")[0] for transcript_vep in VEP]))
-            rows.append([variant.CHROM, variant.POS, variant.REF, variant.ALT[0], consequence])
+            consequence = ",".join(
+                np.unique([transcript_vep.split("|")[0] for transcript_vep in VEP])
+            )
+            rows.append(
+                [variant.CHROM, variant.POS, variant.REF, variant.ALT[0], consequence]
+            )
             i += 1
-            if i % 100000 == 0: print(i)
-        df = pd.DataFrame(data=rows, columns=["chrom", "pos", "ref", "alt", "consequence"])
+            if i % 100000 == 0:
+                print(i)
+        df = pd.DataFrame(
+            data=rows, columns=["chrom", "pos", "ref", "alt", "consequence"]
+        )
         print(df)
         df.to_parquet(output[0], index=False)
 
@@ -808,10 +911,11 @@ rule add_info_variants:
         print(variants)
         ensembl_vep = pd.read_parquet(input[1])
         print(ensembl_vep)
-        variants = variants.merge(ensembl_vep, how="left", on=["chrom", "pos", "ref", "alt"])
+        variants = variants.merge(
+            ensembl_vep, how="left", on=["chrom", "pos", "ref", "alt"]
+        )
         print(variants)
         variants.to_parquet(output[0], index=False)
-
 
 
 rule filter_variants:
@@ -822,17 +926,17 @@ rule filter_variants:
     output:
         "output/variants/all/variants.parquet",
     run:
-        f = h5py.File(input[0], 'r')
+        f = h5py.File(input[0], "r")
         n_snps, n_accessions = f["snps"].shape
         AC = f["snps"][:].sum(axis=1)
         pos = f["positions"][:]
         chrom = np.empty_like(pos, dtype=str)
         for c, (left, right) in zip(
-            f["positions"].attrs["chrs"], f['positions'].attrs['chr_regions']
+            f["positions"].attrs["chrs"], f["positions"].attrs["chr_regions"]
         ):
             chrom[left:right] = str(c)
         variants = pd.DataFrame({"chrom": chrom, "pos": pos, "AC": AC})
-        variants["AF"] = variants.AC / n_accessions 
+        variants["AF"] = variants.AC / n_accessions
 
         variant_info = pd.read_parquet(input[1])
         variants = variants.merge(
@@ -848,11 +952,15 @@ rule filter_variants:
 
         genome = Genome(input[2])
 
+
         def check_seq(w):
             seq = genome.get_seq(w.chrom, w.start, w.end).upper()
-            if len(seq) != TOTAL_SIZE: return False
-            if re.search("[^ACTG]", seq) is not None: return False
+            if len(seq) != TOTAL_SIZE:
+                return False
+            if re.search("[^ACTG]", seq) is not None:
+                return False
             return True
+
 
         variants = variants[variants.progress_apply(check_seq, axis=1)]
         variants.drop(columns=["start", "end", "strand"], inplace=True)
@@ -869,7 +977,7 @@ rule filter_chrom:
     run:
         df = pd.read_parquet(input[0])
         print(df.shape)
-        df = df[df.chrom==wildcards["chrom"]]
+        df = df[df.chrom == wildcards["chrom"]]
         print(df.shape)
         df.to_parquet(output[0], index=False)
 
@@ -892,8 +1000,9 @@ rule make_simulated_variants:
         for pos in range(start, end):
             ref = genome.get_nuc(chrom, pos).upper()
             for alt in nucleotides:
-                if alt == ref: continue
-                rows.append([chrom, pos, '.', ref, alt, '.', '.', '.'])
+                if alt == ref:
+                    continue
+                rows.append([chrom, pos, ".", ref, alt, ".", ".", "."])
         df = pd.DataFrame(data=rows)
         print(df)
         df.to_csv(output[0], sep="\t", index=False, header=False)
@@ -934,14 +1043,14 @@ rule run_vep_embeddings:
 
 rule download_phastcons:
     output:
-        "output/conservation/phastCons.bedGraph.gz"
+        "output/conservation/phastCons.bedGraph.gz",
     shell:
         "wget http://plantregmap.gao-lab.org/download_ftp.php?filepath=08-download/Arabidopsis_thaliana/sequence_conservation/Ath_PhastCons.bedGraph.gz -O {output}"
 
 
 rule download_phylop:
     output:
-        "output/conservation/phyloP.bedGraph.gz"
+        "output/conservation/phyloP.bedGraph.gz",
     shell:
         "wget http://plantregmap.gao-lab.org/download_ftp.php?filepath=08-download/Arabidopsis_thaliana/sequence_conservation/Ath_PhyloP.bedGraph.gz -O {output}"
 
@@ -956,7 +1065,9 @@ rule process_conservation:
         variants = pd.read_parquet(input[0])
 
         conservation = pd.read_csv(
-            input[1], sep="\t", header=None,
+            input[1],
+            sep="\t",
+            header=None,
             names=["chrom", "pos", "end", "score"],
         ).drop(columns=["end"])
         conservation.pos += 1
@@ -990,19 +1101,35 @@ rule merge_aragwas:
     output:
         "output/aragwas/api.parquet",
     run:
-        aragwas = pd.concat([
-            pd.read_csv(
-                path,
-                usecols=["snp.chr", "snp.position", "snp.ref", "snp.alt", "score", "maf", "mac",
-                        "study.name", "study.phenotype.name", "overBonferroni", "overPermutation"],
-            ).rename(columns={
-                "snp.chr": "chrom",
-                "snp.position": "pos",
-                "snp.ref": "ref",
-                "snp.alt": "alt",
-                "score": "aragwas_score",
-            }) for path in input],
-            ignore_index=True
+        aragwas = pd.concat(
+            [
+                pd.read_csv(
+                    path,
+                    usecols=[
+                        "snp.chr",
+                        "snp.position",
+                        "snp.ref",
+                        "snp.alt",
+                        "score",
+                        "maf",
+                        "mac",
+                        "study.name",
+                        "study.phenotype.name",
+                        "overBonferroni",
+                        "overPermutation",
+                    ],
+                ).rename(
+                    columns={
+                        "snp.chr": "chrom",
+                        "snp.position": "pos",
+                        "snp.ref": "ref",
+                        "snp.alt": "alt",
+                        "score": "aragwas_score",
+                    }
+                )
+                for path in input
+            ],
+            ignore_index=True,
         )
         aragwas.chrom = aragwas.chrom.str.replace("chr", "")
         print(aragwas)
@@ -1025,18 +1152,22 @@ rule make_aragwas_genotype:
         variants = variants.merge(aragwas, how="inner", on=cols, sort=True)
         print(variants.shape)
         variants[cols].to_parquet(output[0], index=False)
-        f = h5py.File(input[2], 'r')
+        f = h5py.File(input[2], "r")
         pos = f["positions"][:]
         chrom = np.empty_like(pos, dtype=str)
         for c, (left, right) in zip(
-            f["positions"].attrs["chrs"], f['positions'].attrs['chr_regions']
+            f["positions"].attrs["chrs"], f["positions"].attrs["chr_regions"]
         ):
             chrom[left:right] = str(c)
-        snp_index = pd.DataFrame({
-            "chrom": chrom, "pos": pos, "snp_index": np.arange(len(pos))
-        }).set_index(["chrom", "pos"]).snp_index
+        snp_index = (
+            pd.DataFrame({"chrom": chrom, "pos": pos, "snp_index": np.arange(len(pos))})
+            .set_index(["chrom", "pos"])
+            .snp_index
+        )
         print(snp_index)
-        locations = snp_index[pd.MultiIndex.from_frame(variants[["chrom", "pos"]])].values
+        locations = snp_index[
+            pd.MultiIndex.from_frame(variants[["chrom", "pos"]])
+        ].values
         X = sp_sparse.csr_matrix(f["snps"][locations])
         print(X.shape)
         sp_sparse.save_npz(output[1], X)
@@ -1056,13 +1187,15 @@ rule make_aragwas_vcf:
 
         # it's pretty slow, cyvcf2 might be faster
         import vcfpy
+
         header_lines = [
             vcfpy.HeaderLine("fileformat", "VCFv4.2"),
-            vcfpy.FormatHeaderLine.from_mapping({"ID": "GT", "Number": "1", "Type": "String", "Description": "Genotype"}),
+            vcfpy.FormatHeaderLine.from_mapping(
+                {"ID": "GT", "Number": "1", "Type": "String", "Description": "Genotype"}
+            ),
         ]
         header = vcfpy.Header(
-            lines=header_lines,
-            samples=vcfpy.SamplesInfos(sample_names)
+            lines=header_lines, samples=vcfpy.SamplesInfos(sample_names)
         )
         with open(output[0], "wb") as f:
             writer = vcfpy.Writer.from_stream(f, header, use_bgzf=True)
@@ -1074,12 +1207,17 @@ rule make_aragwas_vcf:
                     row["pos"],  # position
                     ".",  # ID (missing)
                     row["ref"],  # reference allele
-                    [vcfpy.Substitution("SNV", row["alt"])],  # list of alternate alleles
+                    [
+                        vcfpy.Substitution("SNV", row["alt"])
+                    ],  # list of alternate alleles
                     ".",  # quality (missing)
                     [],  # list of filters (missing)
                     {},  # dictionary of INFO fields (missing)
                     ["GT"],  # dictionary of FORMAT fields (missing)
-                    calls=[vcfpy.Call(sample=sample_names[j], data={"GT": str(snp[j])}) for j in range(n_samples)]
+                    calls=[
+                        vcfpy.Call(sample=sample_names[j], data={"GT": str(snp[j])})
+                        for j in range(n_samples)
+                    ],
                 )
                 writer.write_record(record)
             writer.close()
@@ -1087,7 +1225,7 @@ rule make_aragwas_vcf:
 
 # note, there might be easier ways to create a zarr file
 # without passing thru a vcf
-#rule vcf2zarr:
+# rule vcf2zarr:
 #    input:
 #
 #        "output/aragwas/variants.vcf.bgz",
@@ -1099,13 +1237,16 @@ rule make_aragwas_vcf:
 
 
 rule calculate_LD:
-    input: "output/aragwas/variants.zarr",
-    output: "output/aragwas/LD_{radius,[0-9]+}_{threshold}.npz",
+    input:
+        "output/aragwas/variants.zarr",
+    output:
+        "output/aragwas/LD_{radius,[0-9]+}_{threshold}.npz",
     threads: workflow.cores
     run:
         import sgkit as sg
         from sgkit.io.vcf import vcf_to_zarr
         from dask.diagnostics import ProgressBar
+
         pbar = ProgressBar()
         pbar.register()
 
@@ -1113,7 +1254,10 @@ rule calculate_LD:
         ds["call_dosage"] = ds.call_genotype.sum(dim="ploidy")
         radius = int(wildcards.radius)
         ds = sg.window_by_position(
-            ds, size=radius, offset=-radius/2, window_start_position="variant_position",
+            ds,
+            size=radius,
+            offset=-radius / 2,
+            window_start_position="variant_position",
         )
         ld = sg.ld_matrix(ds, threshold=float(wildcards.threshold))
         ld = ld.compute()

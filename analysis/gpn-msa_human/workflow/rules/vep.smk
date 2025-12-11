@@ -65,8 +65,11 @@ rule make_omim_set:
     run:
         omim = pd.read_parquet(input[0])
         omim.consequence = (
-            omim.consequence.str.split(" ").str[:-1].str.join(sep=" ")
-            .str.replace("’", "'").replace("RNA Gene", "ncRNA")
+            omim.consequence.str.split(" ")
+            .str[:-1]
+            .str.join(sep=" ")
+            .str.replace("’", "'")
+            .replace("RNA Gene", "ncRNA")
         )
         gnomad = (
             pl.read_parquet(input[1])
@@ -94,7 +97,8 @@ rule merge_enformer_variants:
             pl.read_parquet(input[0])
             .join(
                 pl.read_parquet(input[1], columns=COORDINATES),
-                on=COORDINATES, how="inner"
+                on=COORDINATES,
+                how="inner",
             )
             .to_pandas()
         )
@@ -115,18 +119,22 @@ rule run_vep_msa:
         V = pd.read_parquet(input[0], columns=COORDINATES)
         print(V)
         genome_msa = GenomeMSA(input[1])
-        #V["score"] = genome_msa.run_vep_batch(
+        # V["score"] = genome_msa.run_vep_batch(
         #    V["chrom"].values, V["pos"].values, V["ref"].values, V["alt"].values,
         #    backend="multiprocessing", n_jobs=4, #n_jobs=threads
-        #)
-        #print(V)
-        #V[["score"]].to_parquet(output[0], index=False)
+        # )
+        # print(V)
+        # V[["score"]].to_parquet(output[0], index=False)
 
-        res = [] 
+        res = []
         for V2 in tqdm(np.array_split(V, 10)):
             score = genome_msa.run_vep_batch(
-                V2["chrom"].values, V2["pos"].values, V2["ref"].values, V2["alt"].values,
-                backend="multiprocessing", n_jobs=threads
+                V2["chrom"].values,
+                V2["pos"].values,
+                V2["ref"].values,
+                V2["alt"].values,
+                backend="multiprocessing",
+                n_jobs=threads,
             )
             res.append(score)
         pd.DataFrame({"score": np.concatenate(res)}).to_parquet(output[0], index=False)
@@ -139,14 +147,24 @@ rule run_vep_gpn:
     output:
         "results/preds/{dataset}/{alignment}/{species}/{window_size}/{model}.parquet",
     wildcard_constraints:
-        dataset="|".join(datasets + ["results/variants_enformer", "results/gnomad/all/defined/128", "results/clinvar/mis_pat_ben"]),
+        dataset="|".join(
+            datasets
+            + [
+                "results/variants_enformer",
+                "results/gnomad/all/defined/128",
+                "results/clinvar/mis_pat_ben",
+            ]
+        ),
         alignment="[A-Za-z0-9_]+",
         species="[A-Za-z0-9_-]+",
         window_size="\d+",
     params:
-        lambda wildcards: "--disable_aux_features" if wildcards.model.split("/")[-3] == "False" else ""
-    threads:
-        workflow.cores
+        lambda wildcards: (
+            "--disable_aux_features"
+            if wildcards.model.split("/")[-3] == "False"
+            else ""
+        ),
+    threads: workflow.cores
     shell:
         """
         torchrun --nproc_per_node $(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}') -m gpn.msa.inference vep {wildcards.dataset} {input[0]} \
@@ -165,19 +183,23 @@ rule run_vep_gpn_window_size_ablation:
     output:
         "results/preds/{dataset}/{alignment}/{species}/{window_size}/{model}.{window_size_ablation}.parquet",
     wildcard_constraints:
-        dataset="|".join(datasets + ["results/variants_enformer", "results/gnomad/all/defined/128"]),
+        dataset="|".join(
+            datasets + ["results/variants_enformer", "results/gnomad/all/defined/128"]
+        ),
         alignment="[A-Za-z0-9_]+",
         species="[A-Za-z0-9_-]+",
         window_size="\d+",
         window_size_ablation="\d+",
     params:
-        lambda wildcards: "--disable_aux_features" if wildcards.model.split("/")[-3] == "False" else ""
-    threads:
-        workflow.cores
+        lambda wildcards: (
+            "--disable_aux_features"
+            if wildcards.model.split("/")[-3] == "False"
+            else ""
+        ),
+    threads: workflow.cores
     shell:
         """
         torchrun --nproc_per_node $(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}') -m gpn.msa.inference vep {wildcards.dataset} {input[0]} \
         {wildcards.window_size_ablation} {input[1]} {output} \
         --per_device_batch_size 2048 --dataloader_num_workers {threads} {params}
         """
-

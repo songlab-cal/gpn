@@ -20,7 +20,8 @@ rule process_omim:
         "results/omim/variants.parquet",
     run:
         from liftover import get_lifter
-        converter = get_lifter('hg19', 'hg38')
+
+        converter = get_lifter("hg19", "hg38")
 
         xls = pd.ExcelFile(input[0])
         sheet_names = xls.sheet_names
@@ -31,21 +32,25 @@ rule process_omim:
             df["consequence"] = variant_type
             dfs.append(df)
         df = pd.concat(dfs)
-        df = df[["Chr", "Position", "Ref", "Alt", "consequence", "OMIM", "Gene", "PMID"]].rename(columns={
-            "Chr": "chrom", "Position": "pos", "Ref": "ref", "Alt": "alt"
-        })
+        df = df[
+            ["Chr", "Position", "Ref", "Alt", "consequence", "OMIM", "Gene", "PMID"]
+        ].rename(
+            columns={"Chr": "chrom", "Position": "pos", "Ref": "ref", "Alt": "alt"}
+        )
         df.chrom = df.chrom.str.replace("chr", "")
-        df = df[(df.ref.str.len()==1) & (df.alt.str.len()==1)]
+        df = df[(df.ref.str.len() == 1) & (df.alt.str.len() == 1)]
+
 
         def get_new_pos(v):
             try:
                 res = converter[v.chrom][v.pos]
                 assert len(res) == 1
                 chrom, pos, strand = res[0]
-                assert chrom.replace("chr", "")==v.chrom
+                assert chrom.replace("chr", "") == v.chrom
                 return pos
             except:
                 return -1
+
 
         df.pos = df.apply(get_new_pos, axis=1)
         df = df[df.pos != -1]

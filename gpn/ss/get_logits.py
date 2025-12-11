@@ -170,7 +170,7 @@ if __name__ == "__main__":
     )
     model = MLMforLogitsModel(
         args.model_path,
-        *[token_input_id(nuc, tokenizer, args.n_prefix) for nuc in "ACGT"]
+        *[token_input_id(nuc, tokenizer, args.n_prefix) for nuc in "ACGT"],
     )
     pred = get_logits(
         positions,

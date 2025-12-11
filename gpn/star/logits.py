@@ -21,7 +21,8 @@ class MLMforLogitsModel(torch.nn.Module):
 
     def get_logits(self, input_ids, source_ids, target_species, pos):
         logits = self.model.forward(
-            input_ids=input_ids, source_ids=source_ids,
+            input_ids=input_ids,
+            source_ids=source_ids,
             target_species=target_species,
         ).logits
         logits = logits[torch.arange(len(pos)), pos].squeeze(-2)
@@ -41,17 +42,19 @@ class MLMforLogitsModel(torch.nn.Module):
         id_c = self.id_c
         id_g = self.id_g
         id_t = self.id_t
-        logits_fwd = self.get_logits(input_ids_fwd, source_ids_fwd, target_species, pos_fwd)[
-            :, [id_a, id_c, id_g, id_t]
-        ]
-        logits_rev = self.get_logits(input_ids_rev, source_ids_rev, target_species, pos_rev)[
-            :, [id_t, id_g, id_c, id_a]
-        ]
+        logits_fwd = self.get_logits(
+            input_ids_fwd, source_ids_fwd, target_species, pos_fwd
+        )[:, [id_a, id_c, id_g, id_t]]
+        logits_rev = self.get_logits(
+            input_ids_rev, source_ids_rev, target_species, pos_rev
+        )[:, [id_t, id_g, id_c, id_a]]
         return (logits_fwd + logits_rev) / 2
 
 
 class LogitsInference(object):
-    def __init__(self, model_path, genome_msa_list, window_size, disable_aux_features=False):
+    def __init__(
+        self, model_path, genome_msa_list, window_size, disable_aux_features=False
+    ):
         self.model = MLMforLogitsModel(model_path)
         self.genome_msa_list = genome_msa_list
         self.window_size = window_size
@@ -65,14 +68,16 @@ class LogitsInference(object):
         pos = np.array(V["pos"]) - 1
         start = pos - self.window_size // 2
         end = pos + self.window_size // 2
-        
-        msa_fwd, msa_rev = zip(*[
-            genome_msa.get_msa_batch_fwd_rev(chrom, start, end, tokenize=True)
-            for genome_msa in self.genome_msa_list
-        ])
+
+        msa_fwd, msa_rev = zip(
+            *[
+                genome_msa.get_msa_batch_fwd_rev(chrom, start, end, tokenize=True)
+                for genome_msa in self.genome_msa_list
+            ]
+        )
         msa_fwd = np.concatenate(msa_fwd, axis=-1)
         msa_rev = np.concatenate(msa_rev, axis=-1)
-        
+
         pos_fwd = self.window_size // 2
         pos_rev = pos_fwd - 1 if self.window_size % 2 == 0 else pos_fwd
 

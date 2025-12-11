@@ -10,7 +10,9 @@ rule dataset:
         df = pd.read_parquet(input[0])
         genome = Genome(input[1], subset_chroms=df.chrom.unique())
 
-        df["start"] = (df.pos - n_upstream).where(df.strand == "+", df.pos - n_downstream)
+        df["start"] = (df.pos - n_upstream).where(
+            df.strand == "+", df.pos - n_downstream
+        )
         df["end"] = (df.pos + n_downstream).where(df.strand == "+", df.pos + n_upstream)
         df.drop(columns="pos", inplace=True)
 
@@ -20,7 +22,8 @@ rule dataset:
         )
 
         exp_cols = [
-            col for col in df.columns
+            col
+            for col in df.columns
             if col not in ["chrom", "start", "end", "strand", "seq"]
         ]
         df[exp_cols] = np.log1p(df[exp_cols]).round(3)
@@ -38,7 +41,8 @@ rule dataset_label_metadata:
         "results/dataset/labels.txt",
     run:
         cols = [
-            col for col in pd.read_parquet(input[0]).columns
+            col
+            for col in pd.read_parquet(input[0]).columns
             if col not in ["chrom", "pos", "strand"]
         ]
         df = pd.DataFrame({"label": cols})

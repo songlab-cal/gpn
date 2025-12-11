@@ -11,8 +11,10 @@ rng = np.random.default_rng(seed=42)
 
 input_species = pd.read_csv(input_path, header=None).values.ravel().tolist()
 output_species = (
-    input_species[:force_keep] +
-    rng.choice(input_species[force_keep:], size=n-force_keep, replace=False).tolist()
+    input_species[:force_keep]
+    + rng.choice(
+        input_species[force_keep:], size=n - force_keep, replace=False
+    ).tolist()
 )
 # Sort the subsample to have the same order as in the original list
 output_species = sorted(output_species, key=lambda x: input_species.index(x))

@@ -1,17 +1,27 @@
 import bioframe as bf
 from gpn.data import (
-    filter_defined, filter_length, load_table, add_flank, get_annotation_features,
-    add_jitter, get_promoters, get_random_intervals, union_intervals,
-    intersect_intervals, intervals_size
+    filter_defined,
+    filter_length,
+    load_table,
+    add_flank,
+    get_annotation_features,
+    add_jitter,
+    get_promoters,
+    get_random_intervals,
+    union_intervals,
+    intersect_intervals,
+    intervals_size,
 )
 import pandas as pd
 import polars as pl
+
 
 def find_positions(interval):
     df = pd.DataFrame(dict(pos=range(interval.start, interval.end)))
     df["chrom"] = interval.chrom
     df.pos += 1  # we'll treat as 1-based
     return df
+
 
 rule make_positions_chrom:
     input:
@@ -20,13 +30,15 @@ rule make_positions_chrom:
         "results/positions/{chrom}/{genome}/{window_size}/positions.parquet",
     run:
         intervals = pd.read_parquet(input[0]).query(f"chrom == '{wildcards.chrom}'")
-        intervals = bf.expand(intervals, pad=-int(wildcards.window_size)//2)
+        intervals = bf.expand(intervals, pad=-int(wildcards.window_size) // 2)
         intervals = filter_length(intervals, 1)
         positions = pd.concat(
-            intervals.progress_apply(find_positions, axis=1).values, ignore_index=True,
+            intervals.progress_apply(find_positions, axis=1).values,
+            ignore_index=True,
         )
         print(positions)
         positions.to_parquet(output[0], index=False)
+
 
 rule get_logits:
     input:
@@ -42,10 +54,9 @@ rule get_logits:
         alignment="[A-Za-z0-9_]+",
         species="[A-Za-z0-9_-]+",
         window_size="\d+",
-    threads:
-        workflow.cores
+    threads: workflow.cores
     shell:
-    #$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}')
+        #$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}')
         """
         num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}')
         num_cpus={threads}
@@ -55,6 +66,7 @@ rule get_logits:
         --per_device_batch_size 8 --is_file \
         --dataloader_num_workers $dataloader_num_workers
         """
+
 
 rule process_logits:
     input:
@@ -69,8 +81,7 @@ rule process_logits:
         alignment="[A-Za-z0-9_]+",
         species="[A-Za-z0-9_-]+",
         window_size="\d+",
-    threads:
-        workflow.cores
+    threads: workflow.cores
     run:
         V1 = pl.read_parquet(input[0])[["chrom", "pos"]]
         V2 = pl.read_parquet(input[1])
@@ -80,7 +91,7 @@ rule process_logits:
             chrom = V["chrom"][0]
             seq = Genome(input[2])._genome[chrom].upper()
             seq = np.frombuffer(seq.encode("ascii"), dtype="S1")
-            V = V.with_columns(ref=seq[V["pos"]-1])
+            V = V.with_columns(ref=seq[V["pos"] - 1])
 
         else:
             genome = Genome(input[2])
@@ -94,15 +105,20 @@ rule process_logits:
         V = V.with_columns(ref=pl.col("ref").cast(str))
         # sorry, this is horrible, was more elegant in pandas
         V = V.with_columns(
-            V.select(ref_logit=(
-                pl.when(pl.col("ref") == "A").then(pl.col("A"))
-                .when(pl.col("ref") == "C").then(pl.col("C"))
-                .when(pl.col("ref") == "G").then(pl.col("G"))
-                .when(pl.col("ref") == "T").then(pl.col("T"))
-        )))
-        V = V.with_columns(
-            V[NUCLEOTIDES] - V["ref_logit"]
+            V.select(
+                ref_logit=(
+                    pl.when(pl.col("ref") == "A")
+                    .then(pl.col("A"))
+                    .when(pl.col("ref") == "C")
+                    .then(pl.col("C"))
+                    .when(pl.col("ref") == "G")
+                    .then(pl.col("G"))
+                    .when(pl.col("ref") == "T")
+                    .then(pl.col("T"))
+                )
+            )
         )
+        V = V.with_columns(V[NUCLEOTIDES] - V["ref_logit"])
         V = V.select(["chrom", "pos", "ref"] + NUCLEOTIDES)
         print(V)
         V.write_parquet(output[0])
@@ -113,15 +129,19 @@ rule get_llr:
         "results/{anything}/processed_logits/{model}.parquet",
     output:
         "results/{anything}/llr/{model}.parquet",
-    threads:
-        workflow.cores
+    threads: workflow.cores
     run:
-        V = pl.read_parquet(
-            input[0]
-        ).melt(
-            id_vars=["chrom", "pos", "ref"], value_vars=NUCLEOTIDES,
-            variable_name="alt", value_name="score"
-        ).sort(["chrom", "pos", "ref"]).filter(pl.col("ref") != pl.col("alt"))
+        V = (
+            pl.read_parquet(input[0])
+            .melt(
+                id_vars=["chrom", "pos", "ref"],
+                value_vars=NUCLEOTIDES,
+                variable_name="alt",
+                value_name="score",
+            )
+            .sort(["chrom", "pos", "ref"])
+            .filter(pl.col("ref") != pl.col("alt"))
+        )
         print(V)
         V.write_parquet(output[0])
 
@@ -140,10 +160,10 @@ rule logits_merge_chroms:
         "cat {input} > {output}"
 
 
-#ruleorder: logits_merge_chroms > process_logits
+# ruleorder: logits_merge_chroms > process_logits
 #
 #
-#rule logits_merge_chroms:
+# rule logits_merge_chroms:
 #    input:
 #        expand("results/positions/{chrom}/{{anything}}/{{model}}.parquet", chrom=CHROMS),
 #    output:
@@ -157,6 +177,7 @@ rule logits_merge_chroms:
 #        print(V)
 #        V.write_parquet(output[0])
 #        #V.to_pandas().to_parquet(output[0], index=False)
+
 
 rule get_calibration_logits:
     input:
@@ -172,12 +193,13 @@ rule get_calibration_logits:
         species="[A-Za-z0-9_-]+",
         window_size="\d+",
     params:
-        disable_aux_features = lambda wildcards: "disable_aux_features" if wildcards.model.split("/")[-3] == "False" else "",
-        dataset_dir = lambda wildcards, input: input[2].replace("/test.parquet", "")
-    threads:
-        workflow.cores
+        disable_aux_features=lambda wildcards: (
+            "disable_aux_features" if wildcards.model.split("/")[-3] == "False" else ""
+        ),
+        dataset_dir=lambda wildcards, input: input[2].replace("/test.parquet", ""),
+    threads: workflow.cores
     shell:
-    #$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}')
+        #$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}')
         """
         num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}')
         num_cpus={threads}
@@ -188,6 +210,7 @@ rule get_calibration_logits:
         --per_device_batch_size 32 --dataloader_num_workers $dataloader_num_workers {params.disable_aux_features}
         """
 
+
 rule get_vep_logits:
     input:
         "results/msa/{genome}/{alignment}/{species}",
@@ -195,18 +218,19 @@ rule get_vep_logits:
     output:
         "results/logits/{dataset}/{genome}/{time_enc}/{clade_thres}/{alignment}/{species}/{window_size}/{model}.parquet",
     wildcard_constraints:
-        dataset="|".join(vep_datasets),# + ["results/variants_enformer", "results/gnomad/all/defined/128"]),
+        dataset="|".join(vep_datasets),  # + ["results/variants_enformer", "results/gnomad/all/defined/128"]),
         time_enc="[A-Za-z0-9_-]+",
         clade_thres="[0-9.-]+",
         alignment="[A-Za-z0-9_]+",
         species="[A-Za-z0-9_-]+",
         window_size="\d+",
     params:
-        disable_aux_features = lambda wildcards: "disable_aux_features" if wildcards.model.split("/")[-3] == "False" else "",
-    threads:
-        workflow.cores
+        disable_aux_features=lambda wildcards: (
+            "disable_aux_features" if wildcards.model.split("/")[-3] == "False" else ""
+        ),
+    threads: workflow.cores
     shell:
-    #$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}')
+        #$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}')
         """
         num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}')
         num_cpus={threads}

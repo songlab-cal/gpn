@@ -51,8 +51,8 @@ def get_categorical_jacobian(msa, target_only=True):
     with torch.no_grad():
         x = torch.clone(msa).unsqueeze(0)
         fx = f(x)[0]
-        fx_h = torch.zeros((L,num_tokens,L,num_tokens), dtype=torch.float32)
-        x = torch.tile(x,[num_tokens,1,1])
+        fx_h = torch.zeros((L, num_tokens, L, num_tokens), dtype=torch.float32)
+        x = torch.tile(x, [num_tokens, 1, 1])
         for i in tqdm(range(L)):
             x_h = torch.clone(x)
             if target_only:
@@ -79,27 +79,33 @@ context_start = center - WINDOW_SIZE // 2
 context_end = center + WINDOW_SIZE // 2
 assert context_end - context_start == WINDOW_SIZE
 
-start_idx = START - context_start 
+start_idx = START - context_start
 end_idx = END - context_start
 
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 target_species_index = 0
 
 msa_paths = find_directory_sum_paths(MSA_PATH)
-genome_msa_list = [GenomeMSA(path, n_species=n_species, in_memory=False) for n_species, path in msa_paths.items()]
+genome_msa_list = [
+    GenomeMSA(path, n_species=n_species, in_memory=False)
+    for n_species, path in msa_paths.items()
+]
 config = AutoConfig.from_pretrained(MODEL_PATH)
 config.phylo_dist_path = PHYLO_INFO_PATH
 model = AutoModelForMaskedLM.from_pretrained(MODEL_PATH, config=config)
 model.to(device).eval()
 
 tokenizer = Tokenizer()
-NUCLEOTIDES = list('ACGT')
+NUCLEOTIDES = list("ACGT")
 NUCLEOTIDES_IDX = [tokenizer.vocab.index(nc) for nc in NUCLEOTIDES]
 NUC_TOKENS = NUCLEOTIDES_IDX
 NUCLEOTIDES_IDX
 
 
-msa = [genome_msa.get_msa(CHROM, context_start, context_end, strand="+", tokenize=True) for genome_msa in genome_msa_list]
+msa = [
+    genome_msa.get_msa(CHROM, context_start, context_end, strand="+", tokenize=True)
+    for genome_msa in genome_msa_list
+]
 msa = np.concatenate(msa, axis=-1)
 msa = torch.tensor(msa.astype(np.int64)).to(device)
 

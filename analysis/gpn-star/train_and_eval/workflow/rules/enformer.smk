@@ -23,17 +23,19 @@ rule process_enformer_precomputed_full:
 
         f = h5py.File(input[0])
 
-        V = pd.DataFrame({
-            "chrom": f["chr"][:].astype(str),
-            "pos": f["pos"][:],
-            "ref": f["ref"][:].astype(str),
-            "alt": f["alt"][:].astype(str),
-        })
+        V = pd.DataFrame(
+            {
+                "chrom": f["chr"][:].astype(str),
+                "pos": f["pos"][:],
+                "ref": f["ref"][:].astype(str),
+                "alt": f["alt"][:].astype(str),
+            }
+        )
         V["idx"] = np.arange(len(V))
         print(V)
 
         V.chrom = V.chrom.str.replace("chr", "")
-        V = V[(V.ref.str.len()==1) & (V.alt.str.len()==1)]
+        V = V[(V.ref.str.len() == 1) & (V.alt.str.len() == 1)]
         print(V.shape)
         V = lift_hg19_to_hg38(V)
         V = V[V.pos != -1]
@@ -65,8 +67,7 @@ rule enformer_abs_delta:
         data=expand("results/data/enformer/{chrom}.h5", chrom=enformer_chroms),
     output:
         "results/features/{dataset}/Enformer_absDelta.parquet",
-    threads:
-        workflow.cores
+    threads: workflow.cores
     run:
         import h5py
 
@@ -74,18 +75,18 @@ rule enformer_abs_delta:
         V = load_dataset_from_file_or_dir(wildcards["dataset"]).to_pandas()
 
         coords = pd.read_parquet(input.coords)
-        
+
         labels = [f"feature_{i}" for i in range(5313)]
 
         all_res = []
 
         for chrom, data_path in tqdm(zip(enformer_chroms, input.data)):
-            coords_c = coords.merge(V.loc[V.chrom==chrom, cols], on=cols, how="inner")
+            coords_c = coords.merge(V.loc[V.chrom == chrom, cols], on=cols, how="inner")
             f = h5py.File(data_path)
-            #data = f["SAD"][:]  # load into memory
+            # data = f["SAD"][:]  # load into memory
             data = f["SAD"]  # do not load into memory
             data = pd.DataFrame(data[coords_c.idx.values].astype(float), columns=labels)
-            res  = pd.concat([coords_c, data], axis=1)
+            res = pd.concat([coords_c, data], axis=1)
             recoded = (res.ref != f["ref"][res.idx.values].astype(str)).values
             res.loc[recoded, data.columns] *= -1
             all_res.append(res)

@@ -31,9 +31,11 @@ def load_fasta(path, subset_chroms=None):
 
 
 def save_fasta(path, genome):
-    with bgzf.BgzfWriter(path, "wb") if path.endswith(".gz") else open(
-        path, "w"
-    ) as handle:
+    with (
+        bgzf.BgzfWriter(path, "wb")
+        if path.endswith(".gz")
+        else open(path, "w") as handle
+    ):
         SeqIO.write(genome.values(), handle, "fasta")
 
 
@@ -93,10 +95,12 @@ class Genome:
 
     def get_seq(self, chrom, start, end, strand="+"):
         chrom_size = self.chrom_sizes[chrom]
-        seq = self._genome[chrom][max(start,0):min(end,chrom_size)]
+        seq = self._genome[chrom][max(start, 0) : min(end, chrom_size)]
 
-        if start < 0: seq = "N" * (-start) + seq  # left padding
-        if end > chrom_size: seq = seq + "N" * (end - chrom_size)  # right padding
+        if start < 0:
+            seq = "N" * (-start) + seq  # left padding
+        if end > chrom_size:
+            seq = seq + "N" * (end - chrom_size)  # right padding
 
         if strand == "-":
             seq = str(Seq(seq).reverse_complement())
@@ -400,7 +404,7 @@ class GenomeMSA(object):
             chroms = [chrom for chrom in chroms if chrom in subset_chroms]
         if in_memory:
             self.data = pd.Series({chrom: self.f[chrom][:] for chrom in tqdm(chroms)})
-            #self.f.close()
+            # self.f.close()
         else:
             # pd.Series does not work with h5py/zarr object
             # (attempts to load all data into memory)

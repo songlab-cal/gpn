@@ -34,9 +34,12 @@ def get_assay_name(assay):
 
 
 def avg_correlation(df, method):
-    if df.shape[1] < 2: return np.nan
+    if df.shape[1] < 2:
+        return np.nan
     corr_matrix = df.corr(method=method)
-    upper_triangle = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(bool))
+    upper_triangle = corr_matrix.where(
+        np.triu(np.ones(corr_matrix.shape), k=1).astype(bool)
+    )
     # Compute the average correlation
     return upper_triangle.stack().mean()
 
@@ -60,10 +63,12 @@ class Genome:
 
     def __call__(self, chrom, start, end, strand="+"):
         chrom_size = self.chrom_sizes[chrom]
-        seq = self._genome[chrom][max(start,0):min(end,chrom_size)]
+        seq = self._genome[chrom][max(start, 0) : min(end, chrom_size)]
 
-        if start < 0: seq = "N" * (-start) + seq  # left padding
-        if end > chrom_size: seq = seq + "N" * (end - chrom_size)  # right padding
+        if start < 0:
+            seq = "N" * (-start) + seq  # left padding
+        if end > chrom_size:
+            seq = seq + "N" * (end - chrom_size)  # right padding
 
         if strand == "-":
             seq = str(Seq(seq).reverse_complement())

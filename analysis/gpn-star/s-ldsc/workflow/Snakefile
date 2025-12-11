@@ -47,10 +47,7 @@ models_all = (
 )
 
 models_part1 = (
-    gpn_star_models
-    + conservation_models
-    + [enformer_tissue_agnostic]
-    + other_models
+    gpn_star_models + conservation_models + [enformer_tissue_agnostic] + other_models
 )
 
 qs_part_2 = config["quantiles"]

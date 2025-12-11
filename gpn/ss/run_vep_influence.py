@@ -34,7 +34,7 @@ class ModelforVEPModel(torch.nn.Module):
     def get_score(self, input_ids_ref, input_ids_alt, pos):
         log_odds_ref = self.get_log_odds(input_ids_ref, pos)
         log_odds_alt = self.get_log_odds(input_ids_alt, pos)
-        res = torch.abs(log_odds_ref-log_odds_alt)
+        res = torch.abs(log_odds_ref - log_odds_alt)
         res, _ = torch.max(res, dim=2)
         res = torch.mean(res, dim=1)
         return res
@@ -106,8 +106,12 @@ def run_vep(
             )
 
         res = {}
-        res["input_ids_ref_fwd"], res["input_ids_alt_fwd"], res["pos_fwd"] = prepare_output(seq_fwd, pos_fwd, ref_fwd, alt_fwd)
-        res["input_ids_ref_rev"], res["input_ids_alt_rev"], res["pos_rev"] = prepare_output(seq_rev, pos_rev, ref_rev, alt_rev)
+        res["input_ids_ref_fwd"], res["input_ids_alt_fwd"], res["pos_fwd"] = (
+            prepare_output(seq_fwd, pos_fwd, ref_fwd, alt_fwd)
+        )
+        res["input_ids_ref_rev"], res["input_ids_alt_rev"], res["pos_rev"] = (
+            prepare_output(seq_rev, pos_rev, ref_rev, alt_rev)
+        )
         return res
 
     variants.set_transform(get_tokenized_seq)

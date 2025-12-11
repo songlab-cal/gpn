@@ -14,14 +14,14 @@ NUCLEOTIDES = list("ACGT")
 
 
 def lift_hg19_to_hg38(V):
-    converter = get_lifter('hg19', 'hg38')
+    converter = get_lifter("hg19", "hg38")
 
     def get_new_pos(v):
         try:
             res = converter[v.chrom][v.pos]
             assert len(res) == 1
             chrom, pos, strand = res[0]
-            assert chrom.replace("chr", "")==v.chrom
+            assert chrom.replace("chr", "") == v.chrom
             return pos
         except:
             return -1
@@ -31,9 +31,9 @@ def lift_hg19_to_hg38(V):
 
 
 def sort_chrom_pos(V):
-    chrom_order = [str(i) for i in range(1, 23)] + ['X', 'Y']
+    chrom_order = [str(i) for i in range(1, 23)] + ["X", "Y"]
     V.chrom = pd.Categorical(V.chrom, categories=chrom_order, ordered=True)
-    V = V.sort_values(['chrom', 'pos'])
+    V = V.sort_values(["chrom", "pos"])
     V.chrom = V.chrom.astype(str)
     return V
 
@@ -47,9 +47,9 @@ def check_ref_alt(V, genome):
     V["ref_nuc"] = V.progress_apply(
         lambda v: genome.get_nuc(v.chrom, v.pos).upper(), axis=1
     )
-    mask = V['ref'] != V['ref_nuc']
-    V.loc[mask, ['ref', 'alt']] = V.loc[mask, ['alt', 'ref']].values
-    V = V[V['ref'] == V['ref_nuc']]
+    mask = V["ref"] != V["ref_nuc"]
+    V.loc[mask, ["ref", "alt"]] = V.loc[mask, ["alt", "ref"]].values
+    V = V[V["ref"] == V["ref_nuc"]]
     V.drop(columns=["ref_nuc"], inplace=True)
     return V
 
@@ -59,12 +59,14 @@ rule parquet_to_tsv:
         "{anything}.parquet",
     output:
         temp("{anything}.tsv"),
-    threads:
-        workflow.cores
+    threads: workflow.cores
     run:
         # could do this with polars scan (lazy)
         pl.read_parquet(input[0]).write_csv(
-            output[0], separator="\t", include_header=False, float_precision=2,
+            output[0],
+            separator="\t",
+            include_header=False,
+            float_precision=2,
         )
 
 
@@ -73,8 +75,7 @@ rule bgzip:
         "{anything}.tsv",
     output:
         "{anything}.tsv.bgz",
-    threads:
-        workflow.cores
+    threads: workflow.cores
     shell:
         "bgzip -c {input} --threads {threads} > {output}"
 
@@ -107,7 +108,7 @@ def match_columns(df, target, covariates):
             D[:, j] = np.inf  # ensure it cannot be picked up again
         all_pos.append(pos)
         all_neg_matched.append(neg.iloc[closest])
-    
+
     pos = pd.concat(all_pos, ignore_index=True)
     pos["match_group"] = np.arange(len(pos))
     neg_matched = pd.concat(all_neg_matched, ignore_index=True)
@@ -124,28 +125,33 @@ def filter_snp(V):
 
 
 def train_predict_lr(V_train, V_test, features):
-    clf = Pipeline([
-        ('scaler', RobustScaler()),
-        ('linear', LogisticRegressionCV(
-            random_state=42,
-            scoring="roc_auc",
-            n_jobs=-1,
-            Cs=np.logspace(-5, 5, 16),
-        ))
-    ])
+    clf = Pipeline(
+        [
+            ("scaler", RobustScaler()),
+            (
+                "linear",
+                LogisticRegressionCV(
+                    random_state=42,
+                    scoring="roc_auc",
+                    n_jobs=-1,
+                    Cs=np.logspace(-5, 5, 16),
+                ),
+            ),
+        ]
+    )
     clf.fit(V_train[features], V_train.label)
     linear = clf.named_steps["linear"]
     C = linear.C_
     Cs = linear.Cs_
-    #if C == Cs[0] or C == Cs[-1]:
+    # if C == Cs[0] or C == Cs[-1]:
     #    raise Exception(f"{C=} {Cs[0]=} {Cs[-1]=}")
     return -clf.predict_proba(V_test[features])[:, 1]
 
 
 def train_predict_best_feature(V_train, V_test, features):
-    best_feature_idx = np.argmax([
-        roc_auc_score(V_train.label, -V_train[f]) for f in features
-    ])
+    best_feature_idx = np.argmax(
+        [roc_auc_score(V_train.label, -V_train[f]) for f in features]
+    )
     return V_test[features[best_feature_idx]]
 
 
@@ -158,12 +164,15 @@ rule get_tss:
         annotation = load_table(input[0])
         tx = annotation.query('feature=="transcript"').copy()
         tx["gene_id"] = tx.attribute.str.extract(r'gene_id "([^;]*)";')
-        tx["transcript_biotype"] = tx.attribute.str.extract(r'transcript_biotype "([^;]*)";')
-        tx = tx[tx.transcript_biotype=="protein_coding"]
+        tx["transcript_biotype"] = tx.attribute.str.extract(
+            r'transcript_biotype "([^;]*)";'
+        )
+        tx = tx[tx.transcript_biotype == "protein_coding"]
         tss = tx.copy()
         tss[["start", "end"]] = tss.progress_apply(
-            lambda w: (w.start, w.start+1) if w.strand=="+" else (w.end-1, w.end),
-            axis=1, result_type="expand"
+            lambda w: (w.start, w.start + 1) if w.strand == "+" else (w.end - 1, w.end),
+            axis=1,
+            result_type="expand",
         )
         tss = tss[["chrom", "start", "end", "gene_id"]]
         print(tss)
@@ -179,8 +188,10 @@ rule get_exon:
         annotation = load_table(input[0])
         exon = annotation.query('feature=="exon"').copy()
         exon["gene_id"] = exon.attribute.str.extract(r'gene_id "([^;]*)";')
-        exon["transcript_biotype"] = exon.attribute.str.extract(r'transcript_biotype "([^;]*)";')
-        exon = exon[exon.transcript_biotype=="protein_coding"]
+        exon["transcript_biotype"] = exon.attribute.str.extract(
+            r'transcript_biotype "([^;]*)";'
+        )
+        exon = exon[exon.transcript_biotype == "protein_coding"]
         exon = exon[["chrom", "start", "end", "gene_id"]]
         print(exon)
         exon.to_parquet(output[0], index=False)
@@ -211,7 +222,10 @@ rule make_ensembl_vep_input:
         df["allele"] = df.ref + "/" + df.alt
         df["strand"] = "+"
         df.to_csv(
-            output[0], sep="\t", header=False, index=False,
+            output[0],
+            sep="\t",
+            header=False,
+            index=False,
             columns=["chrom", "start", "end", "allele", "strand"],
         )
 
@@ -246,14 +260,13 @@ rule run_ensembl_vep:
         --most_severe --compress_output gzip --tab --distance 1000 --offline
         """
 
+
 ruleorder: subset_to_fully_conserved_pos > get_logits
 ruleorder: subset_to_fully_conserved_pos > process_logits
 ruleorder: subset_to_fully_conserved_pos > get_llr
-
 ruleorder: subsample_variants > get_logits
 ruleorder: subsample_variants > process_logits
 ruleorder: subsample_variants > get_llr
-
 ruleorder: process_ensembl_vep > subset_to_fully_conserved_pos
 ruleorder: process_ensembl_vep > subsample_variants
 ruleorder: process_ensembl_vep > get_logits
@@ -270,8 +283,7 @@ rule process_ensembl_vep:
     run:
         V = pd.read_parquet(input[0])
         V2 = pd.read_csv(
-            input[1], sep="\t", header=None, comment="#",
-            usecols=[0, 6]
+            input[1], sep="\t", header=None, comment="#", usecols=[0, 6]
         ).rename(columns={0: "variant", 6: "consequence"})
         V2["chrom"] = V2.variant.str.split("_").str[0]
         V2["pos"] = V2.variant.str.split("_").str[1].astype(int)
@@ -288,8 +300,7 @@ rule find_conserved_pos:
         "results/msa/multiz100way/89/all.zarr",
     output:
         "results/conserved_pos/{subset}/{chrom}.parquet",
-    threads:
-        workflow.cores
+    threads: workflow.cores
     run:
         msa = GenomeMSA(input[0]).f[wildcards.chrom][:, 1:]
         print(msa.shape)
@@ -304,15 +315,15 @@ rule find_conserved_pos:
             valid_rows = np.logical_and(
                 not_dash,
                 np.logical_and(
-                    np.all(msa[:, :armadillo_index+1] == msa[:, [0]], axis=1),
-                    np.all(msa[:, armadillo_index+1:] == b"-", axis=1),
-                )
+                    np.all(msa[:, : armadillo_index + 1] == msa[:, [0]], axis=1),
+                    np.all(msa[:, armadillo_index + 1 :] == b"-", axis=1),
+                ),
             )
 
-        # Step 4: Find indices
+            # Step 4: Find indices
         indices = np.where(valid_rows)[0]
 
-        pos = pd.DataFrame(dict(pos=indices+1))
+        pos = pd.DataFrame(dict(pos=indices + 1))
         print(pos)
         pos.to_parquet(output[0], index=False)
 
@@ -351,11 +362,16 @@ rule pli_convert:
     output:
         "results/pli/variants.parquet",
     run:
-        V = pl.read_csv(
-            input[0], has_header=False,
-            columns=[1, 2, 3, 4],
-            new_columns=["chrom", "pos", "ref", "alt"],
-        ).with_columns(pl.col("chrom").cast(str)).sort(["chrom", "pos"])
+        V = (
+            pl.read_csv(
+                input[0],
+                has_header=False,
+                columns=[1, 2, 3, 4],
+                new_columns=["chrom", "pos", "ref", "alt"],
+            )
+            .with_columns(pl.col("chrom").cast(str))
+            .sort(["chrom", "pos"])
+        )
         print(V)
         V.write_parquet(output[0])
 
@@ -366,11 +382,16 @@ rule pli_convert2:
     output:
         "results/pli2/variants.parquet",
     run:
-        V = pl.read_csv(
-            input[0], has_header=False,
-            columns=[1, 2, 3, 4],
-            new_columns=["chrom", "pos", "ref", "alt"],
-        ).with_columns(pl.col("chrom").cast(str)).sort(["chrom", "pos"])
+        V = (
+            pl.read_csv(
+                input[0],
+                has_header=False,
+                columns=[1, 2, 3, 4],
+                new_columns=["chrom", "pos", "ref", "alt"],
+            )
+            .with_columns(pl.col("chrom").cast(str))
+            .sort(["chrom", "pos"])
+        )
         print(V)
         V.write_parquet(output[0])
 
@@ -381,10 +402,15 @@ rule pli_convert3:
     output:
         "results/pli3/variants.parquet",
     run:
-        V = pl.read_csv(
-            input[0], has_header=False,
-            columns=[1, 2, 3, 4],
-            new_columns=["chrom", "pos", "ref", "alt"],
-        ).with_columns(pl.col("chrom").cast(str)).sort(["chrom", "pos"])
+        V = (
+            pl.read_csv(
+                input[0],
+                has_header=False,
+                columns=[1, 2, 3, 4],
+                new_columns=["chrom", "pos", "ref", "alt"],
+            )
+            .with_columns(pl.col("chrom").cast(str))
+            .sort(["chrom", "pos"])
+        )
         print(V)
         V.write_parquet(output[0])

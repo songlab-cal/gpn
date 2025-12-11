@@ -15,10 +15,13 @@ class VEPEuclideanDist(torch.nn.Module):
 
     def get_embedding(self, input_ids, aux_features):
         return self.model(
-            input_ids=input_ids, aux_features=aux_features,
+            input_ids=input_ids,
+            aux_features=aux_features,
         ).last_hidden_state.reshape(len(input_ids), -1)
 
-    def get_scores(self, input_ids_ref, aux_features_ref, input_ids_alt, aux_features_alt):
+    def get_scores(
+        self, input_ids_ref, aux_features_ref, input_ids_alt, aux_features_alt
+    ):
         embed_ref = self.get_embedding(input_ids_ref, aux_features_ref)
         embed_alt = self.get_embedding(input_ids_alt, aux_features_alt)
         return F.pairwise_distance(embed_ref, embed_alt)
@@ -35,10 +38,16 @@ class VEPEuclideanDist(torch.nn.Module):
         aux_features_alt_rev=None,
     ):
         fwd = self.get_scores(
-            input_ids_ref_fwd, aux_features_ref_fwd, input_ids_alt_fwd, aux_features_alt_fwd,
+            input_ids_ref_fwd,
+            aux_features_ref_fwd,
+            input_ids_alt_fwd,
+            aux_features_alt_fwd,
         )
         rev = self.get_scores(
-            input_ids_ref_rev, aux_features_ref_rev, input_ids_alt_rev, aux_features_alt_rev,
+            input_ids_ref_rev,
+            aux_features_ref_rev,
+            input_ids_alt_rev,
+            aux_features_alt_rev,
         )
         return (fwd + rev) / 2
 
@@ -59,7 +68,7 @@ class VEPEuclideanDistInference(object):
         pos = np.array(V["pos"]) - 1
         start = pos - self.window_size // 2
         end = pos + self.window_size // 2
-        
+
         msa_fwd, msa_rev = self.genome_msa.get_msa_batch_fwd_rev(
             chrom,
             start,
@@ -81,9 +90,9 @@ class VEPEuclideanDistInference(object):
         def prepare_output(msa, pos, ref, alt):
             ref, alt = self.tokenizer(ref.flatten()), self.tokenizer(alt.flatten())
             input_ids, aux_features = msa[:, :, 0], msa[:, :, 1:]
-            assert (
-                input_ids[:, pos] == ref
-            ).all(), f"{input_ids[:, pos].tolist()}, {ref.tolist()}"
+            assert (input_ids[:, pos] == ref).all(), (
+                f"{input_ids[:, pos].tolist()}, {ref.tolist()}"
+            )
             input_ids_alt = input_ids.copy()
             input_ids_alt[:, pos] = alt
             input_ids = input_ids.astype(np.int64)

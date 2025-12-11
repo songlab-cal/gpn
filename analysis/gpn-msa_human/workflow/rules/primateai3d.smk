@@ -6,11 +6,15 @@ rule primateai3d_process:
     run:
         V = pd.read_csv(
             input[0],
-            usecols=["chr", "pos", "non_flipped_ref", "non_flipped_alt", "score_PAI3D"]
-        ).rename(columns={
-            "chr": "chrom", "non_flipped_ref": "ref", "non_flipped_alt": "alt",
-            "score_PAI3D": "score",
-        })
+            usecols=["chr", "pos", "non_flipped_ref", "non_flipped_alt", "score_PAI3D"],
+        ).rename(
+            columns={
+                "chr": "chrom",
+                "non_flipped_ref": "ref",
+                "non_flipped_alt": "alt",
+                "score_PAI3D": "score",
+            }
+        )
         V.chrom = V.chrom.str.replace("chr", "")
         V.score = -V.score
         print(V)

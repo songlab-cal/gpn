@@ -27,7 +27,9 @@ def inner_products(embed_ref, embed_alt):
 
 def cosine_distance(embed_ref, embed_alt):
     B = len(embed_ref)
-    return 1 - F.cosine_similarity(embed_ref.reshape(B, -1), embed_alt.reshape(B, -1), dim=1)
+    return 1 - F.cosine_similarity(
+        embed_ref.reshape(B, -1), embed_alt.reshape(B, -1), dim=1
+    )
 
 
 def cosine_distances(embed_ref, embed_alt):
@@ -41,20 +43,26 @@ class VEPEmbeddings(torch.nn.Module):
 
     def get_embedding(self, input_ids, aux_features):
         return self.model(
-            input_ids=input_ids, aux_features=aux_features,
+            input_ids=input_ids,
+            aux_features=aux_features,
         ).last_hidden_state
 
-    def get_scores(self, input_ids_ref, aux_features_ref, input_ids_alt, aux_features_alt):
+    def get_scores(
+        self, input_ids_ref, aux_features_ref, input_ids_alt, aux_features_alt
+    ):
         embed_ref = self.get_embedding(input_ids_ref, aux_features_ref)
         embed_alt = self.get_embedding(input_ids_alt, aux_features_alt)
-        return torch.cat((
-            torch.unsqueeze(euclidean_distance(embed_ref, embed_alt), 1),
-            torch.unsqueeze(inner_product(embed_ref, embed_alt), 1),
-            torch.unsqueeze(cosine_distance(embed_ref, embed_alt), 1),
-            euclidean_distances(embed_ref, embed_alt),
-            inner_products(embed_ref, embed_alt),
-            cosine_distances(embed_ref, embed_alt),
-        ), dim=1)
+        return torch.cat(
+            (
+                torch.unsqueeze(euclidean_distance(embed_ref, embed_alt), 1),
+                torch.unsqueeze(inner_product(embed_ref, embed_alt), 1),
+                torch.unsqueeze(cosine_distance(embed_ref, embed_alt), 1),
+                euclidean_distances(embed_ref, embed_alt),
+                inner_products(embed_ref, embed_alt),
+                cosine_distances(embed_ref, embed_alt),
+            ),
+            dim=1,
+        )
 
     def forward(
         self,
@@ -68,10 +76,16 @@ class VEPEmbeddings(torch.nn.Module):
         aux_features_alt_rev=None,
     ):
         fwd = self.get_scores(
-            input_ids_ref_fwd, aux_features_ref_fwd, input_ids_alt_fwd, aux_features_alt_fwd,
+            input_ids_ref_fwd,
+            aux_features_ref_fwd,
+            input_ids_alt_fwd,
+            aux_features_alt_fwd,
         )
         rev = self.get_scores(
-            input_ids_ref_rev, aux_features_ref_rev, input_ids_alt_rev, aux_features_alt_rev,
+            input_ids_ref_rev,
+            aux_features_ref_rev,
+            input_ids_alt_rev,
+            aux_features_alt_rev,
         )
         return (fwd + rev) / 2
 
@@ -92,7 +106,7 @@ class VEPEmbeddingsInference(object):
         pos = np.array(V["pos"]) - 1
         start = pos - self.window_size // 2
         end = pos + self.window_size // 2
-        
+
         msa_fwd, msa_rev = self.genome_msa.get_msa_batch_fwd_rev(
             chrom,
             start,
@@ -114,9 +128,9 @@ class VEPEmbeddingsInference(object):
         def prepare_output(msa, pos, ref, alt):
             ref, alt = self.tokenizer(ref.flatten()), self.tokenizer(alt.flatten())
             input_ids, aux_features = msa[:, :, 0], msa[:, :, 1:]
-            assert (
-                input_ids[:, pos] == ref
-            ).all(), f"{input_ids[:, pos].tolist()}, {ref.tolist()}"
+            assert (input_ids[:, pos] == ref).all(), (
+                f"{input_ids[:, pos].tolist()}, {ref.tolist()}"
+            )
             input_ids_alt = input_ids.copy()
             input_ids_alt[:, pos] = alt
             input_ids = input_ids.astype(np.int64)

@@ -6,12 +6,17 @@ from sklearn.preprocessing import StandardScaler
 import tempfile
 import torch
 from tqdm import tqdm
-from transformers import AutoTokenizer, AutoModelForSequenceClassification, Trainer, TrainingArguments
+from transformers import (
+    AutoTokenizer,
+    AutoModelForSequenceClassification,
+    Trainer,
+    TrainingArguments,
+)
 
 
 def dict_to_config_string(config_dict):
     # Convert dict to list of --key value strings and then join with space
-    return ' '.join(f'--{k} {v}' for k, v in config_dict.items() if v is not None)
+    return " ".join(f"--{k} {v}" for k, v in config_dict.items() if v is not None)
 
 
 def get_batch_size(batch_size):
@@ -60,12 +65,17 @@ def run_prediction(d, model_path, batch_size=256, threads=8):
     else:
         print("hardcoding lora model config")
         from peft import AutoPeftModelForSequenceClassification
-        model = AutoPeftModelForSequenceClassification.from_pretrained(model_path, num_labels=26, regression_softplus=True)
+
+        model = AutoPeftModelForSequenceClassification.from_pretrained(
+            model_path, num_labels=26, regression_softplus=True
+        )
 
     def tokenize(seq):
         return tokenizer(
-            seq, return_tensors="pt", return_attention_mask=False,
-            return_token_type_ids=False
+            seq,
+            return_tensors="pt",
+            return_attention_mask=False,
+            return_token_type_ids=False,
         )
 
     d = d.map(

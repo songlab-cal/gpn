@@ -1,5 +1,8 @@
 from gpn.data import (
-    Genome, load_table, get_balanced_intervals, filter_length,
+    Genome,
+    load_table,
+    get_balanced_intervals,
+    filter_length,
     filter_annotation_features,
 )
 
@@ -42,8 +45,11 @@ rule make_annotation_intervals:
         )
         add_jiter = config.get("annotation_features_add_jitter", 100)
         I = filter_annotation_features(
-            I, annotation, wildcards.feature,
-            include_flank=include_flank, jitter=add_jitter,
+            I,
+            annotation,
+            wildcards.feature,
+            include_flank=include_flank,
+            jitter=add_jitter,
         )
         I = filter_length(I, config["window_size"])
         I.to_parquet(output[0], index=False)
@@ -59,7 +65,9 @@ rule make_balanced_v1_intervals:
         defined_intervals = load_table(input[0])
         annotation = load_table(input[1])
         intervals = get_balanced_intervals(
-            defined_intervals, annotation, config["window_size"],
+            defined_intervals,
+            annotation,
+            config["window_size"],
             config.get("promoter_upstream", 1000),
         )
         intervals.to_parquet(output[0], index=False)

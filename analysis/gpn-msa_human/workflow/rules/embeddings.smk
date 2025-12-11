@@ -12,18 +12,35 @@ rule process_rmsk:
         "results/rmsk.parquet",
     run:
         df = pd.read_csv(
-            input[0], sep="\t", header=None, names=[
-                "bin", "swScore", "milliDiv", "milliDel", "milliIns", "chrom",
-                "start", "end", "genoLeft", "strand", "repName", "repClass",
-                "repFamily", "repStart", "repEnd", "repLeft", "id",
-            ]
+            input[0],
+            sep="\t",
+            header=None,
+            names=[
+                "bin",
+                "swScore",
+                "milliDiv",
+                "milliDel",
+                "milliIns",
+                "chrom",
+                "start",
+                "end",
+                "genoLeft",
+                "strand",
+                "repName",
+                "repClass",
+                "repFamily",
+                "repStart",
+                "repEnd",
+                "repLeft",
+                "id",
+            ],
         )
         df.chrom = df.chrom.astype(str)
         df.chrom = df.chrom.str.replace("chr", "")
         df = df[df.chrom.isin(CHROMS)]
         df.to_parquet(output[0], index=False)
 
-     
+
 rule merge_rmsk:
     input:
         "results/rmsk.parquet",
@@ -56,22 +73,35 @@ rule expand_annotation:
 
         all_intervals = Genome(input[2], subset_chroms=CHROMS).get_all_intervals()
 
-        gtf_intergenic = bf.subtract(all_intervals, gtf[gtf.feature.isin(["gene", "Repeat"])])
+        gtf_intergenic = bf.subtract(
+            all_intervals, gtf[gtf.feature.isin(["gene", "Repeat"])]
+        )
         gtf_intergenic["feature"] = "intergenic"
         gtf = pd.concat([gtf, gtf_intergenic], ignore_index=True)
 
-        gtf_exon = gtf[gtf.feature=="exon"]
-        gtf_exon["transcript_id"] = gtf_exon.attribute.str.extract(r'transcript_id "([^;]*)";')
+        gtf_exon = gtf[gtf.feature == "exon"]
+        gtf_exon["transcript_id"] = gtf_exon.attribute.str.extract(
+            r'transcript_id "([^;]*)";'
+        )
+
 
         def get_transcript_introns(df_transcript):
             df_transcript = df_transcript.sort_values("start")
-            exon_pairs = more_itertools.pairwise(df_transcript.loc[:, ["start", "end"]].values)
+            exon_pairs = more_itertools.pairwise(
+                df_transcript.loc[:, ["start", "end"]].values
+            )
             introns = [[e1[1], e2[0]] for e1, e2 in exon_pairs]
             introns = pd.DataFrame(introns, columns=["start", "end"])
             introns["chrom"] = df_transcript.chrom.iloc[0]
             return introns
 
-        gtf_introns = gtf_exon.groupby("transcript_id").apply(get_transcript_introns).reset_index().drop_duplicates(subset=["chrom", "start", "end"])
+
+        gtf_introns = (
+            gtf_exon.groupby("transcript_id")
+            .apply(get_transcript_introns)
+            .reset_index()
+            .drop_duplicates(subset=["chrom", "start", "end"])
+        )
         gtf_introns["feature"] = "intron"
         gtf = pd.concat([gtf, gtf_introns], ignore_index=True)
         print(gtf.feature.value_counts())
@@ -92,29 +122,35 @@ rule define_embedding_windows:
         windows = make_windows(defined_intervals, WINDOW_SIZE, EMBEDDING_WINDOW_SIZE)
         windows.rename(columns={"start": "full_start", "end": "full_end"}, inplace=True)
 
-        windows["start"] = (windows.full_start+windows.full_end)//2 - EMBEDDING_WINDOW_SIZE//2
+        windows["start"] = (
+            windows.full_start + windows.full_end
+        ) // 2 - EMBEDDING_WINDOW_SIZE // 2
         windows["end"] = windows.start + EMBEDDING_WINDOW_SIZE
 
         features_of_interest = [
             "intergenic",
-            'CDS',
-            'intron',
-            'three_prime_utr',
-            'five_prime_utr',
-            #"ncRNA_gene",
+            "CDS",
+            "intron",
+            "three_prime_utr",
+            "five_prime_utr",
+            # "ncRNA_gene",
             "Repeat",
         ]
 
         for f in features_of_interest:
             print(f)
-            windows = bf.coverage(windows, gtf[gtf.feature==f])
+            windows = bf.coverage(windows, gtf[gtf.feature == f])
             windows.rename(columns=dict(coverage=f), inplace=True)
-        
-        windows = windows[(windows[features_of_interest]==EMBEDDING_WINDOW_SIZE).sum(axis=1)==1]
+
+        windows = windows[
+            (windows[features_of_interest] == EMBEDDING_WINDOW_SIZE).sum(axis=1) == 1
+        ]
         windows["Region"] = windows[features_of_interest].idxmax(axis=1)
         windows.drop(columns=features_of_interest, inplace=True)
 
-        windows.rename(columns={"start": "center_start", "end": "center_end"}, inplace=True)
+        windows.rename(
+            columns={"start": "center_start", "end": "center_end"}, inplace=True
+        )
         windows.rename(columns={"full_start": "start", "full_end": "end"}, inplace=True)
         print(windows.Region.value_counts())
         groupby = windows.groupby("Region")
@@ -155,10 +191,12 @@ rule run_umap:
         from umap import UMAP
 
         embeddings = pd.read_parquet(input[0])
-        proj = Pipeline([
-            ("scaler", StandardScaler()),
-            ("umap", UMAP(random_state=42, verbose=True)),
-        ]).fit_transform(embeddings)
+        proj = Pipeline(
+            [
+                ("scaler", StandardScaler()),
+                ("umap", UMAP(random_state=42, verbose=True)),
+            ]
+        ).fit_transform(embeddings)
         proj = pd.DataFrame(proj, columns=["UMAP1", "UMAP2"])
         proj.to_parquet(output[0], index=False)
 
@@ -179,16 +217,27 @@ rule run_classification:
         windows = pd.read_parquet(input[0])
         features = pd.read_parquet(input[1])
 
-        clf = Pipeline([
-            ("scaler", StandardScaler()),
-            ("linear", LogisticRegressionCV(
-                random_state=42, verbose=True, max_iter=1000,
-                class_weight="balanced", n_jobs=-1
-                )
-            ),
-        ])
+        clf = Pipeline(
+            [
+                ("scaler", StandardScaler()),
+                (
+                    "linear",
+                    LogisticRegressionCV(
+                        random_state=42,
+                        verbose=True,
+                        max_iter=1000,
+                        class_weight="balanced",
+                        n_jobs=-1,
+                    ),
+                ),
+            ]
+        )
         preds = cross_val_predict(
-            clf, features, windows.Region, groups=windows.chrom,
-            cv=GroupKFold(), verbose=True,
+            clf,
+            features,
+            windows.Region,
+            groups=windows.chrom,
+            cv=GroupKFold(),
+            verbose=True,
         )
         pd.DataFrame({"pred_Region": preds}).to_parquet(output[0], index=False)

@@ -21,21 +21,28 @@ MODEL_PATH = sys.argv[2]
 MSA_PATH = sys.argv[3]
 PHYLO_INFO_PATH = sys.argv[4]
 WINDOW_SIZE = int(sys.argv[5])
-CENTER_WINDOW_SIZE = int(sys.argv[6]) # we average embeddings over this central sub-window
+CENTER_WINDOW_SIZE = int(
+    sys.argv[6]
+)  # we average embeddings over this central sub-window
 OUTPUT_PATH = sys.argv[7]
 
 
 msa_paths = find_directory_sum_paths(MSA_PATH)
-genome_msa_list = [GenomeMSA(path, n_species=n_species, in_memory=False) for n_species, path in msa_paths.items()]
+genome_msa_list = [
+    GenomeMSA(path, n_species=n_species, in_memory=False)
+    for n_species, path in msa_paths.items()
+]
 config = AutoConfig.from_pretrained(MODEL_PATH)
 config.phylo_dist_path = PHYLO_INFO_PATH
 _model = AutoModel.from_pretrained(MODEL_PATH, config=config)
 
 
-
 def get_msa(chrom, start, end, strand):
     # getting each strand separately is not optimal, just temporary
-    msa = [genome_msa.get_msa(chrom, start, end, strand=strand, tokenize=True) for genome_msa in genome_msa_list]
+    msa = [
+        genome_msa.get_msa(chrom, start, end, strand=strand, tokenize=True)
+        for genome_msa in genome_msa_list
+    ]
     msa = np.concatenate(msa, axis=-1)
     msa = torch.tensor(msa.astype(np.int64))
     return msa
@@ -70,6 +77,7 @@ class ModelWrapper(nn.Module):
         embed_rev = self.embed(msa_rev)
         return (embed_fwd + embed_rev) / 2
 
+
 model = ModelWrapper(_model)
 
 
@@ -77,6 +85,7 @@ df = pd.read_parquet(WINDOWS_PATH)
 if "center" not in df.columns:
     df["center"] = (df["start"] + df["end"]) // 2
 d = Dataset.from_pandas(df)
+
 
 def transform(vs):
     chrom = np.array(vs["chrom"])
@@ -87,6 +96,7 @@ def transform(vs):
     msa_fwd = torch.stack([get_msa(chrom[i], start[i], end[i], "+") for i in range(n)])
     msa_rev = torch.stack([get_msa(chrom[i], start[i], end[i], "-") for i in range(n)])
     return dict(msa_fwd=msa_fwd, msa_rev=msa_rev)
+
 
 d.set_transform(transform)
 

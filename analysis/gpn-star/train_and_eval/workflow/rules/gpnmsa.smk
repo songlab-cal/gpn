@@ -21,7 +21,7 @@ rule gpnmsa_extract_chrom:
         chrom="|".join(CHROMS),
     shell:
         "tabix {input} {wildcards.chrom} | gzip -c > {output}"
-        
+
 
 rule gpnmsa_process_chrom:
     input:
@@ -33,13 +33,17 @@ rule gpnmsa_process_chrom:
     run:
         (
             pl.read_csv(
-                input[0], has_header=False, separator="\t", columns=[0, 1, 2, 3, 4],
+                input[0],
+                has_header=False,
+                separator="\t",
+                columns=[0, 1, 2, 3, 4],
                 new_columns=COORDINATES + ["score"],
                 dtypes={"chrom": str, "score": pl.Float32},
             )
             .with_columns(pl.col("score"))
             .write_parquet(output[0])
         )
+
 
 rule run_vep_gpnmsa_in_memory:
     input:
@@ -50,10 +54,12 @@ rule run_vep_gpnmsa_in_memory:
     threads: workflow.cores
     run:
         V = pl.read_parquet(input[0], columns=COORDINATES)
-        preds = pl.concat([
-            pl.read_parquet(path).join(V, on=COORDINATES, how="inner")
-            for path in tqdm(input[1:])
-        ]).unique(subset=COORDINATES)
+        preds = pl.concat(
+            [
+                pl.read_parquet(path).join(V, on=COORDINATES, how="inner")
+                for path in tqdm(input[1:])
+            ]
+        ).unique(subset=COORDINATES)
         V = V.join(preds, on=COORDINATES, how="left")
         print(V)
         V.select("score").write_parquet(output[0])

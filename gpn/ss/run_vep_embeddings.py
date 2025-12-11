@@ -34,7 +34,9 @@ def inner_products(embed_ref, embed_alt):
 
 def cosine_distance(embed_ref, embed_alt):
     B = len(embed_ref)
-    return 1 - F.cosine_similarity(embed_ref.reshape(B, -1), embed_alt.reshape(B, -1), dim=1)
+    return 1 - F.cosine_similarity(
+        embed_ref.reshape(B, -1), embed_alt.reshape(B, -1), dim=1
+    )
 
 
 def cosine_distances(embed_ref, embed_alt):
@@ -52,14 +54,17 @@ class ModelforVEPModel(torch.nn.Module):
     def get_scores(self, input_ids_ref, input_ids_alt):
         embed_ref = self.model(input_ids=input_ids_ref).last_hidden_state
         embed_alt = self.model(input_ids=input_ids_alt).last_hidden_state
-        return torch.cat((
-            torch.unsqueeze(euclidean_distance(embed_ref, embed_alt), 1),
-            torch.unsqueeze(inner_product(embed_ref, embed_alt), 1),
-            torch.unsqueeze(cosine_distance(embed_ref, embed_alt), 1),
-            euclidean_distances(embed_ref, embed_alt),
-            inner_products(embed_ref, embed_alt),
-            cosine_distances(embed_ref, embed_alt),
-        ), dim=1)
+        return torch.cat(
+            (
+                torch.unsqueeze(euclidean_distance(embed_ref, embed_alt), 1),
+                torch.unsqueeze(inner_product(embed_ref, embed_alt), 1),
+                torch.unsqueeze(cosine_distance(embed_ref, embed_alt), 1),
+                euclidean_distances(embed_ref, embed_alt),
+                inner_products(embed_ref, embed_alt),
+                cosine_distances(embed_ref, embed_alt),
+            ),
+            dim=1,
+        )
 
     def forward(
         self,
@@ -127,8 +132,12 @@ def run_vep(
             )
 
         res = {}
-        res["input_ids_ref_fwd"], res["input_ids_alt_fwd"] = prepare_output(seq_fwd, pos_fwd, ref_fwd, alt_fwd)
-        res["input_ids_ref_rev"], res["input_ids_alt_rev"] = prepare_output(seq_rev, pos_rev, ref_rev, alt_rev)
+        res["input_ids_ref_fwd"], res["input_ids_alt_fwd"] = prepare_output(
+            seq_fwd, pos_fwd, ref_fwd, alt_fwd
+        )
+        res["input_ids_ref_rev"], res["input_ids_alt_rev"] = prepare_output(
+            seq_rev, pos_rev, ref_rev, alt_rev
+        )
         return res
 
     variants.set_transform(get_tokenized_seq)

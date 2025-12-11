@@ -1,8 +1,16 @@
 import bioframe as bf
 from gpn.data import (
-    filter_defined, filter_length, load_table, add_flank, get_annotation_features,
-    add_jitter, get_promoters, get_random_intervals, union_intervals,
-    intersect_intervals, intervals_size
+    filter_defined,
+    filter_length,
+    load_table,
+    add_flank,
+    get_annotation_features,
+    add_jitter,
+    get_promoters,
+    get_random_intervals,
+    union_intervals,
+    intersect_intervals,
+    intervals_size,
 )
 import pandas as pd
 import polars as pl
@@ -29,7 +37,7 @@ rule make_positions_promoter:
         transcripts = annotation[annotation.feature.isin(["mRNA", "transcript"])]
         print(transcripts)
         transcripts = transcripts[
-            transcripts['attribute'].str.contains('transcript_biotype "protein_coding"')
+            transcripts["attribute"].str.contains('transcript_biotype "protein_coding"')
         ]
         intervals = get_promoters(transcripts, 1000, 1000)
         print(intervals)
@@ -45,7 +53,7 @@ rule make_positions_promoter:
 
         defined_intervals = pd.read_parquet(input[2])
         intervals = intersect_intervals(
-            intervals, bf.expand(defined_intervals, pad=-WINDOW_SIZE//2)
+            intervals, bf.expand(defined_intervals, pad=-WINDOW_SIZE // 2)
         )
         print(intervals)
 
@@ -79,7 +87,7 @@ rule make_positions_chrom:
         "results/positions/{chrom}/positions.parquet",
     run:
         intervals = pd.read_parquet(input[0]).query(f"chrom == '{wildcards.chrom}'")
-        intervals = bf.expand(intervals, pad=-config["window_size"]//2)
+        intervals = bf.expand(intervals, pad=-config["window_size"] // 2)
         intervals = filter_length(intervals, 1)
         positions = pd.concat(
             intervals.progress_apply(find_positions, axis=1).values, ignore_index=True
@@ -98,8 +106,7 @@ rule get_logits:
         "results/checkpoints/{alignment}/{species}/{window_size}/{model}",
     output:
         "{anything}/logits/{alignment,[A-Za-z0-9]+}/{species,[A-Za-z0-9]+}/{window_size,\d+}/{model}.parquet",
-    threads:
-        workflow.cores
+    threads: workflow.cores
     shell:
         """
         torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}') -m gpn.msa.inference logits {input[0]} {input[1]} {wildcards.window_size} {input[2]} {output} \
@@ -113,10 +120,10 @@ rule download_jaspar:
         "results/jaspar.meme",
     shell:
         "wget -O {output} https://jaspar.genereg.net/download/data/2022/CORE/JASPAR2022_CORE_vertebrates_non-redundant_pfms_meme.txt"
-    
+
 
 # example:
-# snakemake --cores all --use-conda --conda-frontend mamba 
+# snakemake --cores all --use-conda --conda-frontend mamba
 rule run_modisco:
     input:
         "{anything}/positions.parquet",
@@ -149,8 +156,7 @@ rule process_logits:
         "results/genome.fa.gz",
     output:
         "results/{anything}/processed_logits/{model}.parquet",
-    threads:
-        workflow.cores
+    threads: workflow.cores
     run:
         V1 = pl.read_parquet(input[0])[["chrom", "pos"]]
         V2 = pl.read_parquet(input[1])
@@ -159,19 +165,24 @@ rule process_logits:
         chrom = V["chrom"][0]
         seq = Genome(input[2])._genome[chrom].upper()
         seq = np.frombuffer(seq.encode("ascii"), dtype="S1")
-        V = V.with_columns(ref=seq[V["pos"]-1])
+        V = V.with_columns(ref=seq[V["pos"] - 1])
         V = V.with_columns(ref=pl.col("ref").cast(str))
         # sorry, this is horrible, was more elegant in pandas
         V = V.with_columns(
-            V.select(ref_logit=(
-                pl.when(pl.col("ref") == "A").then(pl.col("A"))
-                .when(pl.col("ref") == "C").then(pl.col("C"))
-                .when(pl.col("ref") == "G").then(pl.col("G"))
-                .when(pl.col("ref") == "T").then(pl.col("T"))
-        )))
-        V = V.with_columns(
-            V[NUCLEOTIDES] - V["ref_logit"]
+            V.select(
+                ref_logit=(
+                    pl.when(pl.col("ref") == "A")
+                    .then(pl.col("A"))
+                    .when(pl.col("ref") == "C")
+                    .then(pl.col("C"))
+                    .when(pl.col("ref") == "G")
+                    .then(pl.col("G"))
+                    .when(pl.col("ref") == "T")
+                    .then(pl.col("T"))
+                )
+            )
         )
+        V = V.with_columns(V[NUCLEOTIDES] - V["ref_logit"])
         V = V.select(["chrom", "pos", "ref"] + NUCLEOTIDES)
         print(V)
         V.write_parquet(output[0])
@@ -182,15 +193,19 @@ rule get_llr:
         "results/{anything}/processed_logits/{model}.parquet",
     output:
         "results/{anything}/llr/{model}.parquet",
-    threads:
-        workflow.cores
+    threads: workflow.cores
     run:
-        V = pl.read_parquet(
-            input[0]
-        ).melt(
-            id_vars=["chrom", "pos", "ref"], value_vars=NUCLEOTIDES,
-            variable_name="alt", value_name="score"
-        ).sort(["chrom", "pos", "ref"]).filter(pl.col("ref") != pl.col("alt"))
+        V = (
+            pl.read_parquet(input[0])
+            .melt(
+                id_vars=["chrom", "pos", "ref"],
+                value_vars=NUCLEOTIDES,
+                variable_name="alt",
+                value_name="score",
+            )
+            .sort(["chrom", "pos", "ref"])
+            .filter(pl.col("ref") != pl.col("alt"))
+        )
         print(V)
         V.write_parquet(output[0])
 
@@ -209,10 +224,10 @@ rule logits_merge_chroms:
         "cat {input} > {output}"
 
 
-#ruleorder: logits_merge_chroms > process_logits
+# ruleorder: logits_merge_chroms > process_logits
 #
 #
-#rule logits_merge_chroms:
+# rule logits_merge_chroms:
 #    input:
 #        expand("results/positions/{chrom}/{{anything}}/{{model}}.parquet", chrom=CHROMS),
 #    output:
@@ -233,36 +248,43 @@ rule all3:
         #f"results/positions/merged/processed_logits/{best_model}.tsv.bgz.tbi",
         #f"results/positions/merged/llr/{best_model}.tsv.bgz.tbi",
         #f"results/positions/22/probs_wig/{best_model}/A.bw",
-        expand("results/positions/merged/probs_wig/{model}/{nuc}.bw", model=[best_model], nuc=NUCLEOTIDES),
+        expand(
+            "results/positions/merged/probs_wig/{model}/{nuc}.bw",
+            model=[best_model],
+            nuc=NUCLEOTIDES,
+        ),
 
 
 rule make_probs_wig:
     input:
         "results/positions/{chrom}/processed_logits/{model}.parquet",
     output:
-        temp(expand("results/positions/{{chrom}}/probs_wig/{{model}}/{nuc}.wig", nuc=NUCLEOTIDES)),
+        temp(
+            expand(
+                "results/positions/{{chrom}}/probs_wig/{{model}}/{nuc}.wig",
+                nuc=NUCLEOTIDES,
+            )
+        ),
     wildcard_constraints:
-        chrom="|".join(CHROMS)
+        chrom="|".join(CHROMS),
     threads: workflow.cores // 4
     run:
         V = pl.read_parquet(input[0])
         V = V.with_columns(
             pl.DataFrame(softmax(V.select(NUCLEOTIDES), axis=1), schema=NUCLEOTIDES)
         )
-        V = (
-            V.with_columns(
-                entropy=entropy(V.select(NUCLEOTIDES), base=2, axis=1)
-            )
-            .with_columns(
-                (pl.col(NUCLEOTIDES) * (2 - pl.col("entropy")))
-            )
-        )
+        V = V.with_columns(
+            entropy=entropy(V.select(NUCLEOTIDES), base=2, axis=1)
+        ).with_columns((pl.col(NUCLEOTIDES) * (2 - pl.col("entropy"))))
         for nuc, path in zip(NUCLEOTIDES, output):
-            with open(path, 'w') as f:
+            with open(path, "w") as f:
                 f.write(f"variableStep chrom=chr{wildcards.chrom}\n")
-            with open(path, 'ab') as f:
+            with open(path, "ab") as f:
                 V.select(["pos", nuc]).write_csv(
-                    f, separator="\t", include_header=False, float_precision=2,
+                    f,
+                    separator="\t",
+                    include_header=False,
+                    float_precision=2,
                 )
 
 
@@ -297,7 +319,10 @@ rule make_chrom_sizes:
         intervals = Genome(input[0], subset_chroms=CHROMS).get_all_intervals()
         intervals.chrom = "chr" + intervals.chrom
         intervals.to_csv(
-            output[0], sep="\t", index=False, header=False,
+            output[0],
+            sep="\t",
+            index=False,
+            header=False,
             columns=["chrom", "end"],
         )
 
@@ -307,7 +332,7 @@ rule convert_bed_to_bigwig:
         "{anything}.bed",
         "results/chrom.sizes",
     output:
-        "{anything}.bw"
+        "{anything}.bw",
     shell:
         # using a local download because conda version didn't work
         "./bedGraphToBigWig {input} {output}"

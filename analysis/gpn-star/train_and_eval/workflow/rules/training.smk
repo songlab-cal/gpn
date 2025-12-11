@@ -6,13 +6,15 @@ import zarr
 from Bio import Phylo
 import networkx as nx
 
+
 rule download_reference:
     output:
         "results/genome/{genome}.fa.gz",
     params:
-        FASTA_URL = lambda wildcards: FASTA_URLS[wildcards.genome]
+        FASTA_URL=lambda wildcards: FASTA_URLS[wildcards.genome],
     shell:
         "wget {params.FASTA_URL} -O {output}"
+
 
 rule make_defined_intervals:
     input:
@@ -47,14 +49,17 @@ rule get_conservation_intervals:
 
         operation = wildcards["operation"]
 
+
         def run_operation(v):
             if operation == "mean":
                 return bw.stats(f"chr{v.chrom}", v.start, v.end, exact=True)[0]
             elif operation == "percentile-75":
                 return np.quantile(bw.values(f"chr{v.chrom}", v.start, v.end), 0.75)
 
+
         intervals["conservation"] = intervals.progress_apply(
-            run_operation, axis=1,
+            run_operation,
+            axis=1,
         )
         print(intervals)
         intervals.to_parquet(output[0])
@@ -70,15 +75,19 @@ rule filter_conservation_intervals:
         print(intervals)
         top_frac = float(wildcards["top_frac"])
         random_frac = float(wildcards["random_frac"])
-        mask_top = intervals.conservation >= intervals.conservation.quantile(1-top_frac)
+        mask_top = intervals.conservation >= intervals.conservation.quantile(
+            1 - top_frac
+        )
         top_intervals = intervals[mask_top]
         print(top_intervals)
         assert not top_intervals.conservation.isna().any()
-        random_intervals = intervals[~mask_top].sample(frac=random_frac, random_state=42)
+        random_intervals = intervals[~mask_top].sample(
+            frac=random_frac, random_state=42
+        )
         print(random_intervals)
         res = pd.concat([top_intervals, random_intervals], ignore_index=True)
         print(res)
-        #res = bf.merge(res[["chrom", "start", "end"]]).drop(columns="n_intervals")
+        # res = bf.merge(res[["chrom", "start", "end"]]).drop(columns="n_intervals")
         res = res[["chrom", "start", "end"]].drop_duplicates()
         print(res)
         res.to_parquet(output[0], index=False)
@@ -86,7 +95,10 @@ rule filter_conservation_intervals:
 
 def get_phylop_bw(wc):
     """Return path to the .bw file based on a lookup table."""
-    return f"results/conservation/{wc.genome}/{PHYLOP_PHASTCONS_GROUP[wc.conservation]}.bw"
+    return (
+        f"results/conservation/{wc.genome}/{PHYLOP_PHASTCONS_GROUP[wc.conservation]}.bw"
+    )
+
 
 rule make_dataset:
     input:
@@ -95,7 +107,10 @@ rule make_dataset:
         "results/conservation/{genome}/{conservation}.bw",
         "results/genome/{genome}.fa.gz",
     output:
-        expand("results/dataset/{{genome}}/{{window_size}}/{{step_size}}/{{add_rc}}/defined.{{conservation}}.{{operation}}_{{top_frac}}_{{random_frac}}/{split}.parquet", split=SPLITS),
+        expand(
+            "results/dataset/{{genome}}/{{window_size}}/{{step_size}}/{{add_rc}}/defined.{{conservation}}.{{operation}}_{{top_frac}}_{{random_frac}}/{split}.parquet",
+            split=SPLITS,
+        ),
     threads: workflow.cores
     run:
         intervals = pd.read_parquet(input[0])
@@ -114,19 +129,25 @@ rule make_dataset:
         phastCons_obj = BigWig(input[2])
         print("Getting phyloP")
         intervals["phyloP"] = intervals.progress_apply(
-            lambda i: phyloP_obj.get_features("chr" + i.chrom, i.start, i.end, i.strand),
+            lambda i: phyloP_obj.get_features(
+                "chr" + i.chrom, i.start, i.end, i.strand
+            ),
             axis=1,
         )
         print("Getting phastCons")
         intervals["phastCons"] = intervals.progress_apply(
-            lambda i: phastCons_obj.get_features("chr" + i.chrom, i.start, i.end, i.strand),
+            lambda i: phastCons_obj.get_features(
+                "chr" + i.chrom, i.start, i.end, i.strand
+            ),
             axis=1,
         )
         print("Loading genome")
         genome = Genome(input[3])
         print("Getting lowercase")
         intervals["lowercase"] = intervals.progress_apply(
-            lambda i: np.char.islower(list(genome.get_seq(i.chrom, i.start, i.end, i.strand))),
+            lambda i: np.char.islower(
+                list(genome.get_seq(i.chrom, i.start, i.end, i.strand))
+            ),
             axis=1,
         )
 
@@ -135,34 +156,43 @@ rule make_dataset:
 
         for path, split in zip(output, SPLITS):
             print(path, split)
-            intervals[
-                intervals.chrom.isin(SPLIT_CHROMS[split])
-            ].to_parquet(path, index=False, engine="pyarrow")
-            
+            intervals[intervals.chrom.isin(SPLIT_CHROMS[split])].to_parquet(
+                path, index=False, engine="pyarrow"
+            )
+
 
 rule compute_phylo_dist:
     input:
         "results/phylo_info/{genome}/{alignment}/{species}/phylo_tree.nh",
     output:
-        directory("results/phylo_info/{genome}/{alignment}/{species}/phylo_dist/{clade_thres}"),
+        directory(
+            "results/phylo_info/{genome}/{alignment}/{species}/phylo_dist/{clade_thres}"
+        ),
     run:
-
         def cluster_clades(phylo_dist_pairwise, threshold):
             N = phylo_dist_pairwise.shape[0]
             G = nx.Graph()
             G.add_nodes_from(range(N))
             for i in range(N):
-                for j in range(i+1, N):
+                for j in range(i + 1, N):
                     if phylo_dist_pairwise[i, j] <= threshold:
                         G.add_edge(i, j)
-            clade_dict = {i: nodes for i, nodes in enumerate(list(nx.connected_components(G)))}
+            clade_dict = {
+                i: nodes for i, nodes in enumerate(list(nx.connected_components(G)))
+            }
             return clade_dict
 
-        phylo_tree = Phylo.read(input[0], 'newick')
+
+        phylo_tree = Phylo.read(input[0], "newick")
         # Get pairwise phylo distance
         leaves = phylo_tree.get_terminals()
-        print('Computing pairwise phylogenetic distances...')
-        phylo_dist_pairwise = np.array([[phylo_tree.distance(leaf1, leaf2) for leaf2 in leaves] for leaf1 in tqdm(leaves)])
+        print("Computing pairwise phylogenetic distances...")
+        phylo_dist_pairwise = np.array(
+            [
+                [phylo_tree.distance(leaf1, leaf2) for leaf2 in leaves]
+                for leaf1 in tqdm(leaves)
+            ]
+        )
 
         clade_dict = cluster_clades(phylo_dist_pairwise, float(wildcards.clade_thres))
 
@@ -171,12 +201,14 @@ rule compute_phylo_dist:
         for clade_id, species in clade_dict.items():
             leaves_in_clade = [leaves[i] for i in list(species)]
             clade_mcra = phylo_tree.common_ancestor(leaves_in_clade)
-            dist_to_mcra = [phylo_tree.distance(leaf, clade_mcra) for leaf in leaves_in_clade]
+            dist_to_mcra = [
+                phylo_tree.distance(leaf, clade_mcra) for leaf in leaves_in_clade
+            ]
             for s, d in zip(list(species), dist_to_mcra):
                 in_clade_phylo_dist[s] = d
-        os.makedirs(output[0], exist_ok=True) 
-        np.save(output[0] + '/pairwise.npy', phylo_dist_pairwise)
-        np.save(output[0] + '/in_clade.npy', in_clade_phylo_dist)
+        os.makedirs(output[0], exist_ok=True)
+        np.save(output[0] + "/pairwise.npy", phylo_dist_pairwise)
+        np.save(output[0] + "/in_clade.npy", in_clade_phylo_dist)
 
 
 def model_config(wildcards, output):
@@ -187,7 +219,7 @@ def model_config(wildcards, output):
     time_enc = wildcards.time_enc
     clade_thres = wildcards.clade_thres
 
-    if s == "small" and w == 128: 
+    if s == "small" and w == 128:
         conf = ",num_hidden_layers=8,num_attention_heads=8,hidden_size=512,intermediate_size=2048 --per_device_train_batch_size 64 --per_device_eval_batch_size 16 --gradient_accumulation_steps 1"
     elif s == "small" and w == 256:
         conf = ",num_hidden_layers=8,num_attention_heads=8,hidden_size=512,intermediate_size=2048 --per_device_train_batch_size 32 --per_device_eval_batch_size 8 --gradient_accumulation_steps 1"
@@ -207,10 +239,17 @@ def model_config(wildcards, output):
         raise Exception("Invalid model config")
 
     if s == "large":
-        conf = f'--learning_rate 5e-5 --config_overrides time_enc={time_enc},clade_thres={clade_thres}' + conf
+        conf = (
+            f"--learning_rate 5e-5 --config_overrides time_enc={time_enc},clade_thres={clade_thres}"
+            + conf
+        )
     else:
-        conf = f'--learning_rate 1e-4 --config_overrides time_enc={time_enc},clade_thres={clade_thres}' + conf
+        conf = (
+            f"--learning_rate 1e-4 --config_overrides time_enc={time_enc},clade_thres={clade_thres}"
+            + conf
+        )
     return conf
+
 
 rule train_gpn_star:
     input:
@@ -218,7 +257,9 @@ rule train_gpn_star:
         "results/phylo_info/{genome}/{alignment}/{species}/phylo_dist/{clade_thres}",
         expand("results/dataset/{{genome}}/{{dataset}}/{split}.parquet", split=SPLITS),
     output:
-        directory("results/checkpoints/{genome}/{time_enc}/{clade_thres}/{alignment}/{species}/{dataset}/{model_size}/{loss_weight}/{seed}/{max_steps}/{use_aux_features}/{weight_conserved}/{flip_nonconserved}"),
+        directory(
+            "results/checkpoints/{genome}/{time_enc}/{clade_thres}/{alignment}/{species}/{dataset}/{model_size}/{loss_weight}/{seed}/{max_steps}/{use_aux_features}/{weight_conserved}/{flip_nonconserved}"
+        ),
     wildcard_constraints:
         genome="[A-Za-z0-9_-]+",
         time_enc="[A-Za-z0-9_-]+",
@@ -228,11 +269,10 @@ rule train_gpn_star:
     params:
         model_conf=model_config,
         project_name=lambda wildcards: wildcards.dataset.replace("/", "_"),
-        run_name=lambda wildcards, output: '/'.join(output[0].split("/")[2:]),
-    threads:
-        workflow.cores
+        run_name=lambda wildcards, output: "/".join(output[0].split("/")[2:]),
+    threads: workflow.cores
     priority: 100
-    shell:       
+    shell:
         """
         num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}')
         num_cpus={threads}

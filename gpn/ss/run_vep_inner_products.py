@@ -94,8 +94,12 @@ def run_vep(
             )
 
         res = {}
-        res["input_ids_ref_fwd"], res["input_ids_alt_fwd"] = prepare_output(seq_fwd, pos_fwd, ref_fwd, alt_fwd)
-        res["input_ids_ref_rev"], res["input_ids_alt_rev"] = prepare_output(seq_rev, pos_rev, ref_rev, alt_rev)
+        res["input_ids_ref_fwd"], res["input_ids_alt_fwd"] = prepare_output(
+            seq_fwd, pos_fwd, ref_fwd, alt_fwd
+        )
+        res["input_ids_ref_rev"], res["input_ids_alt_rev"] = prepare_output(
+            seq_rev, pos_rev, ref_rev, alt_rev
+        )
         return res
 
     variants.set_transform(get_tokenized_seq)

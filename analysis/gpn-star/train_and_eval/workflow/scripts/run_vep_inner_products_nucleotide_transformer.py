@@ -14,7 +14,7 @@ import gpn.model
 from gpn.data import Genome, load_dataset_from_file_or_dir, token_input_id
 
 
-window_size = 5994 #11994 #5994
+window_size = 5994  # 11994 #5994
 k = 6
 nucleotides = list("ACGT")
 
@@ -23,7 +23,8 @@ class VEPEmbedding(torch.nn.Module):
     def __init__(self, model_path):
         super().__init__()
         self.model = AutoModel.from_pretrained(
-            model_path, trust_remote_code=True,
+            model_path,
+            trust_remote_code=True,
         )
 
     def get_embedding(self, input_ids):
@@ -94,8 +95,10 @@ def run_vep(
             # unk token
             res = []
             for x in seq:
-                kmers = ["".join(x[i*k:(i+1)*k]) for i in range(n_kmers)]
-                kmers = [kmer if set(kmer) <= set(nucleotides) else "N" for kmer in kmers]
+                kmers = ["".join(x[i * k : (i + 1) * k]) for i in range(n_kmers)]
+                kmers = [
+                    kmer if set(kmer) <= set(nucleotides) else "N" for kmer in kmers
+                ]
                 res.append("".join(kmers))
             return res
 
@@ -110,8 +113,12 @@ def run_vep(
             )
 
         res = {}
-        res["input_ids_ref_fwd"], res["input_ids_alt_fwd"] = prepare_output(seq_fwd, pos_fwd, ref_fwd, alt_fwd)
-        res["input_ids_ref_rev"], res["input_ids_alt_rev"] = prepare_output(seq_rev, pos_rev, ref_rev, alt_rev)
+        res["input_ids_ref_fwd"], res["input_ids_alt_fwd"] = prepare_output(
+            seq_fwd, pos_fwd, ref_fwd, alt_fwd
+        )
+        res["input_ids_ref_rev"], res["input_ids_alt_rev"] = prepare_output(
+            seq_rev, pos_rev, ref_rev, alt_rev
+        )
         return res
 
     variants.set_transform(get_tokenized_seq)
@@ -131,15 +138,16 @@ if __name__ == "__main__":
         description="Run zero-shot variant effect prediction with AutoModelForMaskedLM"
     )
     parser.add_argument(
-        "variants_path", type=str,
+        "variants_path",
+        type=str,
         help="Variants path. Needs the following columns: chrom,pos,ref,alt. pos should be 1-based",
     )
     parser.add_argument(
-        "genome_path", type=str, help="Genome path (fasta, potentially compressed)",
+        "genome_path",
+        type=str,
+        help="Genome path (fasta, potentially compressed)",
     )
-    parser.add_argument(
-        "model_path", help="Model path (local or on HF hub)", type=str
-    )
+    parser.add_argument("model_path", help="Model path (local or on HF hub)", type=str)
     parser.add_argument("output_path", help="Output path (parquet)", type=str)
     parser.add_argument(
         "--per_device_batch_size",
@@ -148,22 +156,30 @@ if __name__ == "__main__":
         default=8,
     )
     parser.add_argument(
-        "--tokenizer_path", type=str,
+        "--tokenizer_path",
+        type=str,
         help="Tokenizer path (optional, else will use model_path)",
     )
     parser.add_argument(
         "--dataloader_num_workers", type=int, default=0, help="Dataloader num workers"
     )
     parser.add_argument(
-        "--split", type=str, default="test", help="Dataset split",
+        "--split",
+        type=str,
+        default="test",
+        help="Dataset split",
     )
     parser.add_argument(
-        "--is_file", action="store_true", help="VARIANTS_PATH is a file, not directory",
+        "--is_file",
+        action="store_true",
+        help="VARIANTS_PATH is a file, not directory",
     )
     args = parser.parse_args()
 
     variants = load_dataset_from_file_or_dir(
-        args.variants_path, split=args.split, is_file=args.is_file,
+        args.variants_path,
+        split=args.split,
+        is_file=args.is_file,
     )
     subset_chroms = np.unique(variants["chrom"])
     genome = Genome(args.genome_path, subset_chroms=subset_chroms)
@@ -172,13 +188,16 @@ if __name__ == "__main__":
     )
     model = VEPEmbedding(args.model_path)
     pred = run_vep(
-        variants, genome, tokenizer, model,
+        variants,
+        genome,
+        tokenizer,
+        model,
         per_device_batch_size=args.per_device_batch_size,
         dataloader_num_workers=args.dataloader_num_workers,
     )
     directory = os.path.dirname(args.output_path)
     if directory != "" and not os.path.exists(directory):
         os.makedirs(directory)
-    pd.DataFrame(
-        pred, columns=[f"embed_{i}" for i in range(pred.shape[1])]
-    ).to_parquet(args.output_path, index=False)
+    pd.DataFrame(pred, columns=[f"embed_{i}" for i in range(pred.shape[1])]).to_parquet(
+        args.output_path, index=False
+    )
