@@ -27,17 +27,19 @@ rule process_enformer_precomputed_full:
 
         f = h5py.File(input[0])
 
-        V = pd.DataFrame({
-            "chrom": f["chr"][:].astype(str),
-            "pos": f["pos"][:],
-            "ref": f["ref"][:].astype(str),
-            "alt": f["alt"][:].astype(str),
-        })
+        V = pd.DataFrame(
+            {
+                "chrom": f["chr"][:].astype(str),
+                "pos": f["pos"][:],
+                "ref": f["ref"][:].astype(str),
+                "alt": f["alt"][:].astype(str),
+            }
+        )
         V["idx"] = np.arange(len(V))
         print(V)
 
         V.chrom = V.chrom.str.replace("chr", "")
-        V = V[(V.ref.str.len()==1) & (V.alt.str.len()==1)]
+        V = V[(V.ref.str.len() == 1) & (V.alt.str.len() == 1)]
         print(V.shape)
         V = lift_hg19_to_hg38(V)
         V = V[V.pos != -1]
@@ -73,30 +75,37 @@ rule run_vep_enformer:
     output:
         expand("results/preds/{{dataset}}/Enformer_{norm}.parquet", norm=enformer_norms),
     wildcard_constraints:
-        dataset="|".join(datasets + ["results/variants_enformer", "results/gnomad/all/defined/128"]),
-    threads:
-        workflow.cores
+        dataset="|".join(
+            datasets + ["results/variants_enformer", "results/gnomad/all/defined/128"]
+        ),
+    threads: workflow.cores
     run:
         import h5py
 
         V = load_dataset_from_file_or_dir(wildcards["dataset"]).to_pandas()
 
         coords = pd.read_parquet(input.coords)
-        
+
         all_res = []
 
         for chrom, data_path in tqdm(zip(enformer_chroms, input.data)):
-            coords_c = coords.merge(V.loc[V.chrom==chrom, COORDINATES], on=COORDINATES, how="inner")
+            coords_c = coords.merge(
+                V.loc[V.chrom == chrom, COORDINATES], on=COORDINATES, how="inner"
+            )
             f = h5py.File(data_path)
             data = f["SAD"][:]  # load into memory
-            #data = f["SAD"]  # do not load into memory
+            # data = f["SAD"]  # do not load into memory
             data = data[coords_c.idx.values]
-            data = pd.DataFrame({
-                "Enformer_l1": -np.linalg.norm(data, axis=1, ord=1).astype(float),
-                "Enformer_l2": -np.linalg.norm(data, axis=1, ord=2).astype(float),
-                "Enformer_linf": -np.linalg.norm(data, axis=1, ord=np.inf).astype(float),
-            })
-            res  = pd.concat([coords_c, data], axis=1)
+            data = pd.DataFrame(
+                {
+                    "Enformer_l1": -np.linalg.norm(data, axis=1, ord=1).astype(float),
+                    "Enformer_l2": -np.linalg.norm(data, axis=1, ord=2).astype(float),
+                    "Enformer_linf": -np.linalg.norm(data, axis=1, ord=np.inf).astype(
+                        float
+                    ),
+                }
+            )
+            res = pd.concat([coords_c, data], axis=1)
             all_res.append(res)
         res = pd.concat(all_res, ignore_index=True)
 
@@ -113,9 +122,10 @@ rule run_vep_embeddings_enformer:
     output:
         "results/preds/vep_embedding/{dataset}/Enformer.parquet",
     wildcard_constraints:
-        dataset="|".join(datasets + ["results/variants_enformer", "results/gnomad/all/defined/128"]),
-    threads:
-        workflow.cores
+        dataset="|".join(
+            datasets + ["results/variants_enformer", "results/gnomad/all/defined/128"]
+        ),
+    threads: workflow.cores
     run:
         import h5py
 
@@ -123,18 +133,18 @@ rule run_vep_embeddings_enformer:
         V = load_dataset_from_file_or_dir(wildcards["dataset"]).to_pandas()
 
         coords = pd.read_parquet(input.coords)
-        
+
         labels = [f"feature_{i}" for i in range(5313)]
 
         all_res = []
 
         for chrom, data_path in tqdm(zip(enformer_chroms, input.data)):
-            coords_c = coords.merge(V.loc[V.chrom==chrom, cols], on=cols, how="inner")
+            coords_c = coords.merge(V.loc[V.chrom == chrom, cols], on=cols, how="inner")
             f = h5py.File(data_path)
-            #data = f["SAD"][:]  # load into memory
+            # data = f["SAD"][:]  # load into memory
             data = f["SAD"]  # do not load into memory
             data = pd.DataFrame(data[coords_c.idx.values].astype(float), columns=labels)
-            res  = pd.concat([coords_c, data], axis=1)
+            res = pd.concat([coords_c, data], axis=1)
             recoded = (res.ref != f["ref"][res.idx.values].astype(str)).values
             res.loc[recoded, data.columns] *= -1
             all_res.append(res)

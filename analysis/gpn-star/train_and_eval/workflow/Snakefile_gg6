@@ -4,9 +4,18 @@ import bioframe as bf
 from datasets import load_dataset, disable_caching, Dataset
 from gpn.star.data import load_fasta, load_table, Genome, load_dataset_from_file_or_dir
 from gpn.star.data import (
-    filter_defined, filter_length, load_table, add_flank, get_annotation_features,
-    add_jitter, get_promoters, get_random_intervals, union_intervals,
-    intersect_intervals, intervals_size, get_balanced_intervals,
+    filter_defined,
+    filter_length,
+    load_table,
+    add_flank,
+    get_annotation_features,
+    add_jitter,
+    get_promoters,
+    get_random_intervals,
+    union_intervals,
+    intersect_intervals,
+    intervals_size,
+    get_balanced_intervals,
 )
 from gpn.star.data import make_windows, get_seq
 from gpn.star.data import GenomeMSA
@@ -21,11 +30,14 @@ import scipy.sparse as sp_sparse
 from scipy.special import softmax
 from scipy.stats import combine_pvalues, entropy
 from tqdm import tqdm
+
 tqdm.pandas()
 
 NUCLEOTIDES = list("ACGT")
 WINDOW_SIZE = 128
-FASTA_URLS = {"gg6": "http://ftp.ensembl.org/pub/release-106/fasta/gallus_gallus/dna/Gallus_gallus.GRCg6a.dna_sm.toplevel.fa.gz",}
+FASTA_URLS = {
+    "gg6": "http://ftp.ensembl.org/pub/release-106/fasta/gallus_gallus/dna/Gallus_gallus.GRCg6a.dna_sm.toplevel.fa.gz",
+}
 
 CALIBRATION_CONFIGS = {
     "use_ancestral_repeats": True,
@@ -36,7 +48,7 @@ CALIBRATION_CONFIGS = {
     "phastcons": "phastCons77way",
 }
 
-SEX_CHROMS = ['Z', 'W']
+SEX_CHROMS = ["Z", "W"]
 
 SPLIT_CHROMS = {
     "train": [str(i) for i in range(1, 25)] + SEX_CHROMS,
@@ -49,10 +61,10 @@ CHROMS = np.concatenate(list(SPLIT_CHROMS.values()))
 
 AUTOSOMES = [str(i) for i in range(1, 29)] + ["30", "31", "32", "33"]
 
-PHYLOP_PHASTCONS_GROUP = {'phastCons77way': 'phyloP77way'}
+PHYLOP_PHASTCONS_GROUP = {"phastCons77way": "phyloP77way"}
 
 vep_datasets = [
-    #"results/chicken_snps/rare_vs_common",
+    # "results/chicken_snps/rare_vs_common",
 ]
 
 model_template = "{genome}/{time_enc}/{clade_thres}/{dataset}/{model_size}/{loss_weight}/{seed}/{max_steps}/{use_aux_features}/{weight_conserved}/{flip_nonconserved}"
@@ -62,23 +74,18 @@ hparams = {
     "dataset": [
         "multiz77way/77/128/64/True/defined.phastCons77way.percentile-75_0.05_0.001",
     ],
-
     "interval": [
         "128/64/True/defined.phastCons77way.percentile-75_0.05_0.001",
     ],
-    
     "genome": [
         "gg6",
     ],
-
     "time_enc": [
         "fire_1",
     ],
-
     "clade_thres": [
         "0.2",
     ],
-
     "use_aux_features": [
         True,
     ],
@@ -116,29 +123,37 @@ models = sum(
             model_size=[
                 "small",
                 "medium",
-                #"large",
+                # "large",
             ],
-        ) for m in hparam_models
+        )
+        for m in hparam_models
     ],
-    []
+    [],
 )
 best_model = models[0]
-#models = [best_model]
+# models = [best_model]
+
 
 include: "rules/common.smk"
 include: "rules/training.smk"
 include: "rules/vep.smk"
 include: "rules/logits.smk"
 include: "rules/calibration.smk"
-#include: "rules/embeddings.smk"
+# include: "rules/embeddings.smk"
 include: "rules/conservation.smk"
 
-#models += ['gg6/phastCons77way', 'gg6/phyloP77way']
+
+# models += ['gg6/phastCons77way', 'gg6/phyloP77way']
 
 print(models)
 print(vep_datasets)
 
+
 rule all:
     input:
         #expand("results/checkpoints/{model}", model=models),
-        expand("results/preds/llr/{dataset}/{model}.parquet", model=models, dataset=vep_datasets),
+        expand(
+            "results/preds/llr/{dataset}/{model}.parquet",
+            model=models,
+            dataset=vep_datasets,
+        ),

@@ -13,10 +13,11 @@ rule run_vep_nucleotide_transformer:
     output:
         "results/preds/{dataset}/{model}.parquet",
     wildcard_constraints:
-        dataset="|".join(datasets + ["results/variants_enformer", "results/gnomad/all/defined/128"]),
-        model="|".join(nucleotide_transformer_models)
-    threads:
-        workflow.cores
+        dataset="|".join(
+            datasets + ["results/variants_enformer", "results/gnomad/all/defined/128"]
+        ),
+        model="|".join(nucleotide_transformer_models),
+    threads: workflow.cores
     params:
         lambda wildcards: nucleotide_transformer_params[wildcards.model],
     priority: 20
@@ -26,8 +27,10 @@ rule run_vep_nucleotide_transformer:
         {wildcards.model} {output} --dataloader-num-workers 8 {params}
         """
 
+
 # seems to be running out of memory, will not spend more time on this since it's not a priority
 # torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}') workflow/scripts/run_vep_nucleotide_transformer.py {wildcards.dataset} {input} \
+
 
 rule run_vep_embeddings_nucleotide_transformer:
     input:
@@ -35,10 +38,11 @@ rule run_vep_embeddings_nucleotide_transformer:
     output:
         "results/preds/vep_embedding/{dataset}/{model}.parquet",
     wildcard_constraints:
-        dataset="|".join(datasets + ["results/variants_enformer", "results/gnomad/all/defined/128"]),
-        model="|".join(nucleotide_transformer_models)
-    threads:
-        workflow.cores
+        dataset="|".join(
+            datasets + ["results/variants_enformer", "results/gnomad/all/defined/128"]
+        ),
+        model="|".join(nucleotide_transformer_models),
+    threads: workflow.cores
     params:
         lambda wildcards: nucleotide_transformer_params[wildcards.model],
     priority: 20
@@ -47,6 +51,7 @@ rule run_vep_embeddings_nucleotide_transformer:
         python workflow/scripts/run_vep_embeddings_nucleotide_transformer.py {wildcards.dataset} {input} \
         {wildcards.model} {output} --dataloader-num-workers 16 {params}
         """
+
 
 # seems to be running out of memory, will not spend more time on this since it's not a priority
 # torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}') workflow/scripts/run_vep_embeddings_nucleotide_transformer.py {wildcards.dataset} {input} \

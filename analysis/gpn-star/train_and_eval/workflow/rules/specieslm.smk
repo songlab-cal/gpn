@@ -4,8 +4,7 @@ rule specieslm_run_vep_llr:
         "results/genome/{genome}.fa.gz",
     output:
         "results/preds/{dataset}/{genome}/SpeciesLM_LLR.parquet",
-    threads:
-        workflow.cores
+    threads: workflow.cores
     priority: 20
     shell:
         """

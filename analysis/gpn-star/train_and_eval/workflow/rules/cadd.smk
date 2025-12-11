@@ -21,7 +21,7 @@ rule cadd_extract_chrom:
         chrom="|".join(CHROMS),
     shell:
         "tabix {input} {wildcards.chrom} | gzip -c > {output}"
-        
+
 
 rule cadd_process_chrom:
     input:
@@ -33,7 +33,10 @@ rule cadd_process_chrom:
     run:
         (
             pl.read_csv(
-                input[0], has_header=False, separator="\t", columns=[0, 1, 2, 3, 4],
+                input[0],
+                has_header=False,
+                separator="\t",
+                columns=[0, 1, 2, 3, 4],
                 new_columns=COORDINATES + ["score"],
                 dtypes={"chrom": str, "score": pl.Float32},
             )
@@ -42,7 +45,7 @@ rule cadd_process_chrom:
         )
 
 
-#rule prepare_tabix_input:
+# rule prepare_tabix_input:
 #    output:
 #        temp("results/preds/{dataset}/tabix.input.tsv.gz"),
 #    run:
@@ -53,7 +56,7 @@ rule cadd_process_chrom:
 #        df.to_csv(output[0], sep="\t", index=False, header=False)
 #
 #
-#rule run_tabix_CADD:
+# rule run_tabix_CADD:
 #    input:
 #        "results/cadd/all.tsv.gz",
 #        "{anything}/tabix.input.tsv.gz",
@@ -63,7 +66,7 @@ rule cadd_process_chrom:
 #        "tabix {input[0]} -R {input[1]} > {output}"
 #
 #
-#rule process_tabix_output_CADD:
+# rule process_tabix_output_CADD:
 #    input:
 #        "results/preds/{dataset}/tabix.output.tsv",
 #    output:
@@ -86,7 +89,7 @@ rule cadd_process_chrom:
 #        df.to_parquet(output[0], index=False)
 #
 #
-#ruleorder: run_vep_cadd_in_memory > process_tabix_output_CADD
+# ruleorder: run_vep_cadd_in_memory > process_tabix_output_CADD
 
 
 rule run_vep_cadd_in_memory:
@@ -98,10 +101,12 @@ rule run_vep_cadd_in_memory:
     threads: workflow.cores
     run:
         V = pl.read_parquet(input[0], columns=COORDINATES)
-        preds = pl.concat([
-            pl.read_parquet(path).join(V, on=COORDINATES, how="inner")
-            for path in tqdm(input[1:])
-        ]).unique(subset=COORDINATES)
+        preds = pl.concat(
+            [
+                pl.read_parquet(path).join(V, on=COORDINATES, how="inner")
+                for path in tqdm(input[1:])
+            ]
+        ).unique(subset=COORDINATES)
         V = V.join(preds, on=COORDINATES, how="left")
         print(V)
         V.select("score").write_parquet(output[0])

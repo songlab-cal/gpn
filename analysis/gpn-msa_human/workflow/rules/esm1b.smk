@@ -22,7 +22,10 @@ rule make_ensembl_vep_input_v2:
         df["allele"] = df.ref + "/" + df.alt
         df["strand"] = "+"
         df.to_csv(
-            output[0], sep="\t", header=False, index=False,
+            output[0],
+            sep="\t",
+            header=False,
+            index=False,
             columns=["chrom", "start", "end", "allele", "strand"],
         )
 
@@ -76,10 +79,14 @@ rule process_uniprot_id_mapping:
         "results/esm1b/id_mapping.parquet",
     run:
         ensembl2uniprot = pd.read_csv(
-            input[0], sep="\t", header=None,
+            input[0],
+            sep="\t",
+            header=None,
             names=["uniprot_id", "database", "database_id"],
         ).query('database == "Ensembl_TRS"')
-        ensembl2uniprot = ensembl2uniprot.drop_duplicates("database_id")  # only dropping 8
+        ensembl2uniprot = ensembl2uniprot.drop_duplicates(
+            "database_id"
+        )  # only dropping 8
         ensembl2uniprot = ensembl2uniprot.set_index("database_id").uniprot_id
         ensembl2uniprot.to_frame().to_parquet(output[0])
 
@@ -93,6 +100,7 @@ rule process_esm1b_scores:
     run:
         isoform_list = pd.read_csv(input[0], index_col=0).index.values.astype(str)
 
+
         def load_LLR(uniprot_id):
             df = pd.read_csv(Path(input[1]) / f"{uniprot_id}_LLR.csv", index_col=0)
             df = df.stack().reset_index()
@@ -100,8 +108,11 @@ rule process_esm1b_scores:
             df["uniprot_id"] = uniprot_id
             df["pos"] = df.level_1.str.split(" ").str[1].astype(int)
             df["ref"] = df.level_1.str.split(" ").str[0]
-            df = df[["uniprot_id", "pos", "ref", "alt", "score"]].sort_values(["pos", "ref", "alt"])
+            df = df[["uniprot_id", "pos", "ref", "alt", "score"]].sort_values(
+                ["pos", "ref", "alt"]
+            )
             return df
+
 
         print("Loading isoform scores")
         isoform_scores = [load_LLR(isoform) for isoform in tqdm(isoform_list)]
@@ -127,8 +138,13 @@ rule run_vep_esm1b:
         variants = variants[variants.is_valid]
         print(variants)
         protein_variants = pd.read_csv(
-            input[0], sep="\t", comment="#", header=None,
-            names="Uploaded_variation	Location	Allele	Gene	Feature	Feature_type	Consequence	cDNA_position	CDS_position	Protein_position	Amino_acids	Codons	Existing_variation	IMPACT	DISTANCE	STRAND	FLAGS	SWISSPROT	TREMBL	UNIPARC	UNIPROT_ISOFORM".split('\t'),
+            input[0],
+            sep="\t",
+            comment="#",
+            header=None,
+            names="Uploaded_variation	Location	Allele	Gene	Feature	Feature_type	Consequence	cDNA_position	CDS_position	Protein_position	Amino_acids	Codons	Existing_variation	IMPACT	DISTANCE	STRAND	FLAGS	SWISSPROT	TREMBL	UNIPARC	UNIPROT_ISOFORM".split(
+                "\t"
+            ),
         )
         protein_variants = protein_variants[
             protein_variants.Consequence.str.contains("missense_variant")
@@ -139,11 +155,13 @@ rule run_vep_esm1b:
         print(scores)
         ensembl2uniprot = pd.read_parquet(input[2]).uniprot_id
         print(ensembl2uniprot)
-        
+
         protein_variants["uniprot_id"] = ensembl2uniprot.reindex(
             protein_variants.Feature.values
         ).values
-        protein_variants.dropna(subset=['uniprot_id'], inplace=True)  # dropping 541/88220
+        protein_variants.dropna(
+            subset=["uniprot_id"], inplace=True
+        )  # dropping 541/88220
         print(protein_variants)
 
         print("Renaming")
@@ -151,12 +169,12 @@ rule run_vep_esm1b:
             scores.index.get_level_values("uniprot_id").unique()
         )
         protein_variants["uniprot_id"] = protein_variants.progress_apply(
-            lambda v: v.uniprot_id if v.good_match else v.uniprot_id.split('-')[0],
+            lambda v: v.uniprot_id if v.good_match else v.uniprot_id.split("-")[0],
             axis=1,
         )  # isoform aliases for main isoforms
         protein_variants["pos"] = protein_variants.Protein_position.astype(int)
-        protein_variants["ref"] = protein_variants.Amino_acids.str.split('/').str[0]
-        protein_variants["alt"] = protein_variants.Amino_acids.str.split('/').str[1]
+        protein_variants["ref"] = protein_variants.Amino_acids.str.split("/").str[0]
+        protein_variants["alt"] = protein_variants.Amino_acids.str.split("/").str[1]
 
         print("Getting model scores")
         protein_variants["score"] = scores.reindex(
@@ -166,13 +184,15 @@ rule run_vep_esm1b:
         # getting minimum score from effect in different isoforms
         variant_results = protein_variants.groupby("Uploaded_variation").score.min()
         variants["ensembl_name"] = (
-            variants.chrom + "_" +
-            (variants.pos).astype(str) + "_" +
-            variants.ref + "/" + variants.alt
+            variants.chrom
+            + "_"
+            + (variants.pos).astype(str)
+            + "_"
+            + variants.ref
+            + "/"
+            + variants.alt
         )
-        variants["score"] = variant_results.reindex(
-            variants.ensembl_name.values
-        ).values
+        variants["score"] = variant_results.reindex(variants.ensembl_name.values).values
         print(variants.score.isna().value_counts())
         # False    45960
         # True      1770
@@ -196,7 +216,9 @@ rule run_vep_esm1b_dms2:
         scores = (
             pl.read_parquet(input[1])
             .with_columns(
-                (pl.col("ref") + pl.col("pos").cast(str) + pl.col("alt")).alias("mutant")
+                (pl.col("ref") + pl.col("pos").cast(str) + pl.col("alt")).alias(
+                    "mutant"
+                )
             )
             .drop(["pos", "ref", "alt"])
         )

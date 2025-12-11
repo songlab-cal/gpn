@@ -27,15 +27,16 @@ rule run_vep_enformer:
     output:
         "results/dataset/{dataset}/features/Enformer_L2.parquet",
     priority: 101
-    threads:
-        workflow.cores
+    threads: workflow.cores
     shell:
         """
         python \
         workflow/scripts/vep_enformer_borzoi.py {input} enformer human {output} \
         --per_device_batch_size {config[enformer][batch_size]} --dataloader_num_workers {threads} --is_file
         """
-#torchrun --nproc_per_node $(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}') \
+
+
+# torchrun --nproc_per_node $(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}') \
 
 
 rule run_vep_borzoi:
@@ -44,8 +45,7 @@ rule run_vep_borzoi:
         "results/genome.fa.gz",
     output:
         "results/dataset/{dataset}/features/Borzoi_L2.parquet",
-    threads:
-        workflow.cores
+    threads: workflow.cores
     priority: 100
     shell:
         """

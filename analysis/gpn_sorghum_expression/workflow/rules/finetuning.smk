@@ -7,13 +7,14 @@ rule finetune:
     params:
         model_path=lambda wildcards: config["models"][wildcards.model],
         run_name=lambda wildcards: (
-            wildcards.model.replace("/", "_") + "_" +
-            wildcards.hparams.replace("/", "_") + "_" +
-            wildcards.seed
+            wildcards.model.replace("/", "_")
+            + "_"
+            + wildcards.hparams.replace("/", "_")
+            + "_"
+            + wildcards.seed
         ),
         hparams=get_hparams,
-    threads:
-        workflow.cores
+    threads: workflow.cores
     priority: 200
     shell:
         """
@@ -42,6 +43,7 @@ rule finetune:
         --remove_unused_columns False \
         """
 
+
 # this should be updated once we use the new GPN rather than ConvNet class
 #        # --classification_head standard
 
@@ -55,14 +57,15 @@ rule finetune_save_epoch:
     params:
         model_path=lambda wildcards: config["models"][wildcards.model],
         run_name=lambda wildcards: (
-            wildcards.model.replace("/", "_") + "_" +
-            wildcards.hparams.replace("/", "_") + "_" +
-            wildcards.seed +
-            "_epoch"
+            wildcards.model.replace("/", "_")
+            + "_"
+            + wildcards.hparams.replace("/", "_")
+            + "_"
+            + wildcards.seed
+            + "_epoch"
         ),
         hparams=get_hparams,
-    threads:
-        workflow.cores
+    threads: workflow.cores
     priority: 200
     shell:
         """
@@ -100,14 +103,15 @@ rule finetune_save_epoch_lora:
     params:
         model_path=lambda wildcards: config["models"][wildcards.model],
         run_name=lambda wildcards: (
-            wildcards.model.replace("/", "_") + "_" +
-            wildcards.hparams.replace("/", "_") + "_" +
-            wildcards.seed +
-            "_epoch_lora"
+            wildcards.model.replace("/", "_")
+            + "_"
+            + wildcards.hparams.replace("/", "_")
+            + "_"
+            + wildcards.seed
+            + "_epoch_lora"
         ),
         hparams=get_hparams,
-    threads:
-        workflow.cores
+    threads: workflow.cores
     priority: 200
     shell:
         """
@@ -138,22 +142,26 @@ rule finetune_save_epoch_lora:
 
 rule finetune_save_epoch_dataset:
     output:
-        directory("results/checkpoints_epoch_dataset/{dataset}/{model}/{hparams}/{seed}"),
+        directory(
+            "results/checkpoints_epoch_dataset/{dataset}/{model}/{hparams}/{seed}"
+        ),
     wildcard_constraints:
         model="|".join(pretraining_models),
         hparams="|".join(finetuning_hparams),
     params:
         model_path=lambda wildcards: config["models"][wildcards.model],
         run_name=lambda wildcards: (
-            wildcards.dataset.replace("/", "_") + "_" +
-            wildcards.model.replace("/", "_") + "_" +
-            wildcards.hparams.replace("/", "_") + "_" +
-            wildcards.seed +
-            "_epoch"
+            wildcards.dataset.replace("/", "_")
+            + "_"
+            + wildcards.model.replace("/", "_")
+            + "_"
+            + wildcards.hparams.replace("/", "_")
+            + "_"
+            + wildcards.seed
+            + "_epoch"
         ),
         hparams=get_hparams,
-    threads:
-        workflow.cores
+    threads: workflow.cores
     priority: 200
     shell:
         """
@@ -187,16 +195,24 @@ rule predict_validation:
         "results/{checkpoint}",
     output:
         "results/RNAseq/preds/{checkpoint}.parquet",
-    threads:
-        workflow.cores
+    threads: workflow.cores
     run:
         dataset_name = config["finetuning"]["dataset_name"]
         track = config["experimental_data_predict_track"]["PsbS"]
-        tracks = pd.read_csv(f"hf://datasets/{dataset_name}/labels.txt", header=None).values.ravel().tolist()
+        tracks = (
+            pd.read_csv(f"hf://datasets/{dataset_name}/labels.txt", header=None)
+            .values.ravel()
+            .tolist()
+        )
         track_index = tracks.index(track)
         d = load_dataset(dataset_name, split="validation")
-        y_true = d.map(lambda x: {"y_true": x["labels"][track_index]}, remove_columns=list(d.features.keys())).to_pandas()
-        y_pred = run_prediction(d, input[0], batch_size=256, threads=threads)[:, track_index]
+        y_true = d.map(
+            lambda x: {"y_true": x["labels"][track_index]},
+            remove_columns=list(d.features.keys()),
+        ).to_pandas()
+        y_pred = run_prediction(d, input[0], batch_size=256, threads=threads)[
+            :, track_index
+        ]
         y_pred = pd.DataFrame(y_pred, columns=["y_pred"])
         res = pd.concat([y_true, y_pred], axis=1)
         res.to_parquet(output[0], index=False)

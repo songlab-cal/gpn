@@ -11,9 +11,10 @@ rule experimental_data_process:
 
         V = pd.read_csv(input[0], usecols=["mut", "beta", "pval", "n"])
         V = V[V.mut != "wt"]
-        V[['ref', 'pos', 'alt']] = V['mut'].str.extract(r'([A-Z])(-?\d+)([A-Z_]*)')
+        V[["ref", "pos", "alt"]] = V["mut"].str.extract(r"([A-Z])(-?\d+)([A-Z_]*)")
         V.drop(columns=["mut"], inplace=True)
         V.pos = V.pos.astype(int)
+
 
         def get_mut_type(v):
             if v["ref"] == "I":
@@ -23,7 +24,9 @@ rule experimental_data_process:
             else:
                 return "substitution"
 
+
         V["mut_type"] = V.apply(get_mut_type, axis=1)
+
 
         def filter_pos(v):
             res = v.pos > -n_upstream and v.pos < 0
@@ -32,6 +35,7 @@ rule experimental_data_process:
             elif v["mut_type"] == "deletion":
                 res = res and (v.pos + len(v["alt"]) < 0)
             return res
+
 
         V = V[V.apply(filter_pos, axis=1)]
 
@@ -65,22 +69,28 @@ rule experimental_data_process:
         V = V[(V.mut_type == "insertion") | (V.ref == V.ref2)]
         print(V)
 
+
         def get_seq(v):
             i = center + v.pos
             assert ref_seq[i] == v.ref2
             if v.mut_type == "substitution":
-                return ref_seq[:i] + v.alt + ref_seq[i+1:]
+                return ref_seq[:i] + v.alt + ref_seq[i + 1 :]
             elif v.mut_type == "insertion":
                 res = ref_seq[:i] + v.alt + ref_seq[i:]
-                res = res[-(n_upstream+n_downstream):]
+                res = res[-(n_upstream + n_downstream) :]
                 return res
             elif v.mut_type == "deletion":
                 deletion_length = len(v.alt)
-                return left_pad[-deletion_length:] + ref_seq[:i] + ref_seq[i+deletion_length:]
+                return (
+                    left_pad[-deletion_length:]
+                    + ref_seq[:i]
+                    + ref_seq[i + deletion_length :]
+                )
+
 
         V["seq"] = V.apply(get_seq, axis=1)
-        assert (V.seq.str.len() == (n_upstream+n_downstream)).all()
-        assert (V.seq.str[center:center+3] == annotation["center_seq"]).all()
+        assert (V.seq.str.len() == (n_upstream + n_downstream)).all()
+        assert (V.seq.str[center : center + 3] == annotation["center_seq"]).all()
 
         print(V)
         new_row = pd.DataFrame([{"seq": ref_seq}])
@@ -97,8 +107,7 @@ rule experimental_data_predict:
         "results/experimental_data/preds/{gene}/{checkpoint}.parquet",
     wildcard_constraints:
         gene="|".join(extended_experimental_data_genes),
-    threads:
-        workflow.cores
+    threads: workflow.cores
     run:
         gene = wildcards.gene.replace("_ISM", "")
 
@@ -108,11 +117,19 @@ rule experimental_data_predict:
 
         track = config["experimental_data_predict_track"][gene]
         dataset_name = config["finetuning"]["dataset_name"]
-        tracks = pd.read_csv(f"hf://datasets/{dataset_name}/labels.txt", header=None).values.ravel().tolist()
+        tracks = (
+            pd.read_csv(f"hf://datasets/{dataset_name}/labels.txt", header=None)
+            .values.ravel()
+            .tolist()
+        )
         track_index = tracks.index(track)
 
         lfc = run_prediction_lfc(
-            ref_seq, V.seq.tolist(), input[1], track_index, threads=threads,
+            ref_seq,
+            V.seq.tolist(),
+            input[1],
+            track_index,
+            threads=threads,
         )
         V.drop(columns="seq", inplace=True)
         V["pred_lfc"] = lfc
@@ -121,7 +138,7 @@ rule experimental_data_predict:
 
 
 # TODO: remove this rule as it is ambiguous and just for quick testing
-#rule experimental_data_predict_merge_seeds:
+# rule experimental_data_predict_merge_seeds:
 #    input:
 #        "results/experimental_data/preds/{gene}/checkpoints_epoch/GPN_Brassicales/30_epochs/42/checkpoint-{checkpoint}.parquet",
 #        "results/experimental_data/preds/{gene}/checkpoints_epoch/GPN_Brassicales/30_epochs/43/checkpoint-{checkpoint}.parquet",
@@ -161,7 +178,7 @@ rule experimental_data_eval:
             "more_than_50",
             "less_than_50",
         ]
-        
+
         all_variant_types = [
             "all",
             "substitution",
@@ -198,13 +215,15 @@ rule experimental_data_eval:
                     raise ValueError(f"Unknown variant type: {variant_type}")
 
                 if len(V3) > 0:
-                    res.append([
-                        subset,
-                        variant_type,
-                        len(V3),
-                        V3.pred_lfc.corr(V3.beta),
-                        V3.pred_lfc.corr(V3.beta, method="spearman"),
-                    ])
+                    res.append(
+                        [
+                            subset,
+                            variant_type,
+                            len(V3),
+                            V3.pred_lfc.corr(V3.beta),
+                            V3.pred_lfc.corr(V3.beta, method="spearman"),
+                        ]
+                    )
         res = pd.DataFrame(
             res, columns=["subset", "variant_type", "n_variants", "Pearson", "Spearman"]
         )
@@ -243,7 +262,7 @@ rule experimental_data_ISM:
         nucleotides = list("ACGT")
 
         V = []
-        for pos in range(-n_upstream+1, 0):
+        for pos in range(-n_upstream + 1, 0):
             ref = ref_seq[center + pos]
             for alt in nucleotides:
                 if alt == ref:
@@ -253,13 +272,15 @@ rule experimental_data_ISM:
 
         print(V)
 
+
         def get_seq(v):
             i = center + v.pos
-            return ref_seq[:i] + v.alt + ref_seq[i+1:]
+            return ref_seq[:i] + v.alt + ref_seq[i + 1 :]
+
 
         V["seq"] = V.apply(get_seq, axis=1)
-        assert (V.seq.str.len() == (n_upstream+n_downstream)).all()
-        assert (V.seq.str[center:center+3] == annotation["center_seq"]).all()
+        assert (V.seq.str.len() == (n_upstream + n_downstream)).all()
+        assert (V.seq.str[center : center + 3] == annotation["center_seq"]).all()
 
         print(V)
         new_row = pd.DataFrame([{"seq": ref_seq}])

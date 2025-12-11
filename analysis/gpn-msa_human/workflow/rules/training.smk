@@ -37,14 +37,13 @@ rule get_conservation_intervals:
         "results/conservation/{conservation}.bw",
     output:
         "results/intervals/{window_size}/defined.{conservation}.{operation}.parquet",
-    threads:
-        workflow.cores
+    threads: workflow.cores
     run:
         import pyBigWig
 
         intervals = pd.read_parquet(input[0])
         print(intervals)
-        #bw = pyBigWig.open(input[1])
+        # bw = pyBigWig.open(input[1])
         window_size = int(wildcards["window_size"])
         step_size = window_size // 2
         intervals = make_windows(intervals, window_size, step_size)
@@ -54,7 +53,10 @@ rule get_conservation_intervals:
         if operation == "mean":
             f = lambda v, bw: bw.stats(f"chr{v.chrom}", v.start, v.end, exact=True)[0]
         elif operation == "percentile-75":
-            f = lambda v, bw: np.quantile(bw.values(f"chr{v.chrom}", v.start, v.end), 0.75)
+            f = lambda v, bw: np.quantile(
+                bw.values(f"chr{v.chrom}", v.start, v.end), 0.75
+            )
+
 
         def run_operation(v):
             bw = pyBigWig.open(input[1])
@@ -62,12 +64,15 @@ rule get_conservation_intervals:
             bw.close()
             return res
 
+
         from pandarallel import pandarallel
+
         pandarallel.initialize(progress_bar=True, nb_workers=threads)
 
-        #intervals["conservation"] = intervals.progress_apply(
+        # intervals["conservation"] = intervals.progress_apply(
         intervals["conservation"] = intervals.parallel_apply(
-            run_operation, axis=1,
+            run_operation,
+            axis=1,
         )
         print(intervals)
         intervals.to_parquet(output[0])
@@ -87,15 +92,19 @@ rule filter_conservation_intervals:
             res = intervals
         else:
             random_frac = float(wildcards["random_frac"])
-            mask_top = intervals.conservation >= intervals.conservation.quantile(1-top_frac)
+            mask_top = intervals.conservation >= intervals.conservation.quantile(
+                1 - top_frac
+            )
             top_intervals = intervals[mask_top]
             print(top_intervals)
             assert not top_intervals.conservation.isna().any()
-            random_intervals = intervals[~mask_top].sample(frac=random_frac, random_state=42)
+            random_intervals = intervals[~mask_top].sample(
+                frac=random_frac, random_state=42
+            )
             print(random_intervals)
             res = pd.concat([top_intervals, random_intervals], ignore_index=True)
         print(res)
-        #res = bf.merge(res[["chrom", "start", "end"]]).drop(columns="n_intervals")
+        # res = bf.merge(res[["chrom", "start", "end"]]).drop(columns="n_intervals")
         res = res[["chrom", "start", "end"]].drop_duplicates()
         print(res)
         res.to_parquet(output[0], index=False)
@@ -153,15 +162,18 @@ rule make_dataset:
         "results/conservation/phastCons.bw",
         "results/genome.fa.gz",
     output:
-        expand("results/dataset/{{window_size}}/{{step_size}}/{{add_rc}}/{{anything}}/{split}.parquet", split=SPLITS),
+        expand(
+            "results/dataset/{{window_size}}/{{step_size}}/{{add_rc}}/{{anything}}/{split}.parquet",
+            split=SPLITS,
+        ),
     threads: workflow.cores
     run:
         intervals = pd.read_parquet(input[0])
         print(intervals)
-        #print("Loading genome MSA...")
-        #genome_msa = GenomeMSA(
+        # print("Loading genome MSA...")
+        # genome_msa = GenomeMSA(
         #    input[1], in_memory=False, subset_chroms=intervals.chrom.unique()
-        #)
+        # )
         print("Making windows...")
         if "phyloP" in wildcards.anything or "phastCons" in wildcards.anything:
             # a shortcut
@@ -173,50 +185,56 @@ rule make_dataset:
                 intervals = pd.concat([intervals, intervals_neg], ignore_index=True)
         else:
             raise Exception("debug")
-        #intervals = make_windows(
-        #    intervals, int(wildcards.window_size), int(wildcards.step_size),
-        #    wildcards.add_rc=="True",
-        #)
+            # intervals = make_windows(
+            #    intervals, int(wildcards.window_size), int(wildcards.step_size),
+            #    wildcards.add_rc=="True",
+            # )
         print(intervals)
         phyloP_obj = BigWig(input[1])
         phastCons_obj = BigWig(input[2])
         print("Getting phyloP")
         intervals["phyloP"] = intervals.progress_apply(
-            lambda i: phyloP_obj.get_features("chr" + i.chrom, i.start, i.end, i.strand),
+            lambda i: phyloP_obj.get_features(
+                "chr" + i.chrom, i.start, i.end, i.strand
+            ),
             axis=1,
         )
         print("Getting phastCons")
         intervals["phastCons"] = intervals.progress_apply(
-            lambda i: phastCons_obj.get_features("chr" + i.chrom, i.start, i.end, i.strand),
+            lambda i: phastCons_obj.get_features(
+                "chr" + i.chrom, i.start, i.end, i.strand
+            ),
             axis=1,
         )
         print("Loading genome")
         genome = Genome(input[3])
         print("Getting lowercase")
         intervals["lowercase"] = intervals.progress_apply(
-            lambda i: np.char.islower(list(genome.get_seq(i.chrom, i.start, i.end, i.strand))),
+            lambda i: np.char.islower(
+                list(genome.get_seq(i.chrom, i.start, i.end, i.strand))
+            ),
             axis=1,
         )
 
-        #print("Getting MSAs")
+        # print("Getting MSAs")
         ## unfortunately needs flatten to save into parquet
-        #msa = genome_msa.get_msa_batch_parallel(
+        # msa = genome_msa.get_msa_batch_parallel(
         #    intervals.chrom.values, intervals.start.values,
         #    intervals.end.values, intervals.strand.values, n_jobs=32,
-        #)
-        #print(msa.shape)
-        #intervals["msa"] = pd.Series(np.split(msa, msa.shape[0]), index=range(msa.shape[0]))
-        #print(intervals)
-        #print(intervals.msa.iloc[0].shape)
-        #raise Exception("debug")
+        # )
+        # print(msa.shape)
+        # intervals["msa"] = pd.Series(np.split(msa, msa.shape[0]), index=range(msa.shape[0]))
+        # print(intervals)
+        # print(intervals.msa.iloc[0].shape)
+        # raise Exception("debug")
         intervals = intervals.sample(frac=1.0, random_state=42)
         print(intervals)
 
         for path, split in zip(output, SPLITS):
             print(path, split)
-            intervals[
-                intervals.chrom.isin(SPLIT_CHROMS[split])
-            ].to_parquet(path, index=False, engine="pyarrow")
+            intervals[intervals.chrom.isin(SPLIT_CHROMS[split])].to_parquet(
+                path, index=False, engine="pyarrow"
+            )
 
 
 rule make_msa_chrom:
@@ -234,18 +252,20 @@ rule make_msa_chrom:
         all_species = pd.read_csv(input[1], header=None).values.ravel()
         MSA = MSA[all_species]
         species = pd.read_csv(input[2], header=None).values.ravel()
-        MSA = np.vstack(MSA.apply(
-            lambda seq: np.frombuffer(seq.upper().encode("ascii"), dtype="S1")
-        ))
+        MSA = np.vstack(
+            MSA.apply(
+                lambda seq: np.frombuffer(seq.upper().encode("ascii"), dtype="S1")
+            )
+        )
         print(MSA.shape)
         # let's only keep non-gaps in reference
-        MSA = MSA[:, MSA[0]!=b'-']
+        MSA = MSA[:, MSA[0] != b"-"]
         print(MSA.shape)
         MSA = MSA[[all_species.tolist().index(s) for s in species]]
         print(MSA.shape)
         MSA = MSA.T
         print(MSA.shape)
-        vocab = np.frombuffer("ACGT-".encode('ascii'), dtype="S1")
+        vocab = np.frombuffer("ACGT-".encode("ascii"), dtype="S1")
         # decision: consider all "N" and similar as "-"
         # might not be the best, some aligners have a distinction
         # between N, or unaligned, and gap
@@ -255,18 +275,21 @@ rule make_msa_chrom:
         # the latest patch). This is a bit awkward...
         chrom = wildcards.chrom
         ref = np.frombuffer(
-            load_fasta(input[3], subset_chroms=[chrom])[chrom].encode("ascii"), dtype="S1"
+            load_fasta(input[3], subset_chroms=[chrom])[chrom].encode("ascii"),
+            dtype="S1",
         )
         print(ref.shape)
-        MSA = np.concatenate((ref[:, np.newaxis], MSA), axis=1) 
+        MSA = np.concatenate((ref[:, np.newaxis], MSA), axis=1)
         print(MSA.shape)
 
         np.save(output[0], MSA)
+
 
 # recommend archiving the zarr directory before rsyncing
 # tar -cf all.zarr.tar all.zarr
 # and then unarchive on the other side
 # tar -xf all.zarr.tar && rm all.zarr.tar
+
 
 rule merge_msa:
     input:
@@ -278,7 +301,7 @@ rule merge_msa:
     run:
         import zarr
 
-        z = zarr.open_group(output[0], mode='w')
+        z = zarr.open_group(output[0], mode="w")
         for chrom, path in zip(CHROMS, input):
             print(chrom)
             data = np.load(path)
@@ -291,7 +314,7 @@ rule msa_ablation_subset:
     input:
         "results/msa/multiz100way/89/all.zarr",
         "config/species/multiz100way/89.txt",
-        "config/species/multiz100way/{subset}/{species}.txt"
+        "config/species/multiz100way/{subset}/{species}.txt",
     output:
         directory("results/msa/multiz100way_{subset}/{species}/all.zarr"),
     threads: workflow.cores
@@ -304,13 +327,11 @@ rule msa_ablation_subset:
         print(output_idx)
 
         z_input = zarr.open(input[0], mode="r")
-        z_output = zarr.open_group(output[0], mode='w')
+        z_output = zarr.open_group(output[0], mode="w")
 
         for chrom in tqdm(CHROMS):
             z_output.create_dataset(
-                chrom,
-                data=z_input[chrom][:, output_idx],
-                chunks=(512, len(output_idx))
+                chrom, data=z_input[chrom][:, output_idx], chunks=(512, len(output_idx))
             )
 
 
@@ -345,13 +366,16 @@ rule train_gpn_msa:
         "results/msa/{alignment}/{species}/all.zarr",
         expand("results/dataset/{{dataset}}/{split}.parquet", split=SPLITS),
     output:
-        directory("results/checkpoints/{alignment,[A-Za-z0-9_]+}/{species,[A-Za-z0-9_-]+}/{dataset}/{model_size}/{loss_weight}/{seed}/{max_steps}/{use_aux_features}/{weight_conserved}/{flip_nonconserved}"),
+        directory(
+            "results/checkpoints/{alignment,[A-Za-z0-9_]+}/{species,[A-Za-z0-9_-]+}/{dataset}/{model_size}/{loss_weight}/{seed}/{max_steps}/{use_aux_features}/{weight_conserved}/{flip_nonconserved}"
+        ),
     params:
         model_conf=model_config,
         project_name=lambda wildcards: wildcards.dataset.replace("/", "_"),
-        run_name=lambda wildcards, output: '/'.join(output[0].split("/")[2:4]) + '/' + '/'.join(output[0].split("/")[-7:]),
-    threads:
-        workflow.cores
+        run_name=lambda wildcards, output: "/".join(output[0].split("/")[2:4])
+        + "/"
+        + "/".join(output[0].split("/")[-7:]),
+    threads: workflow.cores
     priority: 100
     shell:
         """

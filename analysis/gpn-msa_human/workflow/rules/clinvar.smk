@@ -21,19 +21,46 @@ rule process_clinvar:
 
         rows = []
         for variant in VCF(input[0]):
-            if variant.INFO.get("CLNVC") != "single_nucleotide_variant": continue
-            if len(variant.ALT) != 1: continue
+            if variant.INFO.get("CLNVC") != "single_nucleotide_variant":
+                continue
+            if len(variant.ALT) != 1:
+                continue
             cln_sig = variant.INFO.get("CLNSIG")
-            if cln_sig not in ["Benign", "Pathogenic"]: continue
+            if cln_sig not in ["Benign", "Pathogenic"]:
+                continue
             MC = variant.INFO.get("MC")
-            if MC is None: continue
+            if MC is None:
+                continue
             consequences = [x.split("|")[1] for x in MC.split(",")]
-            consequence = ','.join(np.unique(consequences))
+            consequence = ",".join(np.unique(consequences))
             review_status = variant.INFO.get("CLNREVSTAT")
-            rows.append([variant.CHROM, variant.POS, variant.REF, variant.ALT[0], cln_sig, variant.ID, review_status, consequence])
+            rows.append(
+                [
+                    variant.CHROM,
+                    variant.POS,
+                    variant.REF,
+                    variant.ALT[0],
+                    cln_sig,
+                    variant.ID,
+                    review_status,
+                    consequence,
+                ]
+            )
 
-        df = pd.DataFrame(rows, columns=["chrom", "pos", "ref", "alt", "label", "id", "review_status", "consequence"])
-        df = df[df.chrom!="MT"]
+        df = pd.DataFrame(
+            rows,
+            columns=[
+                "chrom",
+                "pos",
+                "ref",
+                "alt",
+                "label",
+                "id",
+                "review_status",
+                "consequence",
+            ],
+        )
+        df = df[df.chrom != "MT"]
         df = df[df.alt != "N"]
         print(df)
         df.to_parquet(output[0], index=False)
@@ -46,10 +73,7 @@ rule filter_clinvar:
         "results/clinvar/filt.parquet",
     run:
         df = pd.read_parquet(input[0])
-        df = df[
-            df.consequence.str.contains("missense") &
-            (df.label == "Pathogenic")
-        ]
+        df = df[df.consequence.str.contains("missense") & (df.label == "Pathogenic")]
         print(df)
         df.to_parquet(output[0], index=False)
 
@@ -77,24 +101,52 @@ rule clinvar_likely:
 
         rows = []
         for variant in VCF(input[0]):
-            if variant.INFO.get("CLNVC") != "single_nucleotide_variant": continue
-            if len(variant.ALT) != 1: continue
+            if variant.INFO.get("CLNVC") != "single_nucleotide_variant":
+                continue
+            if len(variant.ALT) != 1:
+                continue
             cln_sig = variant.INFO.get("CLNSIG")
             if cln_sig not in [
                 "Benign",
                 "Likely_benign",
                 "Pathogenic",
                 "Likely_pathogenic",
-            ]: continue
+            ]:
+                continue
             MC = variant.INFO.get("MC")
-            if MC is None: continue
+            if MC is None:
+                continue
             consequences = [x.split("|")[1] for x in MC.split(",")]
-            consequence = ','.join(np.unique(consequences))
-            if "missense" not in consequence: continue
+            consequence = ",".join(np.unique(consequences))
+            if "missense" not in consequence:
+                continue
             review_status = variant.INFO.get("CLNREVSTAT")
-            rows.append([variant.CHROM, variant.POS, variant.REF, variant.ALT[0], cln_sig, variant.ID, review_status, consequence])
+            rows.append(
+                [
+                    variant.CHROM,
+                    variant.POS,
+                    variant.REF,
+                    variant.ALT[0],
+                    cln_sig,
+                    variant.ID,
+                    review_status,
+                    consequence,
+                ]
+            )
 
-        df = pd.DataFrame(rows, columns=["chrom", "pos", "ref", "alt", "label", "id", "review_status", "consequence"])
+        df = pd.DataFrame(
+            rows,
+            columns=[
+                "chrom",
+                "pos",
+                "ref",
+                "alt",
+                "label",
+                "id",
+                "review_status",
+                "consequence",
+            ],
+        )
         df = df[df.chrom.isin(CHROMS)]
         df = df[df.alt != "N"]
         print(df)

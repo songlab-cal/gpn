@@ -6,18 +6,24 @@ import polars as pl
 from tqdm import tqdm
 
 
-#configfile: "config/config.yaml"
+# configfile: "config/config.yaml"
 
 
 species = pd.read_csv("config/species/filt.tsv", sep="\t", index_col=0)
 species["Assembly Name"] = species["Assembly Name"].str.replace(" ", "_")
 species["genome_path"] = (
-    "tmp/" + species.index + "/ncbi_dataset/data/" + species.index + "/" +
-    species.index + "_" + species["Assembly Name"] + "_genomic.fna"
+    "tmp/"
+    + species.index
+    + "/ncbi_dataset/data/"
+    + species.index
+    + "/"
+    + species.index
+    + "_"
+    + species["Assembly Name"]
+    + "_genomic.fna"
 )
 species["annotation_path"] = (
-    "tmp/" + species.index + "/ncbi_dataset/data/" + species.index + "/" +
-    "genomic.gtf"
+    "tmp/" + species.index + "/ncbi_dataset/data/" + species.index + "/" + "genomic.gtf"
 )
 
 
@@ -47,8 +53,10 @@ shards = [f"shard_{i:04}" for i in range(n_shards)]
 def load_bed(path):
     try:
         return pl.read_csv(
-            path, has_header=False, separator="\t",
-            new_columns=["chrom", "start", "end"]
+            path,
+            has_header=False,
+            separator="\t",
+            new_columns=["chrom", "start", "end"],
         )
     except pl.exceptions.NoDataError:
         return pl.DataFrame(None, [("chrom", str), ("start", int), ("end", int)])
@@ -61,11 +69,11 @@ rule all:
             split=splits,
             shard=shards,
             intervals=[
-                #"v3",
-                #"v4",
-                #"v5",
-                #"v6",
-                #"v7",
+                # "v3",
+                # "v4",
+                # "v5",
+                # "v6",
+                # "v7",
                 "v8",
             ],
             w=[
@@ -132,7 +140,7 @@ rule extract_all:
         # unfortunately no way to filter chroms based on prefix, AFAIK
         # in human we want to make sure to keep the standard chroms
         if wildcards.s == "GCF_000001405.40":
-            df = df[df.chrom.str[:2]=="NC"]
+            df = df[df.chrom.str[:2] == "NC"]
         df = df[["chrom", "start", "end"]].sort_values("chrom")
         df.to_csv(output[0], sep="\t", header=False, index=False)
 
@@ -156,32 +164,41 @@ rule extract_promoters:
     run:
         up, down = int(wildcards.up), int(wildcards.down)
 
-        df = (
-            pl.read_csv(
-                input[0], has_header=False, separator="\t", comment_prefix="#",
-                new_columns=[
-                    "chrom", "source", "feature", "start", "end", "score", "strand",
-                    "frame", "attribute",
-                ],
-            )
-            .with_columns(pl.col("start") - 1)  # gtf to bed conversion
-        )
+        df = pl.read_csv(
+            input[0],
+            has_header=False,
+            separator="\t",
+            comment_prefix="#",
+            new_columns=[
+                "chrom",
+                "source",
+                "feature",
+                "start",
+                "end",
+                "score",
+                "strand",
+                "frame",
+                "attribute",
+            ],
+        ).with_columns(
+            pl.col("start") - 1
+        )  # gtf to bed conversion
 
         # certain annotations, e.g. GCF_000710305.1, have gene but no transcript features
         if "transcript" in df["feature"].unique():
             gene = df.filter(feature="gene")
             gene = gene.with_columns(
-                pl.col("attribute").str.extract(r'gene_biotype "(.*?)"')
+                pl.col("attribute")
+                .str.extract(r'gene_biotype "(.*?)"')
                 .alias("gene_biotype"),
-                pl.col("attribute").str.extract(r'gene_id "(.*?)"')
-                .alias("gene_id"),
+                pl.col("attribute").str.extract(r'gene_id "(.*?)"').alias("gene_id"),
             )
             df = df.filter(feature="transcript")
             df = df.with_columns(
-                pl.col("attribute").str.extract(r'transcript_biotype "(.*?)"')
+                pl.col("attribute")
+                .str.extract(r'transcript_biotype "(.*?)"')
                 .alias("transcript_biotype"),
-                pl.col("attribute").str.extract(r'gene_id "(.*?)"')
-                .alias("gene_id"),
+                pl.col("attribute").str.extract(r'gene_id "(.*?)"').alias("gene_id"),
             )
             df = df.join(gene, on="gene_id", how="inner")
             if wildcards.subset == "coding":
@@ -197,7 +214,8 @@ rule extract_promoters:
             print(f"Warning: no transcript feature for {wildcards.s}")
             df = df.filter(feature="gene")
             df = df.with_columns(
-                pl.col("attribute").str.extract(r'gene_biotype "(.*?)"')
+                pl.col("attribute")
+                .str.extract(r'gene_biotype "(.*?)"')
                 .alias("gene_biotype")
             )
             if wildcards.subset == "coding":
@@ -207,7 +225,7 @@ rule extract_promoters:
         df = (
             df.select(["chrom", "start", "end", "strand"])
             .with_columns(
-                pl.when(pl.col("strand")=="+")
+                pl.when(pl.col("strand") == "+")
                 .then(pl.col("start") - up)
                 .otherwise(pl.col("end") - down)
                 .alias("start")
@@ -238,10 +256,20 @@ rule extract_feature:
 
         df = (
             pl.read_csv(
-                input[0], has_header=False, separator="\t", comment_prefix="#",
+                input[0],
+                has_header=False,
+                separator="\t",
+                comment_prefix="#",
                 new_columns=[
-                    "chrom", "source", "feature", "start", "end", "score", "strand",
-                    "frame", "attribute",
+                    "chrom",
+                    "source",
+                    "feature",
+                    "start",
+                    "end",
+                    "score",
+                    "strand",
+                    "frame",
+                    "attribute",
                 ],
             )
             .with_columns(pl.col("start") - 1)  # gtf to bed conversion
@@ -271,25 +299,36 @@ rule extract_UTR:
     run:
         flank = int(wildcards.flank)
 
-        df = (
-            pl.read_csv(
-                input[0], has_header=False, separator="\t", comment_prefix="#",
-                new_columns=[
-                    "chrom", "source", "feature", "start", "end", "score", "strand",
-                    "frame", "attribute",
-                ],
-            )
-            .with_columns(pl.col("start") - 1)  # gtf to bed conversion
-        )
+        df = pl.read_csv(
+            input[0],
+            has_header=False,
+            separator="\t",
+            comment_prefix="#",
+            new_columns=[
+                "chrom",
+                "source",
+                "feature",
+                "start",
+                "end",
+                "score",
+                "strand",
+                "frame",
+                "attribute",
+            ],
+        ).with_columns(
+            pl.col("start") - 1
+        )  # gtf to bed conversion
 
         # certain annotations, e.g. GCF_000710305.1, have gene but no transcript features
         if "transcript" in df["feature"].unique():
             gene = (
                 df.filter(feature="gene")
                 .with_columns(
-                    pl.col("attribute").str.extract(r'gene_id "(.*?)"')
+                    pl.col("attribute")
+                    .str.extract(r'gene_id "(.*?)"')
                     .alias("gene_id"),
-                    pl.col("attribute").str.extract(r'gene_biotype "(.*?)"')
+                    pl.col("attribute")
+                    .str.extract(r'gene_biotype "(.*?)"')
                     .alias("gene_biotype"),
                 )
                 .select(["gene_id", "gene_biotype"])
@@ -297,26 +336,24 @@ rule extract_UTR:
             transcript = (
                 df.filter(feature="transcript")
                 .with_columns(
-                    pl.col("attribute").str.extract(r'transcript_id "(.*?)"')
+                    pl.col("attribute")
+                    .str.extract(r'transcript_id "(.*?)"')
                     .alias("transcript_id"),
-                    pl.col("attribute").str.extract(r'transcript_biotype "(.*?)"')
+                    pl.col("attribute")
+                    .str.extract(r'transcript_biotype "(.*?)"')
                     .alias("transcript_biotype"),
                 )
                 .select(["transcript_id", "transcript_biotype"])
             )
-            exon = (
-                df.filter(feature="exon")
-                .with_columns(
-                    pl.col("attribute").str.extract(r'gene_id "(.*?)"')
-                    .alias("gene_id"),
-                    pl.col("attribute").str.extract(r'transcript_id "(.*?)"')
-                    .alias("transcript_id"),
-                )
+            exon = df.filter(feature="exon").with_columns(
+                pl.col("attribute").str.extract(r'gene_id "(.*?)"').alias("gene_id"),
+                pl.col("attribute")
+                .str.extract(r'transcript_id "(.*?)"')
+                .alias("transcript_id"),
             )
 
             df = (
-                exon
-                .join(gene, on="gene_id", how="inner")
+                exon.join(gene, on="gene_id", how="inner")
                 .join(transcript, on="transcript_id", how="inner")
                 .filter(
                     pl.col("gene_biotype") == "protein_coding",
@@ -328,31 +365,24 @@ rule extract_UTR:
             gene = (
                 df.filter(feature="gene")
                 .with_columns(
-                    pl.col("attribute").str.extract(r'gene_id "(.*?)"')
+                    pl.col("attribute")
+                    .str.extract(r'gene_id "(.*?)"')
                     .alias("gene_id"),
-                    pl.col("attribute").str.extract(r'gene_biotype "(.*?)"')
+                    pl.col("attribute")
+                    .str.extract(r'gene_biotype "(.*?)"')
                     .alias("gene_biotype"),
                 )
                 .select(["gene_id", "gene_biotype"])
             )
-            exon = (
-                df.filter(feature="exon")
-                .with_columns(
-                    pl.col("attribute").str.extract(r'gene_id "(.*?)"')
-                    .alias("gene_id"),
-                )
+            exon = df.filter(feature="exon").with_columns(
+                pl.col("attribute").str.extract(r'gene_id "(.*?)"').alias("gene_id"),
             )
-            df = (
-                exon
-                .join(gene, on="gene_id", how="inner")
-                .filter(
-                    pl.col("gene_biotype") == "protein_coding",
-                )
+            df = exon.join(gene, on="gene_id", how="inner").filter(
+                pl.col("gene_biotype") == "protein_coding",
             )
 
         df = (
-            df
-            .select(["chrom", "start", "end"])
+            df.select(["chrom", "start", "end"])
             .unique()
             .sort(["chrom", "start", "end"])
             .to_pandas()
@@ -384,7 +414,7 @@ rule intervals_v3:
         CDS = load_bed(input[2]).to_pandas()
         I = bf.subtract(union_intervals(exon, promoter), CDS)
         filter_less_than = 30  # filter small intervals
-        I = I[(I.end-I.start) >= filter_less_than]
+        I = I[(I.end - I.start) >= filter_less_than]
         I = I.sort_values(["chrom", "start", "end"])
         I.to_csv(output[0], sep="\t", header=False, index=False)
 
@@ -427,7 +457,7 @@ rule intervals_v7:
         CDS = load_bed(input[1]).to_pandas()
         I = union_intervals(promoter, CDS)
         filter_less_than = 30  # filter small intervals
-        I = I[(I.end-I.start) >= filter_less_than]
+        I = I[(I.end - I.start) >= filter_less_than]
         I = I.sort_values(["chrom", "start", "end"])
         I.to_csv(output[0], sep="\t", header=False, index=False)
 
@@ -443,7 +473,7 @@ rule intervals_v8:
         UTR = load_bed(input[1]).to_pandas()
         I = union_intervals(promoter, UTR)
         filter_less_than = 30  # filter small intervals
-        I = I[(I.end-I.start) >= filter_less_than]
+        I = I[(I.end - I.start) >= filter_less_than]
         I = I.sort_values(["chrom", "start", "end"])
         I.to_csv(output[0], sep="\t", header=False, index=False)
 
@@ -456,7 +486,7 @@ rule expand_intervals:
     run:
         I = load_bed(input[0]).to_pandas()
         min_w = int(wildcards.w)
-        missing = np.maximum(min_w - (I.end-I.start), 0)
+        missing = np.maximum(min_w - (I.end - I.start), 0)
         flank = np.ceil(missing / 2).astype(int)
         I.start -= flank
         I.end += flank
@@ -517,7 +547,12 @@ rule make_dataset_species:
     input:
         "results/window_seq/{intervals}/{w}/{s}.fa",
     output:
-        temp(expand("results/dataset_species/{{intervals}}/{{w}}/{{s}}/{split}.parquet", split=splits)),
+        temp(
+            expand(
+                "results/dataset_species/{{intervals}}/{{w}}/{{s}}/{split}.parquet",
+                split=splits,
+            )
+        ),
     threads: 2
     run:
         df = Genome(input[0])._genome.rename("seq").to_frame().reset_index(names="id")
@@ -525,7 +560,9 @@ rule make_dataset_species:
         df["chrom"] = df.id.str.split(":").str[0]
         chrom_split = pd.DataFrame(dict(chrom=df.chrom.unique()))
         chrom_split["split"] = "train"
-        chrom_split.loc[chrom_split.chrom.isin(validation_chroms), "split"] = "validation"
+        chrom_split.loc[chrom_split.chrom.isin(validation_chroms), "split"] = (
+            "validation"
+        )
         chrom_split.loc[chrom_split.chrom.isin(test_chroms), "split"] = "test"
         df = df.merge(chrom_split, on="chrom", how="left")
         df = pl.from_pandas(df[["id", "seq", "split"]])
@@ -536,11 +573,16 @@ rule make_dataset_species:
 
 rule merge_datasets:
     input:
-        expand("results/dataset_species/{{intervals}}/{{w}}/{s}/{{split}}.parquet", s=species.index),
+        expand(
+            "results/dataset_species/{{intervals}}/{{w}}/{s}/{{split}}.parquet",
+            s=species.index,
+        ),
     output:
-        expand("results/dataset/{{intervals}}/{{w}}/data/{{split}}/{shard}.jsonl.zst", shard=shards),
-    threads:
-        workflow.cores 
+        expand(
+            "results/dataset/{{intervals}}/{{w}}/data/{{split}}/{shard}.jsonl.zst",
+            shard=shards,
+        ),
+    threads: workflow.cores
     run:
         df = pd.concat(
             tqdm((pd.read_parquet(path) for path in input), total=len(input)),
@@ -549,6 +591,8 @@ rule merge_datasets:
         print(df)
         for path, df_s in tqdm(zip(output, np.array_split(df, n_shards))):
             df_s.to_json(
-                path, orient="records", lines=True,
-                compression={'method': 'zstd', 'threads': -1},
+                path,
+                orient="records",
+                lines=True,
+                compression={"method": "zstd", "threads": -1},
             )
