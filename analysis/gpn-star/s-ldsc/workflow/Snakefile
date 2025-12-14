@@ -103,6 +103,6 @@ rule all:
         #    "results/score_consequence/{annot_mode}/{approach}/{model}/{q}.parquet",
         #    annot_mode=["annot_with_cre_v2"],
         #    approach=["quantile"],
-        #    model=gpn_star_models,
+        #    model=gpn_star_models + ["phastCons_43p", "phyloP_239p"],
         #    q=[0.001],
         #),

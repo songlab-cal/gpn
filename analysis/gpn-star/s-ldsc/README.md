@@ -2,7 +2,11 @@
 
 ## Requirements
 
-TODO: provide an environment
+Create and activate the conda environment:
+```bash
+mamba env create -f workflow/envs/general.yaml
+mamba activate s-ldsc-general
+```
 
 Optional (recommended): download the processed data (9.1G, feel free to only download a subset):
 - S-LDSC reference files, originally in (https://zenodo.org/records/10515792) but packaged here as well for your convenience.
