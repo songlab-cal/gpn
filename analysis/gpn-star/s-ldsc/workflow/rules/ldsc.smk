@@ -273,6 +273,54 @@ rule quantile_score_cds:
         V[["score"]].to_parquet(output[0], index=False)
 
 
+rule quantile_score_consequence:
+    input:
+        "results/variant_scores/{model}.parquet",
+        "results/maf/merged.parquet",
+        "results/variants/merged.annot_with_cre_v2.parquet",
+    output:
+        "results/variant_scores/quantile_consequence_{consequence}/{model}/{q}.parquet",
+    run:
+        q = float(wildcards.q)
+        consequence = wildcards.consequence
+        V = pd.read_parquet(input[0])
+        MAF = pd.read_parquet(input[1])
+        consequences = pd.read_parquet(input[2], columns=["consequence"])
+        assert len(V) == len(MAF) == len(consequences)
+        V = pd.concat([V, MAF, consequences], axis=1)
+        V["common"] = V.MAF > 0.05
+        # ensure variants with other consequences are not picked
+        V.loc[V.consequence != consequence, "score"] = V.score.min() - 1
+        print(V)
+        n = int(V.common.sum() * q)
+        V2 = V.copy()
+        V2["idx_V1"] = np.arange(len(V2))
+        V2 = V2.sample(frac=1, random_state=42)
+        V2 = V2.sort_values("score", ascending=False, kind="stable")
+        V2["idx_V2"] = np.arange(len(V2))
+        # find index of n'th common variant
+        # but index in V2, not V
+        nth_common_variant = V2.loc[V2.common, "idx_V2"].iloc[n]
+        V2 = V2.head(nth_common_variant)
+        V.score = 0
+        V.loc[V2.idx_V1, "score"] = 1
+        print(V)
+        print(V.score.sum())
+        print(V[V.common].score.sum())
+        V[["score"]].to_parquet(output[0], index=False)
+
+
+rule score_consequence_annotation:
+    input:
+        "results/variants/merged.annot_with_cre_v2.parquet",
+    output:
+        "results/variant_scores/consequence_{consequence}.parquet",
+    run:
+        V = pd.read_parquet(input[0], columns=["consequence"])
+        V["score"] = (V.consequence == wildcards.consequence).astype(int)
+        V[["score"]].to_parquet(output[0], index=False)
+
+
 rule variant_scores_fill_null:
     input:
         "results/variant_scores/{model}.parquet",

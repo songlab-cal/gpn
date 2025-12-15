@@ -187,3 +187,27 @@ quantiles:
   - 0.04
   - 0.045
   - 0.05
+
+# Consequences to explore further
+# df = pd.read_parquet("results/global_score_consequence/annot_with_cre_v2.parquet")
+# df = df[df.category == "common"]
+# df = df[~df.consequence.str.contains("flank")]  # to focus on more relevant ones
+# df = df[df["count"] > 5961]  # at least the 0.1% among common variants
+consequences_to_explore:
+  - intron_variant
+  - intergenic_variant
+  - dELS
+  - CA
+  - non_coding_transcript_exon_variant
+  - pELS
+  - 3_prime_UTR_variant
+  - CA-CTCF
+  - TF
+  - CA-H3K4me3
+  - downstream_gene_variant
+  - missense_variant
+  - synonymous_variant
+  - 5_prime_UTR_variant
+  - CA-TF
+  - PLS
+  - upstream_gene_variant

@@ -518,7 +518,7 @@ rule cre_annotation_v2:
         cre = pd.read_parquet(input[1])
         cre_classes = list(
             reversed(config["cre_classes"])
-        )  # desceding order of priority
+        )  # descending order of priority
         cre_flank_classes = [cre_class + "-flank" for cre_class in cre_classes]
         for c in tqdm(cre_classes):
             I = cre[cre.cre_class == c]
