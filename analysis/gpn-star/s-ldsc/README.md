@@ -2,11 +2,14 @@
 
 ## Requirements
 
-Create and activate the conda environment:
+Install dependencies with uv:
 ```bash
-mamba env create -f workflow/envs/general.yaml
-mamba activate s-ldsc-general
+uv venv --python 3.13
+source .venv/bin/activate
+uv pip install -r requirements.txt
 ```
+
+Additionally, `conda` is required to run the `ldsc` step.
 
 Optional (recommended): download the processed data (9.1G, feel free to only download a subset):
 - S-LDSC reference files, originally in (https://zenodo.org/records/10515792) but packaged here as well for your convenience.
@@ -14,32 +17,27 @@ Optional (recommended): download the processed data (9.1G, feel free to only dow
 - Traits
 - Results (models x traits)
 ```bash
-# first install https://huggingface.co/docs/huggingface_hub/en/guides/cli
 mkdir -p results
-hf download songlab/ldsc --repo-type dataset --local-dir results/
+uv run hf download songlab/ldsc --repo-type dataset --local-dir results/
 cd results
 tar -xf output.tar
 ```
 
 ## Running
 
-
 Take a look at `workflow/Snakefile` rule `all` for example targets.
 The first one will run S-LDSC on one model on one trait.
 
-```python
-# if you use mamba:
-snakemake --cores all --use-conda --conda-frontend mamba
-# else:
-snakemake --cores all --use-conda
+```bash
+uv run snakemake --cores all --use-conda
 ```
 
 ```bash
 # Snakemake sometimes gets confused about which files it needs to rerun and this forces
 # not to rerun any existing file
-snakemake --cores all --touch
+uv run snakemake --cores all --touch
 # to output an execution plan
-snakemake --cores all --dry-run
+uv run snakemake --cores all --dry-run
 ```
 
 LDSC jobs (e.g. running model X on trait Y) is by default parallelized as 1 job per core.

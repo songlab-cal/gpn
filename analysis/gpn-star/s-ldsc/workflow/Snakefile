@@ -121,4 +121,11 @@ rule all:
             q=[0.001],
             trait=traits,
         ),
+        expand(
+            "results/output/quantile_consequence_{consequence}/{model}/{q}/{trait}.parquet",
+            consequence=["dELS"],
+            model=[gpn_star_top_model, "phastCons_43p", "phyloP_239p"],
+            q=[0.001],
+            trait=traits,
+        ),
         ################################################################################
