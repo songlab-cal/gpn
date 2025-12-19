@@ -59,13 +59,13 @@ rule all:
         ################################################################################
         # example of a single model and single trait for illustration purposes
         ################################################################################
-        # expand(
-        #     "results/output/{approach}/{model}/{q}/{trait}.parquet",
-        #     approach=["quantile"],
-        #     model=[gpn_star_top_model],
-        #     q=[0.001],
-        #     trait=["PASS.Schizophrenia.Trubetskoy2022"],
-        # ),
+        expand(
+            "results/output/{approach}/{model}/{q}/{trait}.parquet",
+            approach=["quantile"],
+            model=[gpn_star_top_model],
+            q=[0.001],
+            trait=["PASS.Schizophrenia.Trubetskoy2022"],
+        ),
         ################################################################################
         # main analysis
         ################################################################################
@@ -109,23 +109,23 @@ rule all:
         ################################################################################
         # within specific consequences
         ################################################################################
-        expand(
-            "results/output/consequence_{consequence}/{trait}.parquet",
-            consequence=config["consequences_to_explore"],
-            trait=traits,
-        ),
-        expand(
-            "results/output/quantile_consequence_{consequence}/{model}/{q}/{trait}.parquet",
-            consequence=config["consequences_to_explore"],
-            model=[gpn_star_top_model],
-            q=[0.001],
-            trait=traits,
-        ),
-        expand(
-            "results/output/quantile_consequence_{consequence}/{model}/{q}/{trait}.parquet",
-            consequence=["dELS"],
-            model=[gpn_star_top_model, "phastCons_43p", "phyloP_239p"],
-            q=[0.001],
-            trait=traits,
-        ),
+        # expand(
+        #     "results/output/consequence_{consequence}/{trait}.parquet",
+        #     consequence=config["consequences_to_explore"],
+        #     trait=traits,
+        # ),
+        # expand(
+        #     "results/output/quantile_consequence_{consequence}/{model}/{q}/{trait}.parquet",
+        #     consequence=config["consequences_to_explore"],
+        #     model=[gpn_star_top_model],
+        #     q=[0.001],
+        #     trait=traits,
+        # ),
+        # expand(
+        #     "results/output/quantile_consequence_{consequence}/{model}/{q}/{trait}.parquet",
+        #     consequence=["dELS", "missense_variant"],
+        #     model=[gpn_star_top_model, "phastCons_43p", "phyloP_239p"],
+        #     q=[0.001],
+        #     trait=traits,
+        # ),
         ################################################################################
