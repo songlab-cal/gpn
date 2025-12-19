@@ -3,6 +3,8 @@ import bioframe as bf
 from scipy.spatial.distance import cdist
 from gpn.data import Genome
 from liftover import get_lifter
+import matplotlib.pyplot as plt
+from matplotlib_venn import venn3
 import numpy as np
 import os
 import pandas as pd
@@ -24,6 +26,14 @@ NON_EXONIC_CONSEQUENCES = [
 ]
 
 TRAITGYM_PATH = "/accounts/projects/yss/gbenegas/projects/functionality-prediction/"
+
+
+def plot_venn(subsets: dict, palette: dict) -> plt.Figure:
+    fig = plt.figure(figsize=(2, 2))
+    labels = list(subsets.keys())
+    colors = tuple(palette[label] for label in labels)
+    venn3(list(subsets.values()), set_labels=labels, set_colors=colors)
+    return fig
 
 
 def filter_snp(V):

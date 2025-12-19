@@ -141,6 +141,20 @@ gpn_star_p: GPN-Star-p243-200M-256_minus_entropy_calibrated
 gpn_star_m: GPN-Star-m447-200M-256_minus_entropy_calibrated
 gpn_star_v: GPN-Star-v100-200M-128_minus_entropy_calibrated
 
+palette:
+  "GPN-Star (V)": "#2773BA"
+  "GPN-Star (M)": "#4F97DB"
+  "GPN-Star (P)": "#95BFE6"
+  "GPN-MSA": "#919191"
+  "CADD": "#E09D5A"
+  "PhyloP (V)": "#9E66BA"
+  "PhastCons (V)": "#C4494B"
+  "PhyloP (M)": "#B684D9"
+  "PhastCons (M)": "#D96C70"
+  "PhyloP (P)": "#D4A6ED"
+  "PhastCons (P)": "#EDA8A6"
+  "Enformer": "#B58181"
+
 filt_seg_tissues:
   - Liver
   - Kidney_Cortex

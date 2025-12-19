@@ -16,6 +16,7 @@ include: "rules/dist.smk"
 include: "rules/finemapping_dataset.smk"
 include: "rules/gpn.smk"
 include: "rules/ldsc.smk"
+include: "rules/plot.smk"
 include: "rules/seg.smk"
 
 
