@@ -253,19 +253,50 @@ quantiles:
 # Consequences to explore further
 # df = pd.read_parquet("results/global_score_consequence/annot_with_cre_v2.parquet")
 # df = df[df.category == "common"]
-# df = df[~df.consequence.str.contains("flank")]  # to focus on more relevant ones
 # df = df[df["count"] > 5961]  # at least the 0.1% among common variants
+#                          consequence    count
+#                       intron_variant  1200166
+#                           dELS-flank  1170017
+#                   intergenic_variant  1051512
+#                                 dELS   770125
+#                             CA-flank   415393
+#                        CA-CTCF-flank   182941
+#                             TF-flank   163576
+#                                   CA   145633
+#   non_coding_transcript_exon_variant   137567
+#                           pELS-flank   105041
+#                     CA-H3K4me3-flank   102497
+#                                 pELS    99143
+#                  3_prime_UTR_variant    68705
+#                              CA-CTCF    63673
+#                                   TF    59661
+#                           CA-H3K4me3    45657
+#                          CA-TF-flank    38827
+#              downstream_gene_variant    20059
+#                     missense_variant    19310
+#                   synonymous_variant    18907
+#                  5_prime_UTR_variant    15800
+#                                CA-TF    15312
+#                                  PLS    13588
+#                upstream_gene_variant    13016
 consequences_to_explore:
   - intron_variant
+  - dELS-flank
   - intergenic_variant
   - dELS
+  - CA-flank
+  - CA-CTCF-flank
+  - TF-flank
   - CA
   - non_coding_transcript_exon_variant
+  - pELS-flank
+  - CA-H3K4me3-flank
   - pELS
   - 3_prime_UTR_variant
   - CA-CTCF
   - TF
   - CA-H3K4me3
+  - CA-TF-flank
   - downstream_gene_variant
   - missense_variant
   - synonymous_variant
