@@ -155,6 +155,25 @@ palette:
   "PhastCons (P)": "#EDA8A6"
   "Enformer": "#B58181"
 
+consequence_renaming:
+  "5-prime-UTR": "5' UTR"
+  "3-prime-UTR": "3' UTR"
+  "non-coding-transcript-exon": "ncRNA"
+
+score_consequence_models:
+  "GPN-Star (P)": GPN-Star-p243-200M-256_minus_entropy_calibrated
+  "GPN-Star (M)": GPN-Star-m447-200M-256_minus_entropy_calibrated
+  "GPN-Star (V)": GPN-Star-v100-200M-128_minus_entropy_calibrated
+  "PhastCons (P)": phastCons_43p
+  "PhyloP (P)": phyloP_239p
+
+model_comparisons:
+  - ["GPN-Star (P)", "GPN-Star (V)"]
+  - ["GPN-Star (P)", "GPN-Star (M)"]
+  - ["GPN-Star (M)", "GPN-Star (V)"]
+  - ["GPN-Star (P)", "PhastCons (P)"]
+  - ["GPN-Star (P)", "PhyloP (P)"]
+
 filt_seg_tissues:
   - Liver
   - Kidney_Cortex

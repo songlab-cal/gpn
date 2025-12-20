@@ -1,6 +1,6 @@
+from adjustText import adjust_text
 from Bio.Seq import Seq
 import bioframe as bf
-from scipy.spatial.distance import cdist
 from gpn.data import Genome
 from liftover import get_lifter
 import matplotlib.pyplot as plt
@@ -10,6 +10,10 @@ import os
 import pandas as pd
 import polars as pl
 import re
+from scipy.spatial.distance import cdist
+from scipy.stats import fisher_exact
+import seaborn as sns
+from statsmodels.stats.multitest import fdrcorrection
 from tqdm import tqdm
 
 
@@ -34,6 +38,129 @@ def plot_venn(subsets: dict, palette: dict) -> plt.Figure:
     colors = tuple(palette[label] for label in labels)
     venn3(list(subsets.values()), set_labels=labels, set_colors=colors)
     return fig
+
+
+def calculate_enrichment(df: pd.DataFrame, renaming: dict) -> pd.DataFrame:
+    df = df.copy()
+    df["proportion"] = df["count"] / df["count"].sum()
+    df["other_proportion"] = df["other_count"] / df["other_count"].sum()
+    df["global_proportion"] = df["global_count"] / df["global_count"].sum()
+    df.consequence = df.consequence.str.replace("_variant", "").str.replace("_", "-")
+    df.consequence = df.consequence.map(lambda x: renaming.get(x, x))
+
+    total_count = df["count"].sum()
+    total_other_count = df["other_count"].sum()
+
+    results = []
+    for _, row in df.iterrows():
+        table = [
+            [row["count"], total_count - row["count"]],
+            [row["other_count"], total_other_count - row["other_count"]],
+        ]
+        odds_ratio, p_value = fisher_exact(table, alternative="two-sided")
+        results.append(
+            {"consequence": row["consequence"], "odds ratio": odds_ratio, "p_value": p_value}
+        )
+
+    results_df = pd.DataFrame(results)
+    df = pd.merge(df, results_df, on="consequence")
+
+    _, q_values = fdrcorrection(df["p_value"])
+    df["q_value"] = q_values
+    df["significant"] = q_values < 0.05
+
+    return df
+
+
+def plot_enrichment(df: pd.DataFrame, figsize: float = 8) -> plt.Figure:
+    fig, ax = plt.subplots(figsize=(figsize, figsize))
+    ax.scatter(df["proportion"], df["odds ratio"], alpha=0.7, edgecolors="w", s=100)
+    ax.axhline(y=1, color="gray", linestyle="--")
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_xlabel("Proportion")
+    ax.set_ylabel("Odds ratio")
+
+    texts = [
+        ax.text(row["proportion"], row["odds ratio"], row["consequence"])
+        for _, row in df.iterrows()
+    ]
+    adjust_text(texts, ax=ax, arrowprops=dict(arrowstyle="->", color="black", lw=0.5))
+    sns.despine()
+    plt.tight_layout()
+    return fig
+
+
+def custom_format(n: float) -> str:
+    if abs(n) < 0.01:
+        return f"{n:.0e}"
+    return f"{n:.2f}"
+
+
+def enrich_to_latex(df: pd.DataFrame) -> str:
+    df2 = df.copy()
+    df2.consequence = r"\verb|" + df2.consequence + r"|"
+    df2["odds ratio"] = df2.apply(
+        lambda row: f"\\textbf{{{row['odds ratio']:.2f}}}"
+        if row["significant"]
+        else f"{row['odds ratio']:.2f}",
+        axis=1,
+    )
+    df2.proportion = df2.proportion.apply(custom_format)
+    df2 = df2[["consequence", "count", "proportion", "odds ratio"]]
+    return df2.to_latex(index=False, escape=False)
+
+
+def calculate_enrichment_two_models(
+    df: pd.DataFrame, model1: str, model2: str, renaming: dict
+) -> pd.DataFrame:
+    df_models = df[df["model"].isin([model1, model2])].copy()
+    df_models.consequence = (
+        df_models.consequence.str.replace("_variant", "").str.replace("_", "-")
+    )
+    df_models.consequence = df_models.consequence.map(lambda x: renaming.get(x, x))
+
+    contingency_table = df_models.pivot_table(
+        index="consequence", columns="model", values="count", fill_value=0
+    )
+
+    total_model1 = contingency_table[model1].sum()
+    total_model2 = contingency_table[model2].sum()
+
+    results = []
+    for consequence, row in contingency_table.iterrows():
+        count_model1 = row[model1]
+        count_model2 = row[model2]
+
+        table = [
+            [count_model1, count_model2],
+            [total_model1 - count_model1, total_model2 - count_model2],
+        ]
+
+        try:
+            odds_ratio, p_value = fisher_exact(table)
+            results.append(
+                {"consequence": consequence, "odds_ratio": odds_ratio, "p_value": p_value}
+            )
+        except ValueError:
+            results.append(
+                {"consequence": consequence, "odds_ratio": float("nan"), "p_value": float("nan")}
+            )
+
+    results_df = pd.DataFrame(results)
+    if not results_df.empty:
+        _, q_values = fdrcorrection(results_df["p_value"], alpha=0.05)
+        results_df["q_value"] = q_values
+
+    return results_df.sort_values(by="q_value").reset_index(drop=True)
+
+
+def enrich_two_models_to_latex(df: pd.DataFrame) -> str:
+    df2 = df.copy()
+    df2.consequence = r"\verb|" + df2.consequence + r"|"
+    for col in ["p_value", "q_value"]:
+        df2[col] = [f"{x:.0e}" for x in df2[col]]
+    return df2.to_latex(index=False, escape=False, float_format="%.2f")
 
 
 def filter_snp(V):
