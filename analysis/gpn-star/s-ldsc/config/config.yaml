@@ -155,6 +155,35 @@ palette:
   "PhastCons (P)": "#EDA8A6"
   "Enformer": "#B58181"
 
+palette_part4:
+  "GPN-Star (P243)": "#95BFE6"
+  "GPN-Star (P36)": "#c1d2e3"
+  "PhyloP (P243)": "#D4A6ED"
+  "PhastCons (P43)": "#EDA8A6"
+
+model_renaming:
+  "GPN-Star-v100-200M-128_minus_entropy_calibrated": "GPN-Star (V)"
+  "GPN-Star-m447-200M-256_minus_entropy_calibrated": "GPN-Star (M)"
+  "GPN-Star-p243-200M-256_minus_entropy_calibrated": "GPN-Star (P)"
+  "GPN-MSA_absLLR": "GPN-MSA"
+  "CADD": "CADD"
+  "phyloP_100v": "PhyloP (V)"
+  "phastCons_100v": "PhastCons (V)"
+  "phyloP_447m": "PhyloP (M)"
+  "phastCons_470m": "PhastCons (M)"
+  "phyloP_239p": "PhyloP (P)"
+  "phastCons_43p": "PhastCons (P)"
+  "cV2F_tissue_agnostic_extract_Enformer.Enformer_all_all": "Enformer"
+
+model_renaming_part4:
+  "GPN-Star-p243-200M-256_minus_entropy_calibrated": "GPN-Star (P243)"
+  "GPN-Star-p36-200M-256_minus_entropy_calibrated": "GPN-Star (P36)"
+  "phyloP_239p": "PhyloP (P243)"
+  "phastCons_43p": "PhastCons (P43)"
+
+ablation_models:
+  - GPN-Star-p36-200M-256_minus_entropy_calibrated
+
 consequence_renaming:
   "5-prime-UTR": "5' UTR"
   "3-prime-UTR": "3' UTR"

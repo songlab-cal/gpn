@@ -4,15 +4,20 @@ import bioframe as bf
 from gpn.data import Genome
 from liftover import get_lifter
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+import matplotlib.ticker as ticker
 from matplotlib_venn import venn3
 import numpy as np
 import os
 import pandas as pd
 import polars as pl
 import re
+import scipy
 from scipy.spatial.distance import cdist
-from scipy.stats import fisher_exact
+from scipy.stats import fisher_exact, pearsonr
 import seaborn as sns
+import statsmodels.api as sm
+from statsmodels.stats.meta_analysis import combine_effects
 from statsmodels.stats.multitest import fdrcorrection
 from tqdm import tqdm
 
@@ -161,6 +166,169 @@ def enrich_two_models_to_latex(df: pd.DataFrame) -> str:
     for col in ["p_value", "q_value"]:
         df2[col] = [f"{x:.0e}" for x in df2[col]]
     return df2.to_latex(index=False, escape=False, float_format="%.2f")
+
+
+def load_ldsc_results(
+    traits: pd.DataFrame,
+    models: list[str],
+    qs: list[float],
+    approaches: list[str],
+    model_renaming: dict[str, str],
+) -> pd.DataFrame:
+    res = []
+    for _, trait in traits.iterrows():
+        trait_path = trait["File name"]
+        trait_name = trait["Trait"]
+        for model in models:
+            for q in qs:
+                for approach in approaches:
+                    path = f"results/output/{approach}/{model}/{q}/{trait_path}.parquet"
+                    df = pd.read_parquet(path)
+                    df["trait"] = trait_name
+                    df["model"] = model_renaming.get(model, model)
+                    df["q"] = q
+                    df["approach"] = approach
+                    res.append(df)
+    res = pd.concat(res)
+    res = res.rename(columns={"tau_star_se": "tau_star_std_error"})
+    return res
+
+
+def combine_effects_wrapper(effects, variances):
+    res = combine_effects(effects, variances).summary_frame().loc["random effect"]
+    p_value = scipy.stats.norm.sf(res.eff / res.sd_eff)
+    return res.eff, res.sd_eff, p_value
+
+
+def run_ldsc_meta_analysis(res: pd.DataFrame) -> pd.DataFrame:
+    x = (
+        res.groupby(["model", "q", "approach"])
+        .apply(
+            lambda df: pd.Series(
+                dict(
+                    **dict(
+                        zip(
+                            ["Enrichment", "Enrichment_sd", "Enrichment_p"],
+                            combine_effects_wrapper(
+                                df.Enrichment, df.Enrichment_std_error**2
+                            ),
+                        )
+                    ),
+                    **dict(
+                        zip(
+                            ["Coefficient", "Coefficient_sd", "Coefficient_p"],
+                            combine_effects_wrapper(
+                                df.Coefficient, df.Coefficient_std_error**2
+                            ),
+                        )
+                    ),
+                    **dict(
+                        zip(
+                            ["tau_star", "tau_star_sd", "tau_star_p"],
+                            combine_effects_wrapper(
+                                df.tau_star, df.tau_star_std_error**2
+                            ),
+                        )
+                    ),
+                )
+            )
+        )
+        .reset_index()
+    )
+    for col in ["Enrichment_p", "Coefficient_p", "tau_star_p"]:
+        x[col + "_minuslog10"] = -np.log10(x[col])
+    return x
+
+
+def plot_bar_ldsc(
+    df: pd.DataFrame,
+    x: str,
+    xlabel: str,
+    palette: dict,
+    limit: float,
+    major_locator: float | None = None,
+) -> plt.Figure:
+    fig = plt.figure(figsize=(3, 3.5))
+    sns.barplot(data=df, y="model", x=x, palette=palette)
+    err_col = x + "_sd"
+    if err_col in df.columns:
+        plt.errorbar(
+            x=df[x], y=df["model"], xerr=df[err_col], fmt="none", ecolor="black"
+        )
+    plt.xlabel(xlabel)
+    sns.despine()
+    ax = plt.gca()
+    if major_locator is not None:
+        ax.xaxis.set_major_locator(ticker.MultipleLocator(major_locator))
+    ax.set_xlim(left=limit)
+    plt.ylabel("")
+    return fig
+
+
+def plot_agg_relplot(
+    df: pd.DataFrame,
+    palette: dict,
+    x_label: str = "q",
+    y_label: str = "value",
+    values_to_plot: list[str] | None = None,
+) -> plt.Figure:
+    if values_to_plot is None:
+        values_to_plot = ["Enrichment", "Tau_star"]
+    sd_vars = [f"{col}_sd" for col in values_to_plot]
+
+    value_df = df.melt(
+        id_vars=["Model", "q"],
+        value_vars=values_to_plot,
+        var_name="metric",
+        value_name="value",
+    )
+    sd_df = df.melt(
+        id_vars=["Model", "q"], value_vars=sd_vars, var_name="metric", value_name="sd"
+    )
+    sd_df["metric"] = sd_df["metric"].str.replace("_sd", "")
+    long_df = pd.merge(value_df, sd_df, on=["Model", "q", "metric"])
+    long_df = long_df.sort_values("value", ascending=False)
+
+    g = sns.relplot(
+        data=long_df,
+        x="q",
+        y="value",
+        hue="Model",
+        kind="line",
+        marker="o",
+        palette=palette,
+        facet_kws={"sharex": True, "sharey": False},
+        height=3,
+        aspect=1.1,
+        errorbar=None,
+        linewidth=1,
+        markersize=5,
+    )
+
+    metrics = long_df["metric"].unique()
+    for i, ax in enumerate(g.axes.flat):
+        current_metric = metrics[i]
+        subset = long_df[long_df["metric"] == current_metric]
+        for model in subset["Model"].unique():
+            model_data = subset[subset["Model"] == model]
+            color = palette[model]
+            ax.errorbar(
+                x=model_data["q"],
+                y=model_data["value"],
+                yerr=model_data["sd"],
+                color=color,
+                fmt="none",
+                linewidth=1,
+            )
+        if current_metric == "Enrichment":
+            ax.set_ylim(bottom=1)
+        elif current_metric == "Tau_star":
+            ax.set_ylim(bottom=0)
+        ax.set_xlim(right=long_df.q.max() + 0.001)
+
+    g.set_axis_labels(x_label, y_label)
+    sns.despine()
+    return g.figure
 
 
 def filter_snp(V):
