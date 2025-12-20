@@ -273,3 +273,12 @@ consequences_to_explore:
   - CA-TF
   - PLS
   - upstream_gene_variant
+
+consequence_comparison_consequences:
+  - dELS
+  - missense_variant
+
+consequence_comparison_models:
+  - GPN-Star-p243-200M-256_minus_entropy_calibrated
+  - phastCons_43p
+  - phyloP_239p

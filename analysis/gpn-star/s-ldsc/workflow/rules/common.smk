@@ -331,6 +331,129 @@ def plot_agg_relplot(
     return g.figure
 
 
+def load_consequence_ldsc_results(
+    traits: pd.DataFrame,
+    consequences: list[str],
+) -> pd.DataFrame:
+    res = []
+    for _, trait in traits.iterrows():
+        trait_path = trait["File name"]
+        trait_name = trait["Trait"]
+        for consequence in consequences:
+            path = f"results/output/consequence_{consequence}/{trait_path}.parquet"
+            df = pd.read_parquet(path)
+            df["trait"] = trait_name
+            df["consequence"] = consequence
+            res.append(df)
+    res = pd.concat(res)
+    res = res.rename(columns={"tau_star_se": "tau_star_std_error"})
+    return res
+
+
+def load_quantile_consequence_ldsc_results(
+    traits: pd.DataFrame,
+    consequences: list[str],
+    models: list[str],
+    q: float,
+    model_renaming: dict[str, str],
+) -> pd.DataFrame:
+    res = []
+    for _, trait in traits.iterrows():
+        trait_path = trait["File name"]
+        trait_name = trait["Trait"]
+        for consequence in consequences:
+            for model in models:
+                path = f"results/output/quantile_consequence_{consequence}/{model}/{q}/{trait_path}.parquet"
+                df = pd.read_parquet(path)
+                df["trait"] = trait_name
+                df["consequence"] = consequence
+                df["model"] = model_renaming.get(model, model)
+                res.append(df)
+    res = pd.concat(res)
+    res = res.rename(columns={"tau_star_se": "tau_star_std_error"})
+    return res
+
+
+def run_consequence_meta_analysis(res: pd.DataFrame) -> pd.DataFrame:
+    x = (
+        res.groupby(["consequence"])
+        .apply(
+            lambda df: pd.Series(
+                dict(
+                    **dict(
+                        zip(
+                            ["Enrichment", "Enrichment_sd", "Enrichment_p"],
+                            combine_effects_wrapper(
+                                df.Enrichment, df.Enrichment_std_error**2
+                            ),
+                        )
+                    ),
+                    **dict(
+                        zip(
+                            ["Coefficient", "Coefficient_sd", "Coefficient_p"],
+                            combine_effects_wrapper(
+                                df.Coefficient, df.Coefficient_std_error**2
+                            ),
+                        )
+                    ),
+                    **dict(
+                        zip(
+                            ["tau_star", "tau_star_sd", "tau_star_p"],
+                            combine_effects_wrapper(
+                                df.tau_star, df.tau_star_std_error**2
+                            ),
+                        )
+                    ),
+                )
+            )
+        )
+        .reset_index()
+    )
+    for col in ["Enrichment_p", "Coefficient_p", "tau_star_p"]:
+        x[col + "_minuslog10"] = -np.log10(x[col])
+    return x
+
+
+def run_consequence_model_meta_analysis(res: pd.DataFrame) -> pd.DataFrame:
+    x = (
+        res.groupby(["consequence", "model"])
+        .apply(
+            lambda df: pd.Series(
+                dict(
+                    **dict(
+                        zip(
+                            ["Enrichment", "Enrichment_sd", "Enrichment_p"],
+                            combine_effects_wrapper(
+                                df.Enrichment, df.Enrichment_std_error**2
+                            ),
+                        )
+                    ),
+                    **dict(
+                        zip(
+                            ["Coefficient", "Coefficient_sd", "Coefficient_p"],
+                            combine_effects_wrapper(
+                                df.Coefficient, df.Coefficient_std_error**2
+                            ),
+                        )
+                    ),
+                    **dict(
+                        zip(
+                            ["tau_star", "tau_star_sd", "tau_star_p"],
+                            combine_effects_wrapper(
+                                df.tau_star, df.tau_star_std_error**2
+                            ),
+                        )
+                    ),
+                )
+            )
+        )
+        .reset_index()
+    )
+    for col in ["Enrichment_p", "Coefficient_p", "tau_star_p"]:
+        x[col + "_minuslog10"] = -np.log10(x[col])
+    return x
+
+
 def filter_snp(V):
     V = V[V.ref.isin(NUCLEOTIDES)]
     V = V[V.alt.isin(NUCLEOTIDES)]

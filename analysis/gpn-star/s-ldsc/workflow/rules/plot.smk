@@ -569,6 +569,121 @@ rule ldsc_supp_tables:
             f.write(df.to_latex(escape=False))
 
 
+rule ldsc_consequence_combined:
+    input:
+        traits="config/traits_indep107.tsv",
+    output:
+        svg="results/plots/ldsc/consequence_combined.svg",
+        pdf="results/plots/ldsc/consequence_combined.pdf",
+    run:
+        os.makedirs("results/plots/ldsc", exist_ok=True)
+        plt.rcParams["font.size"] = 12
+
+        traits = pd.read_csv(input.traits, sep="\t")
+        traits = traits[traits["File name"] != "PASS.Multiple_Sclerosis.IMSGC2019"]
+
+        consequences = config["consequences_to_explore"]
+        gpn_star_top_model = config["gpn_star_top_model"]
+
+        # Load baseline consequence results
+        res_baseline = load_consequence_ldsc_results(traits, consequences)
+        agg_baseline = run_consequence_meta_analysis(res_baseline)
+        agg_baseline["variant_set"] = "All"
+
+        # Load quantile within consequence results
+        res_quantile = load_quantile_consequence_ldsc_results(
+            traits, consequences, [gpn_star_top_model], 0.001, config["model_renaming"]
+        )
+        agg_quantile = run_consequence_meta_analysis(res_quantile)
+        agg_quantile["variant_set"] = "Top 0.1%"
+
+        # Combine
+        agg_res = pd.concat([agg_baseline, agg_quantile], ignore_index=True)
+
+        # Sort consequences by top 0.1% enrichment
+        consequence_order = (
+            agg_res[agg_res["variant_set"] == "Top 0.1%"]
+            .sort_values("Enrichment", ascending=False)["consequence"]
+            .tolist()
+        )
+
+        fig = plt.figure(figsize=(10, 6))
+        hue_order = ["All", "Top 0.1%"]
+        sns.barplot(
+            data=agg_res, y="consequence", x="Enrichment",
+            hue="variant_set", hue_order=hue_order, order=consequence_order
+        )
+
+        # Add error bars
+        for i, consequence in enumerate(consequence_order):
+            for j, variant_set in enumerate(hue_order):
+                row = agg_res[(agg_res["consequence"] == consequence) & (agg_res["variant_set"] == variant_set)]
+                if not row.empty:
+                    y_pos = i + (j - 0.5) * 0.4
+                    plt.errorbar(
+                        x=row["Enrichment"].values[0], y=y_pos,
+                        xerr=row["Enrichment_sd"].values[0], fmt="none", ecolor="black"
+                    )
+
+        plt.xlim(left=1)
+        plt.xlabel("Heritability enrichment")
+        plt.ylabel("")
+        plt.legend(title="Variant set")
+        sns.despine()
+        plt.tight_layout()
+        fig.savefig(output.svg, bbox_inches="tight")
+        fig.savefig(output.pdf, bbox_inches="tight")
+        plt.close(fig)
+
+
+rule ldsc_consequence_model_comparison:
+    input:
+        traits="config/traits_indep107.tsv",
+    output:
+        svg="results/plots/ldsc/consequence_model_comparison.svg",
+        pdf="results/plots/ldsc/consequence_model_comparison.pdf",
+    run:
+        os.makedirs("results/plots/ldsc", exist_ok=True)
+        plt.rcParams["font.size"] = 12
+
+        traits = pd.read_csv(input.traits, sep="\t")
+        traits = traits[traits["File name"] != "PASS.Multiple_Sclerosis.IMSGC2019"]
+
+        consequences = config["consequence_comparison_consequences"]
+        models = config["consequence_comparison_models"]
+        res = load_quantile_consequence_ldsc_results(
+            traits, consequences, models, 0.001, config["model_renaming"]
+        )
+        agg_res = run_consequence_model_meta_analysis(res)
+
+        palette = config["palette"]
+
+        fig, axes = plt.subplots(len(consequences), 1, figsize=(3, 2.5 * len(consequences)), sharex=False)
+        if len(consequences) == 1:
+            axes = [axes]
+
+        for ax, consequence in zip(axes, consequences):
+            df = agg_res[agg_res["consequence"] == consequence].copy()
+            df = df.sort_values("Enrichment", ascending=False)
+
+            sns.barplot(data=df, x="Enrichment", y="model", palette=palette, ax=ax)
+            ax.errorbar(
+                x=df["Enrichment"], y=range(len(df)),
+                xerr=df["Enrichment_sd"], fmt="none", ecolor="black"
+            )
+            ax.set_xlim(left=1)
+            ax.set_title(consequence)
+            ax.set_xlabel("")
+            ax.set_ylabel("")
+
+        axes[-1].set_xlabel("Heritability enrichment")
+        sns.despine()
+        plt.tight_layout()
+        fig.savefig(output.svg, bbox_inches="tight")
+        fig.savefig(output.pdf, bbox_inches="tight")
+        plt.close(fig)
+
+
 rule all_plots:
     input:
         rules.plot_score_overlap.output,
@@ -578,3 +693,5 @@ rule all_plots:
         rules.ldsc_part3_tissue.output,
         rules.ldsc_part4_ablation.output,
         rules.ldsc_supp_tables.output,
+        rules.ldsc_consequence_combined.output,
+        rules.ldsc_consequence_model_comparison.output,
