@@ -10,7 +10,7 @@ from gpn.star.data import (
 )
 from gpn.star.data import make_windows, get_seq
 from gpn.star.data import GenomeMSA
-from gpn.star.utils import normalize_logits, get_entropy
+from gpn.star.utils import normalize_logits, get_entropy, get_llr
 import gzip
 from joblib import Parallel, delayed
 import numpy as np
@@ -60,7 +60,9 @@ PHYLOP_PHASTCONS_GROUP = {'phastCons100way': 'phyloP100way',
 
 vep_datasets = [
     #'songlab/clinvar_vs_benign',
-    'songlab/cosmic',
+    #'songlab/cosmic',
+    'songlab/ukb_finemapped_coding',
+    #'songlab/omim_traitgym',
     
     #'results/clinvar/vs_benign_v2',
     #'results/cosmic',
@@ -151,13 +153,13 @@ models = sum(
                 42,
             ],
             max_steps=[
-                150_000,
-                #200_000,
+                #150_000,
+                200_000,
             ],
             model_size=[
-                "small",
+                #"small",
                 #"medium",
-                #"large",
+                "large",
             ],
         ) for m in hparam_models
     ],
@@ -193,6 +195,8 @@ print(vep_datasets)
 rule all:
     input:
         #expand("results/checkpoints/{model}", model=models),
-        expand("results/preds/llr/{dataset}/{model}.parquet", model=models, dataset=vep_datasets),
+        #expand("results/preds/llr/{dataset}/{model}.parquet", model=models, dataset=vep_datasets),
+        #expand("results/preds/absllr/{dataset}/{model}.parquet", model=models, dataset=vep_datasets),
         #expand("results/preds/entropy/{dataset}/{model}.parquet", model=models, dataset=vep_datasets),
         #expand("results/logits/{dataset}/{model}.parquet", model=models, dataset=vep_datasets),
+        expand("results/positions/{chrom}/{genome}/{window_size}/positions.parquet", chrom=["22"], genome=["hg38"], window_size=[WINDOW_SIZE]),

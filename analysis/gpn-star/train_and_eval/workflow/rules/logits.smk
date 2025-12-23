@@ -30,18 +30,22 @@ rule make_positions_chrom:
 
 rule get_logits:
     input:
-        "{anything}/positions.parquet",
-        #"{anything}/{genome}/{window_size}/positions.parquet",
+        "results/positions/{chrom}/{genome}/{window_size}/positions.parquet",
         "results/msa/{genome}/{alignment}/{species}",
         "results/checkpoints/{genome}/{time_enc}/{clade_thres}/{alignment}/{species}/{window_size}/{model}",
     output:
-        "{anything}/logits/{genome}/{time_enc}/{clade_thres}/{alignment}/{species}/{window_size}/{model}.parquet",
+        "results/logits/{chrom}/{genome}/{time_enc}/{clade_thres}/{alignment}/{species}/{window_size}/{model}.parquet",
     wildcard_constraints:
         time_enc="[A-Za-z0-9_-]+",
         clade_thres="[0-9.-]+",
         alignment="[A-Za-z0-9_]+",
         species="[A-Za-z0-9_-]+",
         window_size="\d+",
+    params:
+        # Number of positions per checkpoint batch (adjust as needed)
+        # A larger batch saves less frequently but has less overhead
+        # A smaller batch saves more frequently for better resume granularity
+        checkpoint_batch_size=config.get("checkpoint_batch_size", 1000000),
     threads:
         workflow.cores
     shell:
@@ -53,7 +57,9 @@ rule get_logits:
 
         torchrun --nproc_per_node=$num_gpus -m gpn.star.inference logits {input[0]} {input[1]} {wildcards.window_size} {input[2]} {output} \
         --per_device_batch_size 8 --is_file \
-        --dataloader_num_workers $dataloader_num_workers
+        --dataloader_num_workers $dataloader_num_workers \
+        --checkpoint_batch_size {params.checkpoint_batch_size} \
+        --cleanup_checkpoints
         """
 
 rule process_logits:

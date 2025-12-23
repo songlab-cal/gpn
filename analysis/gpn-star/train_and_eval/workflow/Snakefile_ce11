@@ -10,7 +10,7 @@ from gpn.star.data import (
 )
 from gpn.star.data import make_windows, get_seq
 from gpn.star.data import GenomeMSA
-from gpn.star.utils import normalize_logits, get_entropy
+from gpn.star.utils import normalize_logits, get_entropy, get_llr
 import gzip
 from joblib import Parallel, delayed
 import numpy as np

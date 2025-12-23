@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import torch
-from transformers import AutoModelForMaskedLM
+from transformers import AutoModelForMaskedLM, AutoConfig
 import os
 
 import gpn.star.model
@@ -9,9 +9,16 @@ from gpn.data import Tokenizer
 
 
 class MLMforLogitsModel(torch.nn.Module):
-    def __init__(self, model_path):
+    def __init__(self, model_path, phylo_dist_path=None):
         super().__init__()
-        self.model = AutoModelForMaskedLM.from_pretrained(model_path)
+        # Load config and optionally override phylo_dist_path
+        if phylo_dist_path is not None:
+            config = AutoConfig.from_pretrained(model_path)
+            config.phylo_dist_path = phylo_dist_path
+            self.model = AutoModelForMaskedLM.from_pretrained(model_path, config=config)
+        else:
+            # Use original config as-is
+            self.model = AutoModelForMaskedLM.from_pretrained(model_path)
         self.model.eval()
         tokenizer = Tokenizer()
         self.id_a = tokenizer.vocab.index("A")
@@ -51,8 +58,8 @@ class MLMforLogitsModel(torch.nn.Module):
 
 
 class LogitsInference(object):
-    def __init__(self, model_path, genome_msa_list, window_size, disable_aux_features=False):
-        self.model = MLMforLogitsModel(model_path)
+    def __init__(self, model_path, genome_msa_list, window_size, disable_aux_features=False, phylo_dist_path=None):
+        self.model = MLMforLogitsModel(model_path, phylo_dist_path=phylo_dist_path)
         self.genome_msa_list = genome_msa_list
         self.window_size = window_size
         self.disable_aux_features = disable_aux_features
