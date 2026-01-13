@@ -118,7 +118,7 @@ rule all:
         expand(
             "results/output/quantile_consequence_{consequence}/{model}/{q}/{trait}.parquet",
             consequence=config["consequences_to_explore"],
-            model=[gpn_star_top_model, "phastCons_43p", "phyloP_239p"],
+            model=config["consequence_comparison_models"],
             q=[0.001],
             trait=traits,
         ),

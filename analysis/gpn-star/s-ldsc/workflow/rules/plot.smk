@@ -649,7 +649,7 @@ rule ldsc_consequence_model_comparison:
         traits = pd.read_csv(input.traits, sep="\t")
         traits = traits[traits["File name"] != "PASS.Multiple_Sclerosis.IMSGC2019"]
 
-        consequences = config["consequence_comparison_consequences"]
+        consequences = config["consequences_to_explore"]
         models = config["consequence_comparison_models"]
         res = load_quantile_consequence_ldsc_results(
             traits, consequences, models, 0.001, config["model_renaming"]
@@ -658,9 +658,10 @@ rule ldsc_consequence_model_comparison:
 
         palette = config["palette"]
 
-        fig, axes = plt.subplots(len(consequences), 1, figsize=(3, 2.5 * len(consequences)), sharex=False)
-        if len(consequences) == 1:
-            axes = [axes]
+        n_cols = 4
+        n_rows = (len(consequences) + n_cols - 1) // n_cols
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 2.5 * n_rows), sharex=False)
+        axes = axes.flatten()
 
         for ax, consequence in zip(axes, consequences):
             df = agg_res[agg_res["consequence"] == consequence].copy()
@@ -676,7 +677,10 @@ rule ldsc_consequence_model_comparison:
             ax.set_xlabel("")
             ax.set_ylabel("")
 
-        axes[-1].set_xlabel("Heritability enrichment")
+        for ax in axes[len(consequences):]:
+            ax.set_visible(False)
+
+        fig.supxlabel("Heritability enrichment")
         sns.despine()
         plt.tight_layout()
         fig.savefig(output.svg, bbox_inches="tight")
