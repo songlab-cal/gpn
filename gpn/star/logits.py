@@ -1,17 +1,16 @@
 import numpy as np
 import pandas as pd
 import torch
-from transformers import AutoModelForMaskedLM
 import os
 
-import gpn.star.model
+from gpn.star.model import load_model
 from gpn.data import Tokenizer
 
 
 class MLMforLogitsModel(torch.nn.Module):
     def __init__(self, model_path):
         super().__init__()
-        self.model = AutoModelForMaskedLM.from_pretrained(model_path)
+        self.model = load_model(model_path)
         self.model.eval()
         tokenizer = Tokenizer()
         self.id_a = tokenizer.vocab.index("A")
