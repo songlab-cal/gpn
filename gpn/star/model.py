@@ -1,3 +1,5 @@
+import os
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -958,6 +960,27 @@ class GPNStarForMaskedLM(GPNStarPreTrainedModel):
             loss=loss,
             logits=logits,
         )
+
+
+def load_model(model_path):
+    """Load model with validated phylo_dist_path.
+
+    If config.phylo_dist_path doesn't exist on filesystem, tries fallback
+    path at model_path/phylo_dist/. Raises Exception if neither exists.
+    """
+    config = AutoConfig.from_pretrained(model_path)
+
+    if not os.path.exists(config.phylo_dist_path):
+        fallback_path = os.path.join(model_path, "phylo_dist")
+        if os.path.exists(fallback_path):
+            config.phylo_dist_path = fallback_path
+        else:
+            raise Exception(
+                f"phylo_dist_path '{config.phylo_dist_path}' does not exist "
+                f"and fallback path '{fallback_path}' does not exist"
+            )
+
+    return AutoModelForMaskedLM.from_pretrained(model_path, config=config)
 
 
 AutoConfig.register("GPNStar", GPNStarConfig)
