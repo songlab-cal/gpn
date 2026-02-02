@@ -589,9 +589,9 @@ rule interpretation_embed:
     output:
         "results/interpretation/embed/{anything}/{model}.parquet",
     params:
-        model_path=lambda wc: config["gpn_star"][wc.model]["model_path"],
-        msa_path=lambda wc: config["gpn_star"][wc.model]["msa_path"],
-        phylo_info_path=lambda wc: config["gpn_star"][wc.model]["phylo_info_path"],
+        model_path=lambda wc: f"{config['external']['gpn_star_base']}/{config['gpn_star'][wc.model]['model_path']}",
+        msa_path=lambda wc: f"{config['external']['gpn_star_base']}/{config['gpn_star'][wc.model]['msa_path']}",
+        phylo_info_path=lambda wc: f"{config['external']['gpn_star_base']}/{config['gpn_star'][wc.model]['phylo_info_path']}",
         window_size=lambda wc: config["gpn_star"][wc.model]["window_size"],
         center_window_size=CENTER_WINDOW_SIZE,
     threads: workflow.cores

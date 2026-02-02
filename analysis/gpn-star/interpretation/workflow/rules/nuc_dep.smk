@@ -2,17 +2,17 @@ rule interpretation_nuc_dep:
     output:
         "results/interpretation/nuc_dep/{locus}/{model}.parquet",
     params:
-        lambda wc: config["nuc_dep"][wc.locus]["chrom"],
-        lambda wc: config["nuc_dep"][wc.locus]["start"],
-        lambda wc: config["nuc_dep"][wc.locus]["end"],
-        lambda wc: config["nuc_dep"][wc.locus]["strand"],
-        lambda wc: config["gpn_star"][wc.model]["model_path"],
-        lambda wc: config["gpn_star"][wc.model]["msa_path"],
-        lambda wc: config["gpn_star"][wc.model]["phylo_info_path"],
-        lambda wc: config["gpn_star"][wc.model]["window_size"],
+        chrom=lambda wc: config["nuc_dep"][wc.locus]["chrom"],
+        start=lambda wc: config["nuc_dep"][wc.locus]["start"],
+        end=lambda wc: config["nuc_dep"][wc.locus]["end"],
+        strand=lambda wc: config["nuc_dep"][wc.locus]["strand"],
+        model_path=lambda wc: f"{config['external']['gpn_star_base']}/{config['gpn_star'][wc.model]['model_path']}",
+        msa_path=lambda wc: f"{config['external']['gpn_star_base']}/{config['gpn_star'][wc.model]['msa_path']}",
+        phylo_info_path=lambda wc: f"{config['external']['gpn_star_base']}/{config['gpn_star'][wc.model]['phylo_info_path']}",
+        window_size=lambda wc: config["gpn_star"][wc.model]["window_size"],
     threads: workflow.cores
     shell:
-        "python workflow/scripts/nuc_dep.py {params} {output}"
+        "python workflow/scripts/nuc_dep.py {params.chrom} {params.start} {params.end} {params.strand} {params.model_path} {params.msa_path} {params.phylo_info_path} {params.window_size} {output}"
 
 
 rule interpretation_nuc_dep_plot:
