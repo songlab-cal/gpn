@@ -53,6 +53,13 @@ rule interpretation_intervals_repeat:
         df.to_parquet(output[0], index=False)
 
 
+rule interpretation_download_phastcons:
+    output:
+        "results/interpretation/phastCons-43p.bw",
+    shell:
+        "wget https://cgl.gi.ucsc.edu/data/cactus/zoonomia-2021-track-hub/hg38/phyloPPrimates.bigWig -O {output}"
+
+
 rule interpretation_intervals_cre_download:
     output:
         temp("results/interpretation/intervals/cre.tsv"),
@@ -545,7 +552,7 @@ rule interpretation_enhancer_merge:
 rule interpretation_add_cons:
     input:
         "results/interpretation/windows/{anything}.parquet",
-        "/scratch/users/gbenegas/projects/functionality-prediction/results/conservation/phastCons-43p.bw",
+        "results/interpretation/phastCons-43p.bw",
     output:
         "results/interpretation/windows/{anything}_cons.parquet",
     run:
