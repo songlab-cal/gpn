@@ -1,21 +1,56 @@
+rule interpretation_download_reference:
+    output:
+        "results/interpretation/genome.fa.gz",
+    shell:
+        "wget {config[external][fasta_url]} -O {output}"
+
+
 rule interpretation_intervals_all:
     input:
-        # intervals with no "N" and at least 512bp
-        "/scratch/users/gbenegas/projects/gpn-human/output/intervals/512/defined.parquet",
+        "results/interpretation/genome.fa.gz",
     output:
         "results/interpretation/intervals/all.parquet",
+    run:
+        genome = Genome(input[0])
+        genome.filter_chroms(CHROMS)
+        intervals = genome.get_defined_intervals()
+        intervals = filter_length(intervals, 512)  # at least 512bp
+        intervals.to_parquet(output[0], index=False)
+
+
+rule interpretation_download_rmsk:
+    output:
+        temp("results/interpretation/rmsk.txt.gz"),
     shell:
-        "cp {input} {output}"
+        "wget -O {output} https://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/rmsk.txt.gz"
+
+
+rule interpretation_process_rmsk:
+    input:
+        "results/interpretation/rmsk.txt.gz",
+    output:
+        temp("results/interpretation/rmsk.parquet"),
+    run:
+        df = pd.read_csv(
+            input[0], sep="\t", header=None,
+            names=["bin", "swScore", "milliDiv", "milliDel", "milliIns",
+                   "chrom", "start", "end", "genoLeft", "strand",
+                   "repName", "repClass", "repFamily", "repStart", "repEnd", "repLeft", "id"],
+        )
+        df.chrom = df.chrom.astype(str).str.replace("chr", "")
+        df = df[df.chrom.isin(CHROMS)]
+        df.to_parquet(output[0], index=False)
 
 
 rule interpretation_intervals_repeat:
     input:
-        # repeatmasker
-        "/scratch/users/gbenegas/projects/gpn-human/output/rmsk_merged.parquet",
+        "results/interpretation/rmsk.parquet",
     output:
         "results/interpretation/intervals/repeat.parquet",
-    shell:
-        "cp {input} {output}"
+    run:
+        df = pd.read_parquet(input[0], columns=["chrom", "start", "end"])
+        df = bf.merge(df).drop(columns="n_intervals")
+        df.to_parquet(output[0], index=False)
 
 
 rule interpretation_intervals_cre_download:

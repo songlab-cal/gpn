@@ -2,6 +2,8 @@
 external:
   # Base path for GPN-star training outputs (MSA, phylo info, checkpoints)
   gpn_star_base: /scratch/users/czye/GPN/egpn/analysis/human/egpn/workflow/results
+  # Reference genome (GRCh38)
+  fasta_url: http://ftp.ensembl.org/pub/release-107/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna_sm.primary_assembly.fa.gz
 
 models:
   human:
