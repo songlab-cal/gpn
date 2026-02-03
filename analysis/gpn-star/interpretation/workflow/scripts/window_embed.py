@@ -100,7 +100,7 @@ d.set_transform(transform)
 
 training_args = TrainingArguments(
     output_dir=tempfile.TemporaryDirectory().name,
-    per_device_eval_batch_size=32,
+    per_device_eval_batch_size=64,
     dataloader_num_workers=8,
     remove_unused_columns=False,
     torch_compile=True,
