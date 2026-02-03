@@ -610,13 +610,14 @@ rule interpretation_subsample_stratified:
             n=min(len(df_background), n), random_state=42
         )
 
+        df_foreground = df_foreground.copy()
         df_foreground["conserved"] = df_foreground.cons >= 1
-        res_foreground = (
+        sampled_indices = (
             df_foreground.groupby(["label", "conserved"])
-            .apply(lambda x: x.sample(n=min(len(x), n // 2), random_state=42))
-            .reset_index(drop=True)
-            .drop(columns="conserved")
+            .apply(lambda x: x.sample(n=min(len(x), n // 2), random_state=42).index.tolist())
+            .explode()
         )
+        res_foreground = df_foreground.loc[sampled_indices].drop(columns="conserved")
 
         res = pd.concat([res_background, res_foreground]).sort_values(
             ["chrom", "start", "end"]
@@ -625,20 +626,33 @@ rule interpretation_subsample_stratified:
         res.to_parquet(output[0], index=False)
 
 
+rule download_gpn_star_model:
+    output:
+        directory("results/checkpoints/{model}")
+    params:
+        repo_id=lambda wc: config["gpn_star"][wc.model]["repo_id"]
+    threads: workflow.cores
+    shell:
+        "hf download {params.repo_id} --local-dir {output} --max-workers {threads}"
+
+
 rule interpretation_embed:
     input:
-        "results/interpretation/windows/{anything}.parquet",
+        windows="results/interpretation/windows/{anything}.parquet",
+        checkpoint="results/checkpoints/{model}",
     output:
         "results/interpretation/embed/{anything}/{model}.parquet",
     params:
-        model_path=lambda wc: f"{config['external']['gpn_star_base']}/{config['gpn_star'][wc.model]['model_path']}",
-        msa_path=lambda wc: f"{config['external']['gpn_star_base']}/{config['gpn_star'][wc.model]['msa_path']}",
-        phylo_info_path=lambda wc: f"{config['external']['gpn_star_base']}/{config['gpn_star'][wc.model]['phylo_info_path']}",
+        msa_path=lambda wc: f"{config['external']['msa_base']}/{config['gpn_star'][wc.model]['msa_path']}",
         window_size=lambda wc: config["gpn_star"][wc.model]["window_size"],
         center_window_size=CENTER_WINDOW_SIZE,
     threads: workflow.cores
     shell:
-        "python workflow/scripts/window_embed.py {input} {params.model_path} {params.msa_path} {params.phylo_info_path} {params.window_size} {params.center_window_size} {output}"
+        """
+        python workflow/scripts/window_embed.py \
+            {input.windows} {input.checkpoint} {params.msa_path} \
+            {params.window_size} {params.center_window_size} {output}
+        """
 
 
 rule interpretation_umap:

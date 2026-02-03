@@ -15,6 +15,6 @@ tqdm
 pyyaml
 pyarrow
 torch
-transformers
+transformers==4.57.1
 datasets
 git+https://github.com/songlab-cal/gpn.git

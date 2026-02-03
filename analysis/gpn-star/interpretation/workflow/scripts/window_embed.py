@@ -1,6 +1,8 @@
-from gpn.data import GenomeMSA, Tokenizer
-import gpn.star.model
+from gpn.star.data import GenomeMSA
+import gpn.star.model  # Register GPNStar with transformers
 from gpn.star.utils import find_directory_sum_paths
+from transformers import AutoConfig, AutoModel, TrainingArguments, Trainer
+import tempfile
 
 from datasets import Dataset
 import numpy as np
@@ -9,9 +11,6 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from transformers import AutoConfig, AutoModel, TrainingArguments, Trainer
-from tqdm import tqdm
-import tempfile
 
 import sys
 
@@ -19,12 +18,11 @@ import sys
 WINDOWS_PATH = sys.argv[1]
 MODEL_PATH = sys.argv[2]
 MSA_PATH = sys.argv[3]
-PHYLO_INFO_PATH = sys.argv[4]
-WINDOW_SIZE = int(sys.argv[5])
+WINDOW_SIZE = int(sys.argv[4])
 CENTER_WINDOW_SIZE = int(
-    sys.argv[6]
+    sys.argv[5]
 )  # we average embeddings over this central sub-window
-OUTPUT_PATH = sys.argv[7]
+OUTPUT_PATH = sys.argv[6]
 
 
 msa_paths = find_directory_sum_paths(MSA_PATH)
@@ -33,7 +31,7 @@ genome_msa_list = [
     for n_species, path in msa_paths.items()
 ]
 config = AutoConfig.from_pretrained(MODEL_PATH)
-config.phylo_dist_path = PHYLO_INFO_PATH
+config.phylo_dist_path = os.path.join(MODEL_PATH, "phylo_dist")
 _model = AutoModel.from_pretrained(MODEL_PATH, config=config)
 
 
@@ -102,10 +100,10 @@ d.set_transform(transform)
 
 training_args = TrainingArguments(
     output_dir=tempfile.TemporaryDirectory().name,
-    per_device_eval_batch_size=128,
+    per_device_eval_batch_size=32,
     dataloader_num_workers=8,
     remove_unused_columns=False,
-    torch_compile=True,  # can be faster to skip for small inputs
+    torch_compile=True,
     bf16=True,
     bf16_full_eval=True,
     report_to="none",

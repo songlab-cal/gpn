@@ -1,5 +1,6 @@
-from gpn.data import GenomeMSA, Tokenizer
-import gpn.star.model
+from gpn.star.data import GenomeMSA
+from gpn.data import Tokenizer
+import gpn.star.model  # Register GPNStar with transformers
 from gpn.star.utils import find_directory_sum_paths
 
 from datasets import Dataset
@@ -22,9 +23,8 @@ END = int(sys.argv[3])
 STRAND = sys.argv[4]
 MODEL_PATH = sys.argv[5]
 MSA_PATH = sys.argv[6]
-PHYLO_INFO_PATH = sys.argv[7]
-WINDOW_SIZE = int(sys.argv[8])
-OUTPUT_PATH = sys.argv[9]
+WINDOW_SIZE = int(sys.argv[7])
+OUTPUT_PATH = sys.argv[8]
 
 
 assert END > START
@@ -91,7 +91,7 @@ genome_msa_list = [
     for n_species, path in msa_paths.items()
 ]
 config = AutoConfig.from_pretrained(MODEL_PATH)
-config.phylo_dist_path = PHYLO_INFO_PATH
+config.phylo_dist_path = os.path.join(MODEL_PATH, "phylo_dist")
 model = AutoModelForMaskedLM.from_pretrained(MODEL_PATH, config=config)
 model.to(device).eval()
 
