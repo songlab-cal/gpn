@@ -34,7 +34,7 @@ rule get_logits:
         "results/msa/{genome}/{alignment}/{species}",
         "results/checkpoints/{genome}/{time_enc}/{clade_thres}/{alignment}/{species}/{window_size}/{model}",
     output:
-        "results/logits/{chrom}/{genome}/{time_enc}/{clade_thres}/{alignment}/{species}/{window_size}/{model}.parquet",
+        "results/logits/positions/{chrom}/{genome}/{time_enc}/{clade_thres}/{alignment}/{species}/{window_size}/{model}.parquet",
     wildcard_constraints:
         time_enc="[A-Za-z0-9_-]+",
         clade_thres="[0-9.-]+",
