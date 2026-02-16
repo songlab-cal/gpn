@@ -14,7 +14,7 @@ import polars as pl
 import re
 import scipy
 from scipy.spatial.distance import cdist
-from scipy.stats import fisher_exact, pearsonr
+from scipy.stats import fisher_exact, mannwhitneyu, pearsonr
 import seaborn as sns
 import statsmodels.api as sm
 from statsmodels.stats.meta_analysis import combine_effects

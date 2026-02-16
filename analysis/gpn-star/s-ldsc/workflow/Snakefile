@@ -18,6 +18,7 @@ include: "rules/gpn.smk"
 include: "rules/ldsc.smk"
 include: "rules/plot.smk"
 include: "rules/seg.smk"
+include: "rules/other.smk"
 
 
 gpn_star_top_model = config["gpn_star_top_model"]
