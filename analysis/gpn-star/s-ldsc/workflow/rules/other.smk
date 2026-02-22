@@ -1,3 +1,42 @@
+rule download_kanai_et_al:
+    output:
+        "results/kanai_et_al/supp_tables.xlsx",
+    shell:
+        "wget --no-check-certificate -O {output} 'https://www.medrxiv.org/content/medrxiv/early/2021/09/05/2021.09.03.21262975/DC2/embed/media-2.xlsx?download=true'"
+
+
+rule process_kanai_et_al:
+    input:
+        "results/kanai_et_al/supp_tables.xlsx",
+        "results/gwas_effect_sizes/aggregated.parquet",
+    output:
+        "results/kanai_et_al/high_pip_effect_sizes.parquet",
+    run:
+        (
+            pl.from_pandas(
+                pd.read_excel(
+                    input[0], sheet_name="ST3_high_PIP_pairs", header=2,
+                    usecols=["variant", "rsid", "cohort"],
+                )
+            )
+            .filter(pl.col("cohort") == "UKBB")
+            .with_columns(
+                pl.col("variant").str.split(":").list.get(2).alias("ref"),
+                pl.col("variant").str.split(":").list.get(3).alias("alt"),
+            )
+            .filter(
+                pl.col("ref").is_in(NUCLEOTIDES) & pl.col("alt").is_in(NUCLEOTIDES)
+            )
+            .select("rsid")
+            .unique()
+            .join(
+                pl.read_parquet(input[1]),
+                left_on="rsid", right_on="SNP", how="inner",
+            )
+            .write_parquet(output[0])
+        )
+
+
 rule gwas_effect_sizes_agg:
     input:
         expand("results/sumstats_107/{trait}.sumstats.gz", trait=traits),
@@ -46,26 +85,46 @@ rule gwas_effect_sizes_histogram:
         p=f"results/gwas_effect_sizes/quantile/{config['gpn_star_p']}/0.001.parquet",
         m=f"results/gwas_effect_sizes/quantile/{config['gpn_star_m']}/0.001.parquet",
         v=f"results/gwas_effect_sizes/quantile/{config['gpn_star_v']}/0.001.parquet",
+        kanai="results/kanai_et_al/high_pip_effect_sizes.parquet",
         bg="results/gwas_effect_sizes/aggregated.parquet",
     output:
         ecdf="results/gwas_effect_sizes/ecdf.svg",
         kde="results/gwas_effect_sizes/kde.svg",
     run:
-        cols = ["mean_Z2", "max_Z2", "model"]
+        hue_col = "variant set"
+        cols = ["mean_Z2", "max_Z2", hue_col]
+        bg_full = pl.read_parquet(input.bg)
+        parts = [
+            (pl.read_parquet(input.p), "GPN-Star-P top 0.1%"),
+            (pl.read_parquet(input.m), "GPN-Star-M top 0.1%"),
+            (pl.read_parquet(input.v), "GPN-Star-V top 0.1%"),
+            (pl.read_parquet(input.kanai), "Kanai et al. finemapped high PIP"),
+        ]
         df = pl.concat([
-            pl.read_parquet(input.p).with_columns(model=pl.lit("GPN-Star-P")).select(cols),
-            pl.read_parquet(input.m).with_columns(model=pl.lit("GPN-Star-M")).select(cols),
-            pl.read_parquet(input.v).with_columns(model=pl.lit("GPN-Star-V")).select(cols),
-            pl.read_parquet(input.bg).with_columns(model=pl.lit("All")).select(cols).sample(30000, seed=42),
+            d.with_columns(pl.lit(f"{name}\n(n={len(d):,})").alias(hue_col)).select(cols)
+            for d, name in parts
+        ] + [
+            bg_full.sample(30000, seed=42)
+            .with_columns(pl.lit(f"All\n(n={len(bg_full):,})").alias(hue_col))
+            .select(cols)
         ])
         for plot_fn, out in [(sns.ecdfplot, output.ecdf), (sns.kdeplot, output.kde)]:
-            fig, axes = plt.subplots(1, 2, figsize=(8, 3))
-            for ax, col in zip(axes, ["mean_Z2", "max_Z2"]):
+            fig, axes = plt.subplots(1, 2, figsize=(8, 4))
+            for i, (ax, col) in enumerate(zip(axes, ["mean_Z2", "max_Z2"])):
                 kwargs = {"common_norm": False} if plot_fn is sns.kdeplot else {}
-                plot_fn(data=df, x=col, hue="model", log_scale=(True, False), ax=ax, **kwargs)
+                plot_fn(data=df, x=col, hue=hue_col, log_scale=(True, False), ax=ax, **kwargs)
                 ax.set_xlabel(col.replace("_", " ").replace("Z2", "$Z^2$"))
+                legend = ax.get_legend()
+                if i == 0:
+                    handles = legend.legend_handles
+                    labels = [t.get_text() for t in legend.get_texts()]
+                legend.remove()
+            fig.legend(
+                handles, labels, loc="upper center", ncol=3,
+                bbox_to_anchor=(0.5, 1.0), frameon=False,
+            )
             sns.despine()
-            fig.tight_layout()
+            fig.subplots_adjust(top=0.78)
             fig.savefig(out)
 
 

@@ -20,3 +20,4 @@ liftover
 adjustText
 huggingface_hub
 matplotlib-venn
+openpyxl
