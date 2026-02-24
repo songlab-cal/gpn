@@ -125,7 +125,118 @@ rule gwas_effect_sizes_histogram:
             )
             sns.despine()
             fig.subplots_adjust(top=0.78)
-            fig.savefig(out)
+            fig.savefig(out, bbox_inches="tight")
+
+
+HEIGHT_SUMSTATS = "results/sumstats_107/PASS.Height.Yengo2022.sumstats.gz"
+HEIGHT_KANAI_TRAIT = "Height"
+
+
+rule gwas_effect_sizes_height:
+    input:
+        HEIGHT_SUMSTATS,
+    output:
+        "results/gwas_effect_sizes/height.parquet",
+    run:
+        (
+            pl.from_pandas(pd.read_csv(input[0], sep=r"\s+", usecols=["SNP", "Z"]))
+            .with_columns((pl.col("Z") ** 2).alias("Z2"))
+            .write_parquet(output[0])
+        )
+
+
+rule kanai_height:
+    input:
+        "results/kanai_et_al/supp_tables.xlsx",
+        "results/gwas_effect_sizes/height.parquet",
+    output:
+        "results/kanai_et_al/high_pip_height.parquet",
+    run:
+        (
+            pl.from_pandas(
+                pd.read_excel(
+                    input[0], sheet_name="ST3_high_PIP_pairs", header=2,
+                    usecols=["variant", "rsid", "cohort", "trait"],
+                )
+            )
+            .filter(
+                (pl.col("cohort") == "UKBB") & (pl.col("trait") == HEIGHT_KANAI_TRAIT)
+            )
+            .with_columns(
+                pl.col("variant").str.split(":").list.get(2).alias("ref"),
+                pl.col("variant").str.split(":").list.get(3).alias("alt"),
+            )
+            .filter(
+                pl.col("ref").is_in(NUCLEOTIDES) & pl.col("alt").is_in(NUCLEOTIDES)
+            )
+            .select("rsid")
+            .unique()
+            .join(
+                pl.read_parquet(input[1]),
+                left_on="rsid", right_on="SNP", how="inner",
+            )
+            .write_parquet(output[0])
+        )
+
+
+rule gwas_effect_sizes_height_histogram:
+    input:
+        p=f"results/gwas_effect_sizes/quantile/{config['gpn_star_p']}/0.001.parquet",
+        m=f"results/gwas_effect_sizes/quantile/{config['gpn_star_m']}/0.001.parquet",
+        v=f"results/gwas_effect_sizes/quantile/{config['gpn_star_v']}/0.001.parquet",
+        kanai="results/kanai_et_al/high_pip_height.parquet",
+        height="results/gwas_effect_sizes/height.parquet",
+        rsids="results/variants/rsid/merged.parquet",
+        scores_p=f"results/variant_scores/quantile/{config['gpn_star_p']}/0.001.parquet",
+        scores_m=f"results/variant_scores/quantile/{config['gpn_star_m']}/0.001.parquet",
+        scores_v=f"results/variant_scores/quantile/{config['gpn_star_v']}/0.001.parquet",
+    output:
+        ecdf="results/gwas_effect_sizes/height_ecdf.svg",
+        kde="results/gwas_effect_sizes/height_kde.svg",
+    run:
+        height = pl.read_parquet(input.height)
+        rsids = pl.read_parquet(input.rsids)
+        hue_col = "variant set"
+        col = "Z2"
+
+        def select_model(scores_path, name):
+            scores = pl.read_parquet(scores_path)
+            return (
+                pl.concat([rsids, scores], how="horizontal")
+                .filter(pl.col("score") == 1)
+                .join(height, left_on="rsid", right_on="SNP", how="inner")
+            ), name
+
+        parts = [
+            select_model(input.scores_p, "GPN-Star-P top 0.1%"),
+            select_model(input.scores_m, "GPN-Star-M top 0.1%"),
+            select_model(input.scores_v, "GPN-Star-V top 0.1%"),
+            (pl.read_parquet(input.kanai), "Kanai et al. finemapped high PIP"),
+        ]
+        df = pl.concat([
+            d.with_columns(pl.lit(f"{name}\n(n={len(d):,})").alias(hue_col)).select([col, hue_col])
+            for d, name in parts
+        ] + [
+            height.sample(30000, seed=42)
+            .with_columns(pl.lit(f"All\n(n={len(height):,})").alias(hue_col))
+            .select([col, hue_col])
+        ]).filter(pl.col(col) > 0)
+        for plot_fn, out in [(sns.ecdfplot, output.ecdf), (sns.kdeplot, output.kde)]:
+            fig, ax = plt.subplots(figsize=(5, 4))
+            kwargs = {"common_norm": False} if plot_fn is sns.kdeplot else {}
+            plot_fn(data=df, x=col, hue=hue_col, log_scale=(True, False), ax=ax, **kwargs)
+            ax.set_xlabel("$Z^2$ (Height)")
+            legend = ax.get_legend()
+            handles = legend.legend_handles
+            labels = [t.get_text() for t in legend.get_texts()]
+            legend.remove()
+            fig.legend(
+                handles, labels, loc="upper center", ncol=3,
+                bbox_to_anchor=(0.5, 1.0), frameon=False,
+            )
+            sns.despine()
+            fig.subplots_adjust(top=0.75)
+            fig.savefig(out, bbox_inches="tight")
 
 
 rule gwas_effect_sizes_test:
