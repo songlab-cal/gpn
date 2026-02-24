@@ -37,6 +37,99 @@ rule process_kanai_et_al:
         )
 
 
+# Trait matching between Kanai et al. (2021) fine-mapped variants and our 107 sumstats.
+#
+# Kanai et al. ran their own UKBB GWAS using BOLT-LMM (continuous traits) and
+# SAIGE (binary traits) on ~360K UKBB Europeans.
+#
+# Our sumstats come from three sources:
+#   - UKB_460K.*: Price lab (Loh et al. 2018, Nat Genet), BOLT-LMM on ~459K UKBB
+#     Europeans. Same method and cohort as Kanai, likely very similar analyses
+#     (possibly different covariates/QC).
+#   - PANUKBB.*: Pan-UKBB (Broad Institute), multi-ancestry mixed model on UKBB.
+#     Same cohort but different method.
+#   - PASS.*/GBMI.*: External meta-analyses from various consortia. Different GWAS
+#     entirely, though some include UKBB in their meta-analysis.
+#
+# This mapping only includes traits where: (1) phenotype clearly matches between
+# Kanai and our sumstats, and (2) both are UKBB-only GWAS. No exact same-publication
+# matches exist since Kanai ran their own analysis pipeline.
+#
+# kanai_trait -> sumstats file name
+KANAI_SUMSTATS_MATCHING = {
+    "Age_at_Menarche": "UKB_460K.repro_MENARCHE_AGE",
+    "ALP": "UKB_460K.biochemistry_AlkalinePhosphatase",
+    "AST": "UKB_460K.biochemistry_AspartateAminotransferase",
+    "Balding_Type4": "UKB_460K.body_BALDING1",
+    "BrC": "PANUKBB.Breast_Cancer_female",
+    "DBP": "UKB_460K.bp_DIASTOLICadjMEDz",
+    "Diverticulosis": "PANUKBB.Diverticulosis_And_Diverticulitis",
+    "eBMD": "UKB_460K.bmd_HEEL_TSCOREz",
+    "Hypothyroidism": "UKB_460K.disease_HYPOTHYROIDISM_SELF_REP",
+    "IGF1": "UKB_460K.biochemistry_IGF1",
+    "Inguinal_Hernia": "PANUKBB.Inguinal_Hernia",
+    "Morning_Person": "UKB_460K.other_MORNINGPERSON",
+    "P": "UKB_460K.biochemistry_Phosphate",
+    "PrC": "UKB_460K.cancer_PROSTATE",
+    "RBC": "UKB_460K.blood_RED_COUNT",
+    "sCr": "UKB_460K.biochemistry_Creatinine",
+    "SkC": "PANUKBB.C44_Other_Malignant_Neoplasms_Of_Skin",
+    "TBil": "UKB_460K.biochemistry_TotalBilirubin",
+    "TC": "UKB_460K.biochemistry_Cholesterol",
+    "Testosterone_M": "UKB_460K.biochemistry_Testosterone_Male",
+    "TP": "UKB_460K.biochemistry_TotalProtein",
+    "VitD": "UKB_460K.biochemistry_VitaminD",
+    "WBC": "UKB_460K.blood_WHITE_COUNT",
+    "WHRadjBMI": "UKB_460K.body_WHRadjBMIz",
+}
+
+
+rule kanai_sumstats_matching:
+    input:
+        "results/kanai_et_al/supp_tables.xlsx",
+        "config/traits_indep107.tsv",
+    output:
+        "results/kanai_et_al/sumstats_matching.tsv",
+    run:
+        kanai_traits = (
+            pl.from_pandas(
+                pd.read_excel(
+                    input[0], sheet_name="ST2_overview_traits", header=2,
+                    usecols=[
+                        "cohort", "trait", "description",
+                        "definition", "model_marginal", "n_samples",
+                    ],
+                )
+            )
+            .filter(pl.col("cohort") == "UKBB")
+        )
+        our_traits = pl.read_csv(input[1], separator="\t")
+        rows = []
+        for row in kanai_traits.iter_rows(named=True):
+            kt = row["trait"]
+            our_file = KANAI_SUMSTATS_MATCHING.get(kt)
+            if our_file is None:
+                continue
+            our_row = our_traits.filter(
+                pl.col("File name") == our_file
+            ).row(0, named=True)
+            rows.append({
+                "kanai_trait": kt,
+                "kanai_description": row["description"],
+                "kanai_definition": row["definition"],
+                "kanai_model": row["model_marginal"],
+                "kanai_n": row["n_samples"],
+                "sumstats_file": our_file,
+                "sumstats_trait": our_row["Trait"],
+                "sumstats_n": our_row["Mean N"],
+            })
+        (
+            pl.DataFrame(rows)
+            .sort("kanai_trait")
+            .write_csv(output[0], separator="\t")
+        )
+
+
 rule gwas_effect_sizes_agg:
     input:
         expand("results/sumstats_107/{trait}.sumstats.gz", trait=traits),
