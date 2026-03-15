@@ -305,6 +305,24 @@ consequences_to_explore:
   - PLS
   - upstream_gene_variant
 
+consequence_groups:
+  coding:
+    - missense_variant
+    - synonymous_variant
+    - stop_gained
+    - stop_lost
+    - start_lost
+    - stop_retained_variant
+    - incomplete_terminal_codon_variant
+    - coding_sequence_variant
+  splicing:
+    - splice_region_variant
+    - splice_polypyrimidine_tract_variant
+    - splice_donor_region_variant
+    - splice_donor_variant
+    - splice_donor_5th_base_variant
+    - splice_acceptor_variant
+
 consequence_comparison_models:
   - GPN-Star-p243-200M-256_minus_entropy_calibrated
   - phastCons_43p
