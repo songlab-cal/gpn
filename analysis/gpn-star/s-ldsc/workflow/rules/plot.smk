@@ -652,6 +652,109 @@ rule ldsc_consequence_combined:
         plt.close(fig)
 
 
+def get_ldsc_consequence_combined_line_inputs(wildcards):
+    traits = pd.read_csv("config/traits_indep107.tsv", sep="\t")
+    traits = traits[traits["File name"] != "PASS.Multiple_Sclerosis.IMSGC2019"]
+    trait_paths = traits["File name"].tolist()
+    quantiles_per_consequence = config["quantiles_per_consequence"]
+    gpn_star_top_model = config["gpn_star_top_model"]
+    files = []
+    for consequence, qs in quantiles_per_consequence.items():
+        prefix = get_consequence_path_prefix(consequence)
+        for trait_path in trait_paths:
+            files.append(f"results/output/{prefix}/{trait_path}.parquet")
+            for q in qs:
+                files.append(f"results/output/quantile_{prefix}/{gpn_star_top_model}/{q}/{trait_path}.parquet")
+    return files
+
+
+rule ldsc_consequence_combined_line:
+    input:
+        traits="config/traits_indep107.tsv",
+        global_count="results/global_score_consequence/annot_with_cre_v2.parquet",
+        data=get_ldsc_consequence_combined_line_inputs,
+    output:
+        svg="results/plots/ldsc/consequence_combined_line.svg",
+        pdf="results/plots/ldsc/consequence_combined_line.pdf",
+    run:
+        os.makedirs("results/plots/ldsc", exist_ok=True)
+        plt.rcParams["font.size"] = 10
+
+        traits = pd.read_csv(input.traits, sep="\t")
+        traits = traits[traits["File name"] != "PASS.Multiple_Sclerosis.IMSGC2019"]
+
+        quantiles_per_consequence = config["quantiles_per_consequence"]
+        consequences = list(quantiles_per_consequence.keys())
+        gpn_star_top_model = config["gpn_star_top_model"]
+
+        # Common variant counts per consequence
+        global_count = pd.read_parquet(input.global_count)
+        common_counts = (
+            global_count[global_count.category == "common"]
+            .set_index("consequence")["count"]
+            .to_dict()
+        )
+
+        # Total common variants (for converting quantile to count)
+        n_common_total = global_count[
+            (global_count.category == "common") & (global_count.consequence == "total")
+        ]["count"].iloc[0]
+
+        # Load baseline (all variants) results
+        res_baseline = load_consequence_ldsc_results(traits, consequences)
+        agg_baseline = run_consequence_meta_analysis(res_baseline)
+
+        # Load quantile results for each q
+        all_quantile_qs = sorted(set(q for qs in quantiles_per_consequence.values() for q in qs))
+        agg_quantile_parts = []
+        for q in all_quantile_qs:
+            consequences_for_q = [c for c, qs in quantiles_per_consequence.items() if q in qs]
+            res_q = load_quantile_consequence_ldsc_results(
+                traits, consequences_for_q, [gpn_star_top_model], q, config["model_renaming"]
+            )
+            agg_q = run_consequence_meta_analysis(res_q)
+            agg_q["q"] = q
+            agg_q["n_common"] = int(n_common_total * q)
+            agg_quantile_parts.append(agg_q)
+        agg_quantile = pd.concat(agg_quantile_parts, ignore_index=True)
+
+        # Plot
+        n_cols = 4
+        n_rows = (len(consequences) + n_cols - 1) // n_cols
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 2.5 * n_rows), sharex=False)
+        axes = axes.flatten()
+
+        for ax, consequence in zip(axes, consequences):
+            df = agg_quantile[agg_quantile["consequence"] == consequence].sort_values("n_common")
+            ax.errorbar(
+                x=df["n_common"], y=df["Enrichment"], yerr=df["Enrichment_sd"],
+                marker="o", markersize=4, linewidth=1, capsize=2,
+            )
+
+            # Baseline as horizontal dashed line
+            baseline = agg_baseline[agg_baseline["consequence"] == consequence]
+            if not baseline.empty:
+                enr = baseline["Enrichment"].iloc[0]
+                enr_sd = baseline["Enrichment_sd"].iloc[0]
+                ax.axhline(y=enr, linestyle="--", color="gray", linewidth=1)
+                ax.axhspan(enr - enr_sd, enr + enr_sd, alpha=0.15, color="gray")
+
+            ax.set_title(consequence)
+            ax.set_xlabel("")
+            ax.set_ylabel("")
+
+        for ax in axes[len(consequences):]:
+            ax.set_visible(False)
+
+        fig.supxlabel("Number of common variants")
+        fig.supylabel("Heritability enrichment")
+        sns.despine()
+        plt.tight_layout()
+        fig.savefig(output.svg, bbox_inches="tight")
+        fig.savefig(output.pdf, bbox_inches="tight")
+        plt.close(fig)
+
+
 def get_ldsc_consequence_model_comparison_inputs(wildcards):
     traits = pd.read_csv("config/traits_indep107.tsv", sep="\t")
     traits = traits[traits["File name"] != "PASS.Multiple_Sclerosis.IMSGC2019"]
@@ -730,4 +833,5 @@ rule all_plots:
         rules.ldsc_part4_ablation.output,
         rules.ldsc_supp_tables.output,
         rules.ldsc_consequence_combined.output,
+        rules.ldsc_consequence_combined_line.output,
         # rules.ldsc_consequence_model_comparison.output,
