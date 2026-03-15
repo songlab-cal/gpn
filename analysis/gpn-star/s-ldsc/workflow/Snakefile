@@ -122,4 +122,16 @@ rule all:
         #     q=[0.001],
         #     trait=traits,
         # ),
+        # expand(
+        #     "results/output/group_consequence_{group}/{trait}.parquet",
+        #     group=config["consequence_groups"].keys(),
+        #     trait=traits,
+        # ),
+        # expand(
+        #     "results/output/quantile_group_consequence_{group}/{model}/{q}/{trait}.parquet",
+        #     group=config["consequence_groups"].keys(),
+        #     model=config["consequence_comparison_models"],
+        #     q=[0.001],
+        #     trait=traits,
+        # ),
         ################################################################################

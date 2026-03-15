@@ -29,15 +29,15 @@ Take a look at `workflow/Snakefile` rule `all` for example targets.
 The first one will run S-LDSC on one model on one trait.
 
 ```bash
-uv run snakemake --cores all --use-conda
+uv run snakemake
 ```
 
 ```bash
 # Snakemake sometimes gets confused about which files it needs to rerun and this forces
 # not to rerun any existing file
-uv run snakemake --cores all --touch
+uv run snakemake --touch
 # to output an execution plan
-uv run snakemake --cores all --dry-run
+uv run snakemake --dry-run
 ```
 
 LDSC jobs (e.g. running model X on trait Y) is by default parallelized as 1 job per core.

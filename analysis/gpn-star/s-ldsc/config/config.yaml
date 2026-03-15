@@ -297,12 +297,12 @@ consequences_to_explore:
   - TF
   - CA-H3K4me3
   - CA-TF-flank
+  - coding
   - downstream_gene_variant
-  - missense_variant
-  - synonymous_variant
   - 5_prime_UTR_variant
   - CA-TF
   - PLS
+  - splicing
   - upstream_gene_variant
 
 consequence_groups:

@@ -331,6 +331,12 @@ def plot_agg_relplot(
     return g.figure
 
 
+def get_consequence_path_prefix(consequence: str) -> str:
+    if consequence in config["consequence_groups"]:
+        return f"group_consequence_{consequence}"
+    return f"consequence_{consequence}"
+
+
 def load_consequence_ldsc_results(
     traits: pd.DataFrame,
     consequences: list[str],
@@ -340,7 +346,8 @@ def load_consequence_ldsc_results(
         trait_path = trait["File name"]
         trait_name = trait["Trait"]
         for consequence in consequences:
-            path = f"results/output/consequence_{consequence}/{trait_path}.parquet"
+            prefix = get_consequence_path_prefix(consequence)
+            path = f"results/output/{prefix}/{trait_path}.parquet"
             df = pd.read_parquet(path)
             df["trait"] = trait_name
             df["consequence"] = consequence
@@ -362,8 +369,9 @@ def load_quantile_consequence_ldsc_results(
         trait_path = trait["File name"]
         trait_name = trait["Trait"]
         for consequence in consequences:
+            prefix = get_consequence_path_prefix(consequence)
             for model in models:
-                path = f"results/output/quantile_consequence_{consequence}/{model}/{q}/{trait_path}.parquet"
+                path = f"results/output/quantile_{prefix}/{model}/{q}/{trait_path}.parquet"
                 df = pd.read_parquet(path)
                 df["trait"] = trait_name
                 df["consequence"] = consequence

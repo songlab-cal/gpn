@@ -569,9 +569,25 @@ rule ldsc_supp_tables:
             f.write(df.to_latex(escape=False))
 
 
+def get_ldsc_consequence_combined_inputs(wildcards):
+    traits = pd.read_csv("config/traits_indep107.tsv", sep="\t")
+    traits = traits[traits["File name"] != "PASS.Multiple_Sclerosis.IMSGC2019"]
+    trait_paths = traits["File name"].tolist()
+    consequences = config["consequences_to_explore"]
+    gpn_star_top_model = config["gpn_star_top_model"]
+    files = []
+    for consequence in consequences:
+        prefix = get_consequence_path_prefix(consequence)
+        for trait_path in trait_paths:
+            files.append(f"results/output/{prefix}/{trait_path}.parquet")
+            files.append(f"results/output/quantile_{prefix}/{gpn_star_top_model}/0.001/{trait_path}.parquet")
+    return files
+
+
 rule ldsc_consequence_combined:
     input:
         traits="config/traits_indep107.tsv",
+        data=get_ldsc_consequence_combined_inputs,
     output:
         svg="results/plots/ldsc/consequence_combined.svg",
         pdf="results/plots/ldsc/consequence_combined.pdf",
@@ -636,9 +652,25 @@ rule ldsc_consequence_combined:
         plt.close(fig)
 
 
+def get_ldsc_consequence_model_comparison_inputs(wildcards):
+    traits = pd.read_csv("config/traits_indep107.tsv", sep="\t")
+    traits = traits[traits["File name"] != "PASS.Multiple_Sclerosis.IMSGC2019"]
+    trait_paths = traits["File name"].tolist()
+    consequences = config["consequences_to_explore"]
+    models = config["consequence_comparison_models"]
+    files = []
+    for consequence in consequences:
+        prefix = get_consequence_path_prefix(consequence)
+        for model in models:
+            for trait_path in trait_paths:
+                files.append(f"results/output/quantile_{prefix}/{model}/0.001/{trait_path}.parquet")
+    return files
+
+
 rule ldsc_consequence_model_comparison:
     input:
         traits="config/traits_indep107.tsv",
+        data=get_ldsc_consequence_model_comparison_inputs,
     output:
         svg="results/plots/ldsc/consequence_model_comparison.svg",
         pdf="results/plots/ldsc/consequence_model_comparison.pdf",
@@ -698,4 +730,4 @@ rule all_plots:
         rules.ldsc_part4_ablation.output,
         rules.ldsc_supp_tables.output,
         rules.ldsc_consequence_combined.output,
-        rules.ldsc_consequence_model_comparison.output,
+        # rules.ldsc_consequence_model_comparison.output,
