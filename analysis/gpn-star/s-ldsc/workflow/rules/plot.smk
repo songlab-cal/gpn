@@ -613,6 +613,11 @@ rule ldsc_consequence_combined:
         agg_quantile = run_consequence_meta_analysis(res_quantile)
         agg_quantile["variant_set"] = "Top 0.1%"
 
+        # Filter to consequences with significant enrichment at q=0.001
+        significant = agg_quantile[agg_quantile["Enrichment_p"] < 0.05]["consequence"].tolist()
+        agg_baseline = agg_baseline[agg_baseline["consequence"].isin(significant)]
+        agg_quantile = agg_quantile[agg_quantile["consequence"].isin(significant)]
+
         # Combine
         agg_res = pd.concat([agg_baseline, agg_quantile], ignore_index=True)
 
@@ -718,13 +723,23 @@ rule ldsc_consequence_combined_line:
             agg_quantile_parts.append(agg_q)
         agg_quantile = pd.concat(agg_quantile_parts, ignore_index=True)
 
+        # Filter to consequences with significant enrichment at q=0.001
+        agg_q001 = agg_quantile[agg_quantile["q"] == 0.001]
+        significant = (
+            agg_q001[agg_q001["Enrichment_p"] < 0.05]
+            .sort_values("Enrichment", ascending=False)["consequence"]
+            .tolist()
+        )
+        agg_quantile = agg_quantile[agg_quantile["consequence"].isin(significant)]
+        agg_baseline = agg_baseline[agg_baseline["consequence"].isin(significant)]
+
         # Plot
         n_cols = 4
-        n_rows = (len(consequences) + n_cols - 1) // n_cols
+        n_rows = (len(significant) + n_cols - 1) // n_cols
         fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 2.5 * n_rows), sharex=False)
         axes = axes.flatten()
 
-        for ax, consequence in zip(axes, consequences):
+        for ax, consequence in zip(axes, significant):
             df = agg_quantile[agg_quantile["consequence"] == consequence].sort_values("n_common")
             ax.errorbar(
                 x=df["n_common"], y=df["Enrichment"], yerr=df["Enrichment_sd"],
@@ -743,7 +758,7 @@ rule ldsc_consequence_combined_line:
             ax.set_xlabel("")
             ax.set_ylabel("")
 
-        for ax in axes[len(consequences):]:
+        for ax in axes[len(significant):]:
             ax.set_visible(False)
 
         fig.supxlabel("Number of common variants")
