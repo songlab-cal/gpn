@@ -85,8 +85,6 @@ rule score_consequence_analysis:
         os.makedirs("results/latex", exist_ok=True)
 
         models = config["score_consequence_models"]
-        renaming = config["consequence_renaming"]
-
         global_count = pd.read_parquet(input.global_count).rename(
             columns={"count": "global_count"}
         )
@@ -103,7 +101,7 @@ rule score_consequence_analysis:
 
         # All variants
         enrich_all = calculate_enrichment(
-            df2.query("category == 'all'").copy(), renaming
+            df2.query("category == 'all'").copy()
         )
         fig = plot_enrichment(enrich_all)
         fig.savefig(output.plot_all_svg, bbox_inches="tight")
@@ -115,7 +113,7 @@ rule score_consequence_analysis:
 
         # Common variants
         enrich_common = calculate_enrichment(
-            df2.query("category == 'common'").copy(), renaming
+            df2.query("category == 'common'").copy()
         )
         fig = plot_enrichment(enrich_common)
         fig.savefig(output.plot_common_svg, bbox_inches="tight")
@@ -140,7 +138,7 @@ rule score_consequence_analysis:
 
             for category in ["all", "common"]:
                 result = calculate_enrichment_two_models(
-                    df3.query(f"category == '{category}'"), model1, model2, renaming
+                    df3.query(f"category == '{category}'"), model1, model2,
                 ).query("q_value < 0.05").sort_values("odds_ratio", ascending=False)
 
                 latex_path = f"results/latex/score_consequence_comparison_{m1}_vs_{m2}_{category}.tex"
@@ -618,8 +616,9 @@ rule ldsc_consequence_combined:
         agg_baseline = agg_baseline[agg_baseline["consequence"].isin(significant)]
         agg_quantile = agg_quantile[agg_quantile["consequence"].isin(significant)]
 
-        # Combine
+        # Combine and rename consequences
         agg_res = pd.concat([agg_baseline, agg_quantile], ignore_index=True)
+        agg_res["consequence"] = agg_res["consequence"].map(rename_consequence)
 
         # Sort consequences by top 0.1% enrichment
         consequence_order = (
@@ -630,9 +629,11 @@ rule ldsc_consequence_combined:
 
         fig = plt.figure(figsize=(10, 6))
         hue_order = ["All", "Top 0.1%"]
+        bar_palette = {"All": "gray", "Top 0.1%": "#2773BA"}
         sns.barplot(
             data=agg_res, y="consequence", x="Enrichment",
-            hue="variant_set", hue_order=hue_order, order=consequence_order
+            hue="variant_set", hue_order=hue_order, order=consequence_order,
+            palette=bar_palette,
         )
 
         # Add error bars
@@ -733,17 +734,31 @@ rule ldsc_consequence_combined_line:
         agg_quantile = agg_quantile[agg_quantile["consequence"].isin(significant)]
         agg_baseline = agg_baseline[agg_baseline["consequence"].isin(significant)]
 
+        # Rename consequences
+        renamed = [rename_consequence(c) for c in significant]
+        agg_quantile["consequence"] = agg_quantile["consequence"].map(rename_consequence)
+        agg_baseline["consequence"] = agg_baseline["consequence"].map(rename_consequence)
+
         # Plot
+        line_color = "#2773BA"
         n_cols = 4
-        n_rows = (len(significant) + n_cols - 1) // n_cols
-        fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 2.5 * n_rows), sharex=False)
+        n_rows = (len(renamed) + n_cols - 1) // n_cols
+        fig, axes = plt.subplots(
+            n_rows, n_cols, figsize=(3 * n_cols, 2.5 * n_rows),
+            sharex=True, sharey=True,
+        )
         axes = axes.flatten()
 
-        for ax, consequence in zip(axes, significant):
+        for i, (ax, consequence) in enumerate(zip(axes, renamed)):
             df = agg_quantile[agg_quantile["consequence"] == consequence].sort_values("n_common")
+            ax.plot(
+                df["n_common"], df["Enrichment"],
+                marker="o", markersize=5, linewidth=1, color=line_color,
+                label="Top constrained" if i == 0 else None,
+            )
             ax.errorbar(
                 x=df["n_common"], y=df["Enrichment"], yerr=df["Enrichment_sd"],
-                marker="o", markersize=4, linewidth=1, capsize=2,
+                fmt="none", color=line_color, linewidth=1,
             )
 
             # Baseline as horizontal dashed line
@@ -751,14 +766,20 @@ rule ldsc_consequence_combined_line:
             if not baseline.empty:
                 enr = baseline["Enrichment"].iloc[0]
                 enr_sd = baseline["Enrichment_sd"].iloc[0]
-                ax.axhline(y=enr, linestyle="--", color="gray", linewidth=1)
+                ax.axhline(
+                    y=enr, linestyle="--", color="gray", linewidth=1,
+                    label="All" if i == 0 else None,
+                )
                 ax.axhspan(enr - enr_sd, enr + enr_sd, alpha=0.15, color="gray")
 
             ax.set_title(consequence)
             ax.set_xlabel("")
             ax.set_ylabel("")
 
-        for ax in axes[len(significant):]:
+        axes[0].set_ylim(bottom=1)
+        axes[0].legend()
+
+        for ax in axes[len(renamed):]:
             ax.set_visible(False)
 
         fig.supxlabel("Number of common variants")

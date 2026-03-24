@@ -45,13 +45,12 @@ def plot_venn(subsets: dict, palette: dict) -> plt.Figure:
     return fig
 
 
-def calculate_enrichment(df: pd.DataFrame, renaming: dict) -> pd.DataFrame:
+def calculate_enrichment(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     df["proportion"] = df["count"] / df["count"].sum()
     df["other_proportion"] = df["other_count"] / df["other_count"].sum()
     df["global_proportion"] = df["global_count"] / df["global_count"].sum()
-    df.consequence = df.consequence.str.replace("_variant", "").str.replace("_", "-")
-    df.consequence = df.consequence.map(lambda x: renaming.get(x, x))
+    df.consequence = df.consequence.map(rename_consequence)
 
     total_count = df["count"].sum()
     total_other_count = df["other_count"].sum()
@@ -117,13 +116,10 @@ def enrich_to_latex(df: pd.DataFrame) -> str:
 
 
 def calculate_enrichment_two_models(
-    df: pd.DataFrame, model1: str, model2: str, renaming: dict
+    df: pd.DataFrame, model1: str, model2: str,
 ) -> pd.DataFrame:
     df_models = df[df["model"].isin([model1, model2])].copy()
-    df_models.consequence = (
-        df_models.consequence.str.replace("_variant", "").str.replace("_", "-")
-    )
-    df_models.consequence = df_models.consequence.map(lambda x: renaming.get(x, x))
+    df_models.consequence = df_models.consequence.map(rename_consequence)
 
     contingency_table = df_models.pivot_table(
         index="consequence", columns="model", values="count", fill_value=0
@@ -329,6 +325,12 @@ def plot_agg_relplot(
     g.set_axis_labels(x_label, y_label)
     sns.despine()
     return g.figure
+
+
+def rename_consequence(name: str) -> str:
+    renaming = config["consequence_renaming"]
+    name = name.replace("_variant", "").replace("_", "-")
+    return renaming.get(name, name)
 
 
 def get_consequence_path_prefix(consequence: str) -> str:
