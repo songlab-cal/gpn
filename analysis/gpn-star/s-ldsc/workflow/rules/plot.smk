@@ -678,6 +678,7 @@ rule ldsc_consequence_combined_line:
     input:
         traits="config/traits_indep107.tsv",
         global_count="results/global_score_consequence/annot_with_cre_v2.parquet",
+        # tip: comment out `data` to speed up DAG construction when iterating on plot styling
         data=get_ldsc_consequence_combined_line_inputs,
     output:
         svg="results/plots/ldsc/consequence_combined_line.svg",
@@ -741,10 +742,12 @@ rule ldsc_consequence_combined_line:
 
         # Plot
         line_color = "#2773BA"
-        n_cols = 4
-        n_rows = (len(renamed) + n_cols - 1) // n_cols
+        xtick_values = sorted(agg_quantile["n_common"].unique())
+        subplot_size = 2.2
+        n_cols = 5
+        n_rows = 2
         fig, axes = plt.subplots(
-            n_rows, n_cols, figsize=(3 * n_cols, 2.5 * n_rows),
+            n_rows, n_cols, figsize=(subplot_size * n_cols, subplot_size * n_rows),
             sharex=True, sharey=True,
         )
         axes = axes.flatten()
@@ -775,14 +778,21 @@ rule ldsc_consequence_combined_line:
             ax.set_title(consequence)
             ax.set_xlabel("")
             ax.set_ylabel("")
+            ax.set_xticks(xtick_values)
 
         axes[0].set_ylim(bottom=1)
-        axes[0].legend()
+        # Place legend outside, vertically between the two rows
+        fig.legend(
+            *axes[0].get_legend_handles_labels(),
+            title="Variant set", loc="center",
+            bbox_to_anchor=(1.08, 0.5),
+            frameon=False,
+        )
 
         for ax in axes[len(renamed):]:
             ax.set_visible(False)
 
-        fig.supxlabel("Number of common variants")
+        fig.supxlabel("Number of top constrained common variants")
         fig.supylabel("Heritability enrichment")
         sns.despine()
         plt.tight_layout()
