@@ -79,7 +79,7 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-brassicales")
   - [Checkpoints](https://huggingface.co/datasets/songlab/gpn-animal-promoter-checkpoints)
   - [TraitGym Leaderboard](https://huggingface.co/spaces/songlab/TraitGym-leaderboard)
 
-#### Sorghum gene expression prediction (unpublished)
+#### [Groover et al. "Mapping cis-regulatory mutations at scale in sorghum enables modulation of gene expression" *Nature Biotechnology* (2026)](https://www.nature.com/articles/s41587-026-03046-y)
 
 - **Collection:** [HuggingFace 🤗](https://huggingface.co/collections/songlab/sorghum-gene-expression-prediction-68963dd31658bfb98c07ae1b)
 - **Finetuning dataset:** Sorghum gene expression data from Gene Expression Atlas ([gxa-sorghum-v1](https://huggingface.co/datasets/songlab/gxa-sorghum-v1))
@@ -339,5 +339,17 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-star-hg38-p243-200m")
   pages={2025--09},
   year={2025},
   publisher={Cold Spring Harbor Laboratory}
+}
+```
+
+[Sorghum gene expression prediction](https://www.nature.com/articles/s41587-026-03046-y):
+```bibtex
+@article{groover2026mapping,
+  title={Mapping cis-regulatory mutations at scale in sorghum enables modulation of gene expression},
+  author={Groover, Evan D and Ding, David and Wang, Flora Z and Benegas, Gonzalo and Rivera, Joseph and Schwartz, Shahar and Chen, Stephen and Moubarak, Michael F and Georgieva, Viktoriya and Lemaux, Peggy G and others},
+  journal={Nature Biotechnology},
+  pages={1--11},
+  year={2026},
+  publisher={Nature Publishing Group US New York}
 }
 ```
