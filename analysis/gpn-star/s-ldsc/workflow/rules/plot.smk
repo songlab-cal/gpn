@@ -150,10 +150,81 @@ rule score_consequence_analysis:
 
 # LDSC heritability enrichment rules
 
+
+def load_baseline_ldsc_results(traits, models, model_renaming):
+    """Load binary-annotation LDSC results that do not have a quantile level."""
+    res = []
+    for _, trait in traits.iterrows():
+        trait_path = trait["File name"]
+        trait_name = trait["Trait"]
+        for model in models:
+            path = f"results/output/{model}/{trait_path}.parquet"
+            df = pd.read_parquet(path)
+            df["trait"] = trait_name
+            df["model"] = model_renaming.get(model, model)
+            df["q"] = 0.001
+            df["approach"] = "baseline"
+            res.append(df)
+    res = pd.concat(res, ignore_index=True)
+    return res.rename(columns={"tau_star_se": "tau_star_std_error"})
+
+
+def ldsc_tissue_short_name(tissue):
+    return {
+        "Liver": "liver",
+        "Kidney_Cortex": "kidney",
+        "Lung": "lung",
+        "group_blood_immune": "blood",
+        "group_CNS": "brain",
+        "group_digestive": "gut",
+        "group_adipose": "fat",
+        "group_heart": "heart",
+        "group_skin": "skin",
+    }[tissue]
+
+
+def borzoi_main_result_inputs(wildcards):
+    model = "cV2F_tissue_agnostic_extract_Borzoi.Borzoi_all_all"
+    return expand(
+        "results/output/{approach}/{model}/0.001/{trait}.parquet",
+        approach=["quantile", "quantile_CDS", "quantile_nonCDS"],
+        model=[model],
+        trait=traits,
+    )
+
+
+def borzoi_ccre_tissue_result_inputs(wildcards):
+    gpn_star_top_model = config["gpn_star_top_model"]
+    ccre_tissues = config["filt_ccre_seg_tissues"]
+    quantile_models = (
+        config["borzoi_models"]
+        + [f"filt_cCRE/{gpn_star_top_model}/{tissue}" for tissue in ccre_tissues]
+        + [
+            f"filt_cCRE_SEG/{gpn_star_top_model}/{tissue}"
+            for tissue in ccre_tissues
+        ]
+    )
+    baseline_models = (
+        [f"baseline_SEG/{tissue}" for tissue in config["filt_seg_tissues"]]
+        + [f"baseline_cCRE/{tissue}" for tissue in ccre_tissues]
+        + [f"baseline_SEG_cCRE/{tissue}" for tissue in ccre_tissues]
+    )
+    return expand(
+        "results/output/quantile/{model}/0.001/{trait}.parquet",
+        model=quantile_models,
+        trait=traits,
+    ) + expand(
+        "results/output/{model}/{trait}.parquet",
+        model=baseline_models,
+        trait=traits,
+    )
+
+
 rule ldsc_part1_main:
     input:
         traits="config/traits_indep107.tsv",
         polygenicity="config/polygenicity.tsv",
+        borzoi_results=borzoi_main_result_inputs,
     output:
         h2_full="results/plots/ldsc/fig3_h2_enrich_full.svg",
         tau_full="results/plots/ldsc/fig3_tau_est_full.svg",
@@ -174,7 +245,13 @@ rule ldsc_part1_main:
         gpn_star_models = [config["gpn_star_p"], config["gpn_star_m"], config["gpn_star_v"]]
         other_models = ["GPN-MSA_absLLR", "CADD"]
         enformer_tissue_agnostic = "cV2F_tissue_agnostic_extract_Enformer.Enformer_all_all"
-        models_part1 = gpn_star_models + conservation_models + [enformer_tissue_agnostic] + other_models
+        borzoi_tissue_agnostic = "cV2F_tissue_agnostic_extract_Borzoi.Borzoi_all_all"
+        models_part1 = (
+            gpn_star_models
+            + conservation_models
+            + [enformer_tissue_agnostic, borzoi_tissue_agnostic]
+            + other_models
+        )
 
         res = load_ldsc_results(
             traits, models_part1, [0.001],
@@ -355,8 +432,11 @@ rule ldsc_part3_tissue:
     input:
         traits="config/traits_indep107.tsv",
         trait_tissues="config/trait_tissues.tsv",
+        borzoi_ccre_results=borzoi_ccre_tissue_result_inputs,
     output:
         scatter="results/plots/ldsc/by_tissue_scatter.pdf",
+        tissue_bar_all="results/plots/ldsc/by_tissue_select_bar_all.pdf",
+        tissue_tau_bar_all="results/plots/ldsc/by_tissue_select_bar_tau_all.pdf",
         tissue_bar="results/plots/ldsc/by_tissue_select_bar.svg",
         trait_bar="results/plots/ldsc/by_trait_select_bar.svg",
     run:
@@ -382,37 +462,237 @@ rule ldsc_part3_tissue:
         gpn_star_top_model = config["gpn_star_top_model"]
         gpn_star_top_model_name = config["model_renaming"][gpn_star_top_model]
         filt_seg_tissues = config["filt_seg_tissues"]
+        filt_ccre_seg_tissues = config["filt_ccre_seg_tissues"]
         enformer_models = config["enformer_models"]
+        borzoi_models = config["borzoi_models"]
         seg_models = [f"filt_SEG/{gpn_star_top_model}/{tissue}" for tissue in filt_seg_tissues]
-        models_part3 = [gpn_star_top_model] + seg_models + enformer_models
+        ccre_models = [
+            f"filt_cCRE/{gpn_star_top_model}/{tissue}"
+            for tissue in filt_ccre_seg_tissues
+        ]
+        ccre_seg_models = [
+            f"filt_cCRE_SEG/{gpn_star_top_model}/{tissue}"
+            for tissue in filt_ccre_seg_tissues
+        ]
+        baseline_seg_models = [
+            f"baseline_SEG/{tissue}" for tissue in filt_seg_tissues
+        ]
+        baseline_ccre_models = [
+            f"baseline_cCRE/{tissue}" for tissue in filt_ccre_seg_tissues
+        ]
+        baseline_seg_ccre_models = [
+            f"baseline_SEG_cCRE/{tissue}" for tissue in filt_ccre_seg_tissues
+        ]
+        quantile_models = (
+            [gpn_star_top_model]
+            + seg_models
+            + ccre_models
+            + ccre_seg_models
+            + enformer_models
+            + borzoi_models
+        )
+        baseline_models = (
+            baseline_seg_models + baseline_ccre_models + baseline_seg_ccre_models
+        )
 
         model_renaming_tissue_specific = {gpn_star_top_model: f"{gpn_star_top_model_name}-all"}
         for tissue in filt_seg_tissues:
-            tissue_short = tissue.replace("group_", "").split("_")[0].lower()
-            model_renaming_tissue_specific[f"filt_SEG/{gpn_star_top_model}/{tissue}"] = f"{gpn_star_top_model_name}-{tissue_short}"
+            tissue_short = ldsc_tissue_short_name(tissue)
+            model_renaming_tissue_specific[
+                f"filt_SEG/{gpn_star_top_model}/{tissue}"
+            ] = f"{gpn_star_top_model_name}-SEG-{tissue_short}"
+            model_renaming_tissue_specific[
+                f"baseline_SEG/{tissue}"
+            ] = f"SEG-{tissue_short}"
+        for tissue in filt_ccre_seg_tissues:
+            tissue_short = ldsc_tissue_short_name(tissue)
+            model_renaming_tissue_specific[
+                f"filt_cCRE/{gpn_star_top_model}/{tissue}"
+            ] = f"{gpn_star_top_model_name}-cCRE-{tissue_short}"
+            model_renaming_tissue_specific[
+                f"filt_cCRE_SEG/{gpn_star_top_model}/{tissue}"
+            ] = f"{gpn_star_top_model_name}-SEG+cCRE-{tissue_short}"
+            model_renaming_tissue_specific[
+                f"baseline_cCRE/{tissue}"
+            ] = f"cCRE-{tissue_short}"
+            model_renaming_tissue_specific[
+                f"baseline_SEG_cCRE/{tissue}"
+            ] = f"SEG+cCRE-{tissue_short}"
         for model in enformer_models:
             model_renaming_tissue_specific[model] = f"Enformer-{model.split('_')[-2]}"
+        for model in borzoi_models:
+            model_renaming_tissue_specific[model] = f"Borzoi-{model.split('_')[-2]}"
 
-        res = load_ldsc_results(traits, models_part3, [0.001], ["quantile"], model_renaming_tissue_specific)
+        res = pd.concat(
+            [
+                load_ldsc_results(
+                    traits,
+                    quantile_models,
+                    [0.001],
+                    ["quantile"],
+                    model_renaming_tissue_specific,
+                ),
+                load_baseline_ldsc_results(
+                    traits, baseline_models, model_renaming_tissue_specific
+                ),
+            ],
+            ignore_index=True,
+        )
         res["model_tissue"] = res.model.str.split("-").str[-1]
 
-        model_order = [gpn_star_top_model_name, "Enformer"]
+        model_order_all = [
+            gpn_star_top_model_name,
+            f"{gpn_star_top_model_name}-SEG",
+            f"{gpn_star_top_model_name}-cCRE",
+            f"{gpn_star_top_model_name}-SEG+cCRE",
+            "Enformer",
+            "Borzoi",
+            "SEG",
+            "cCRE",
+            "SEG+cCRE",
+        ]
         palette = config["palette"]
 
-        # Scatter plot by tissue
-        df = pd.concat([
+        df_all = pd.concat([
             run_ldsc_meta_analysis(
                 res[res.trait.isin(tissue_traits[tissue]) & res.model_tissue.isin(["all", tissue])]
             ).assign(tissue=tissue)
             for tissue in tissue_traits.keys()
         ])
-        df["model_model"] = df.model.str.split("-").str[:-1].str.join("-")
-        df["model_tissue"] = df.model.str.split("-").str[-1]
-        df["tissue_specific"] = (df.model_tissue == df.tissue).map({True: "Yes", False: "No"})
-        df["tissue"] = pd.Categorical(df["tissue"], categories=tissue_order, ordered=True)
-        df["model_model"] = pd.Categorical(df["model_model"], categories=model_order, ordered=True)
+        df_all["model_model"] = df_all.model.str.split("-").str[:-1].str.join("-")
+        df_all["model_tissue"] = df_all.model.str.split("-").str[-1]
+        df_all["tissue_specific"] = (df_all.model_tissue == df_all.tissue).map(
+            {True: "Yes", False: "No"}
+        )
+        df_all["tissue"] = pd.Categorical(
+            df_all["tissue"], categories=tissue_order, ordered=True
+        )
+        df_all["model_model"] = pd.Categorical(
+            df_all["model_model"], categories=model_order_all, ordered=True
+        )
+        df_all = df_all.sort_values(["tissue", "model_model"])
+
+        # Supplemental plots retain every Borzoi, cCRE, and SEG comparison.
+        subset_tissues = ["brain", "blood", "liver"]
+        df_all_subset = df_all[df_all.tissue.isin(subset_tissues)].copy()
+        df_all_subset["tissue"] = pd.Categorical(
+            df_all_subset["tissue"], categories=subset_tissues, ordered=True
+        )
+        baseline_models = {"SEG", "cCRE", "SEG+cCRE"}
+
+        def barplot_horizontal(
+            data, value, error, model_order, palette_dict, baseline, **kwargs
+        ):
+            ax = plt.gca()
+            data = data.copy()
+            data["_model_rank"] = data["model_model"].map(
+                {model: i for i, model in enumerate(model_order)}
+            )
+            data["_group"] = 0
+            data.loc[data.tissue_specific == "Yes", "_group"] = 1
+            data.loc[
+                (data.tissue_specific == "Yes")
+                & data.model_model.isin(baseline_models),
+                "_group",
+            ] = 2
+            data = data.sort_values(["_group", "_model_rank"]).reset_index(
+                drop=True
+            )
+            labels = np.where(
+                data.tissue_specific == "No",
+                data.model_model.astype(str) + " (all)",
+                data.model_model.astype(str),
+            )
+            positions = np.arange(len(data))
+            colors = [palette_dict[model] for model in data.model_model]
+            bars = ax.barh(
+                positions,
+                data[value],
+                height=0.7,
+                color=colors,
+                xerr=data[error],
+                linewidth=0,
+            )
+            for bar, tissue_specific in zip(bars, data.tissue_specific):
+                if tissue_specific == "Yes":
+                    bar.set_hatch("////")
+                    bar.set_edgecolor("#545454")
+            ax.set_yticks(positions)
+            ax.set_yticklabels(labels, fontsize=8)
+            ax.invert_yaxis()
+            ax.set_xlim(left=baseline)
+            ax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=4))
+
+        def plot_all_family_bars(value, error, xlabel, baseline, path):
+            grid = sns.FacetGrid(
+                df_all_subset,
+                col="tissue",
+                height=3,
+                aspect=0.5,
+                sharex=False,
+                sharey=False,
+            )
+            grid.map_dataframe(
+                barplot_horizontal,
+                value=value,
+                error=error,
+                model_order=model_order_all,
+                palette_dict=palette,
+                baseline=baseline,
+            )
+            grid.set_axis_labels("", "")
+            for i, (ax, title) in enumerate(zip(grid.axes.flat, grid.col_names)):
+                ax.set_title(title.capitalize(), fontsize=10)
+                if i > 0:
+                    ax.set_yticklabels([])
+            grid.figure.supxlabel(xlabel, fontsize=12)
+            grid.tight_layout()
+            sns.despine()
+            grid.savefig(path, bbox_inches="tight")
+            plt.close(grid.figure)
+
+        plot_all_family_bars(
+            "Enrichment",
+            "Enrichment_sd",
+            "Heritability enrichment",
+            1,
+            output.tissue_bar_all,
+        )
+        plot_all_family_bars(
+            "tau_star",
+            "tau_star_sd",
+            r"Standardized coefficient ($\tau^{\star}$)",
+            0,
+            output.tissue_tau_bar_all,
+        )
+
+        # Focus the selected plots on the combined GPN-Star SEG+cCRE analysis.
+        df = df_all[
+            ~df_all.model_model.isin(
+                [
+                    f"{gpn_star_top_model_name}-SEG",
+                    f"{gpn_star_top_model_name}-cCRE",
+                    "SEG+cCRE",
+                ]
+            )
+        ].copy()
+        combined_model = f"{gpn_star_top_model_name}-SEG+cCRE"
+        df.loc[df.model_model == combined_model, "model_model"] = (
+            gpn_star_top_model_name
+        )
+        model_order = [
+            gpn_star_top_model_name,
+            "Enformer",
+            "Borzoi",
+            "SEG",
+            "cCRE",
+        ]
+        df["model_model"] = pd.Categorical(
+            df["model_model"], categories=model_order, ordered=True
+        )
         df = df.sort_values(["tissue", "model_model"])
 
+        # Scatter plot by tissue
         tissue_specific_markers = {"No": "o", "Yes": "^"}
         unique_tissues = df["tissue"].cat.categories.drop_duplicates()
 
@@ -455,7 +735,6 @@ rule ldsc_part3_tissue:
         plt.close(fig)
 
         # Bar plot by tissue (subset)
-        subset_tissues = ["brain", "blood", "liver"]
         df_subset = df[df.tissue.isin(subset_tissues)].copy()
         df_subset["tissue"] = pd.Categorical(df_subset["tissue"], categories=subset_tissues, ordered=True)
 
@@ -495,6 +774,18 @@ rule ldsc_part3_tissue:
         df_trait["tissue"] = df_trait.trait.map(select_trait_tissue)
         df_trait["model_model"] = df_trait.model.str.split("-").str[:-1].str.join("-")
         df_trait["tissue_specific"] = (df_trait.model_tissue == df_trait.tissue).map({True: "Yes", False: "No"})
+        df_trait = df_trait[
+            ~df_trait.model_model.isin(
+                [
+                    f"{gpn_star_top_model_name}-SEG",
+                    f"{gpn_star_top_model_name}-cCRE",
+                    "SEG+cCRE",
+                ]
+            )
+        ].copy()
+        df_trait.loc[
+            df_trait.model_model == combined_model, "model_model"
+        ] = gpn_star_top_model_name
         df_trait.rename(columns={"Enrichment_std_error": "Enrichment_sd"}, inplace=True)
         df_trait["tissue"] = pd.Categorical(df_trait["tissue"], categories=subset_tissues, ordered=True)
 

@@ -22,9 +22,26 @@ include: "rules/seg.smk"
 
 gpn_star_top_model = config["gpn_star_top_model"]
 filt_seg_tissues = config["filt_seg_tissues"]
+filt_ccre_seg_tissues = config["filt_ccre_seg_tissues"]
 enformer_models = config["enformer_models"]
+borzoi_models = config["borzoi_models"]
 enformer_tissue_agnostic = "cV2F_tissue_agnostic_extract_Enformer.Enformer_all_all"
+borzoi_tissue_agnostic = "cV2F_tissue_agnostic_extract_Borzoi.Borzoi_all_all"
 seg_models = [f"filt_SEG/{gpn_star_top_model}/{tissue}" for tissue in filt_seg_tissues]
+ccre_models = [
+    f"filt_cCRE/{gpn_star_top_model}/{tissue}" for tissue in filt_ccre_seg_tissues
+]
+ccre_seg_models = [
+    f"filt_cCRE_SEG/{gpn_star_top_model}/{tissue}"
+    for tissue in filt_ccre_seg_tissues
+]
+baseline_seg_models = [f"baseline_SEG/{tissue}" for tissue in filt_seg_tissues]
+baseline_ccre_models = [
+    f"baseline_cCRE/{tissue}" for tissue in filt_ccre_seg_tissues
+]
+baseline_seg_ccre_models = [
+    f"baseline_SEG_cCRE/{tissue}" for tissue in filt_ccre_seg_tissues
+]
 gpn_star_models = [
     config["gpn_star_p"],
     config["gpn_star_m"],
@@ -123,3 +140,28 @@ rule all:
         #     trait=traits,
         # ),
         ################################################################################
+
+
+# Generate the Borzoi and cCRE S-LDSC results used by the plotting workflow.
+rule borzoi_ccre_results:
+    input:
+        expand(
+            "results/output/quantile/{model}/0.001/{trait}.parquet",
+            model=borzoi_models + ccre_models + ccre_seg_models,
+            trait=traits,
+        ),
+        expand(
+            "results/output/{approach}/{model}/0.001/{trait}.parquet",
+            approach=["quantile_CDS", "quantile_nonCDS"],
+            model=[borzoi_tissue_agnostic],
+            trait=traits,
+        ),
+        expand(
+            "results/output/{model}/{trait}.parquet",
+            model=(
+                baseline_seg_models
+                + baseline_ccre_models
+                + baseline_seg_ccre_models
+            ),
+            trait=traits,
+        ),
