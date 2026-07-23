@@ -962,23 +962,43 @@ class GPNStarForMaskedLM(GPNStarPreTrainedModel):
         )
 
 
-def load_model(model_path):
+def load_model(model_path, phylo_dist_path=None):
     """Load model with validated phylo_dist_path.
 
-    If config.phylo_dist_path doesn't exist on filesystem, tries fallback
-    path at model_path/phylo_dist/. Raises Exception if neither exists.
+    An explicit ``phylo_dist_path`` takes precedence over the path stored in
+    the model config. Without an override, an invalid configured path falls
+    back to ``model_path/phylo_dist``.
     """
     config = AutoConfig.from_pretrained(model_path)
+    configured_path = None
 
-    if not os.path.exists(config.phylo_dist_path):
-        fallback_path = os.path.join(model_path, "phylo_dist")
-        if os.path.exists(fallback_path):
+    if phylo_dist_path is not None:
+        phylo_dist_path = os.fsdecode(os.fspath(phylo_dist_path))
+        if not os.path.isdir(phylo_dist_path):
+            raise FileNotFoundError(
+                f"Phylogenetic-distance directory does not exist: "
+                f"'{phylo_dist_path}'"
+            )
+        config.phylo_dist_path = phylo_dist_path
+    else:
+        configured_path = getattr(config, "phylo_dist_path", None)
+        if configured_path is not None:
+            configured_path = os.fsdecode(os.fspath(configured_path))
+
+    if phylo_dist_path is None and (
+        configured_path is None or not os.path.isdir(configured_path)
+    ):
+        fallback_path = os.path.join(os.fsdecode(os.fspath(model_path)), "phylo_dist")
+        if os.path.isdir(fallback_path):
             config.phylo_dist_path = fallback_path
         else:
-            raise Exception(
-                f"phylo_dist_path '{config.phylo_dist_path}' does not exist "
-                f"and fallback path '{fallback_path}' does not exist"
+            raise FileNotFoundError(
+                f"Configured phylogenetic-distance directory "
+                f"'{configured_path}' does not exist "
+                f"and fallback directory '{fallback_path}' does not exist"
             )
+    elif phylo_dist_path is None:
+        config.phylo_dist_path = configured_path
 
     return AutoModelForMaskedLM.from_pretrained(model_path, config=config)
 
