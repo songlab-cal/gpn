@@ -145,6 +145,9 @@ palette:
   "GPN-Star (V)": "#2773BA"
   "GPN-Star (M)": "#4F97DB"
   "GPN-Star (P)": "#95BFE6"
+  "GPN-Star (P)-SEG": "#9BE0DE"
+  "GPN-Star (P)-cCRE": "#60BD7C"
+  "GPN-Star (P)-SEG+cCRE": "#9CD66F"
   "GPN-MSA": "#919191"
   "CADD": "#E09D5A"
   "PhyloP (V)": "#9E66BA"
@@ -154,6 +157,10 @@ palette:
   "PhyloP (P)": "#D4A6ED"
   "PhastCons (P)": "#EDA8A6"
   "Enformer": "#B58181"
+  "Borzoi": "#916060"
+  "SEG": "#D6D4D4"
+  "cCRE": "#B5B3B3"
+  "SEG+cCRE": "#B8B6B6"
 
 palette_part4:
   "GPN-Star (P243)": "#95BFE6"
@@ -174,6 +181,7 @@ model_renaming:
   "phyloP_239p": "PhyloP (P)"
   "phastCons_43p": "PhastCons (P)"
   "cV2F_tissue_agnostic_extract_Enformer.Enformer_all_all": "Enformer"
+  "cV2F_tissue_agnostic_extract_Borzoi.Borzoi_all_all": "Borzoi"
 
 model_renaming_part4:
   "GPN-Star-p243-200M-256_minus_entropy_calibrated": "GPN-Star (P243)"
@@ -214,6 +222,49 @@ filt_seg_tissues:
   - group_heart
   - group_skin
 
+ccre_v4_tissues:
+  group_blood_immune:
+    - cCREv4_Human_CellType.BLD_PLS
+    - cCREv4_Human_CellType.BLD_dELS
+    - cCREv4_Human_CellType.BLD_pELS
+  group_CNS:
+    - cCREv4_Human_CellType.BRN_PLS
+    - cCREv4_Human_CellType.BRN_dELS
+    - cCREv4_Human_CellType.BRN_pELS
+  group_digestive:
+    - cCREv4_Human_CellType.GUT_PLS
+    - cCREv4_Human_CellType.GUT_dELS
+    - cCREv4_Human_CellType.GUT_pELS
+  group_heart:
+    - cCREv4_Human_CellType.HRT_PLS
+    - cCREv4_Human_CellType.HRT_dELS
+    - cCREv4_Human_CellType.HRT_pELS
+  Kidney_Cortex:
+    - cCREv4_Human_CellType.KID_PLS
+  Liver:
+    - cCREv4_Human_CellType.LIV_ALL
+    - cCREv4_Human_CellType.LIV_PLS
+    - cCREv4_Human_CellType.LIV_dELS
+    - cCREv4_Human_CellType.LIV_pELS
+  Lung:
+    - cCREv4_Human_CellType.LNG_PLS
+    - cCREv4_Human_CellType.LNG_dELS
+    - cCREv4_Human_CellType.LNG_pELS
+  group_skin:
+    - cCREv4_Human_CellType.SKIN_PLS
+    - cCREv4_Human_CellType.SKIN_dELS
+    - cCREv4_Human_CellType.SKIN_pELS
+
+filt_ccre_seg_tissues:
+  - Liver
+  - Kidney_Cortex
+  - Lung
+  - group_blood_immune
+  - group_CNS
+  - group_digestive
+  - group_heart
+  - group_skin
+
 enformer_models:
   - cV2F_tissue_agnostic_extract_Enformer.Enformer_all_all
   - cV2F_tissue_agnostic_extract_Enformer.Enformer_brain_all
@@ -225,6 +276,18 @@ enformer_models:
   - cV2F_tissue_agnostic_extract_Enformer.Enformer_heart_all
   - cV2F_tissue_agnostic_extract_Enformer.Enformer_skin_all
   - cV2F_tissue_agnostic_extract_Enformer.Enformer_lung_all
+
+borzoi_models:
+  - cV2F_tissue_agnostic_extract_Borzoi.Borzoi_all_all
+  - cV2F_tissue_agnostic_extract_Borzoi.Borzoi_brain_all
+  - cV2F_tissue_agnostic_extract_Borzoi.Borzoi_blood_all
+  - cV2F_tissue_agnostic_extract_Borzoi.Borzoi_liver_all
+  - cV2F_tissue_agnostic_extract_Borzoi.Borzoi_gut_all
+  - cV2F_tissue_agnostic_extract_Borzoi.Borzoi_kidney_all
+  - cV2F_tissue_agnostic_extract_Borzoi.Borzoi_fat_all
+  - cV2F_tissue_agnostic_extract_Borzoi.Borzoi_heart_all
+  - cV2F_tissue_agnostic_extract_Borzoi.Borzoi_skin_all
+  - cV2F_tissue_agnostic_extract_Borzoi.Borzoi_lung_all
 
 # in order of importance, similar to https://screen.wenglab.org/about
 cre_classes:
