@@ -54,6 +54,8 @@ rule get_logits:
         alignment="[A-Za-z0-9_]+",
         species="[A-Za-z0-9_-]+",
         window_size="\d+",
+    params:
+        checkpoint_batch_size=config.get("checkpoint_batch_size", 1_000_000),
     threads: workflow.cores
     shell:
         #$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{{print NF}}')
@@ -64,7 +66,9 @@ rule get_logits:
 
         torchrun --nproc_per_node=$num_gpus -m gpn.star.inference logits {input[0]} {input[1]} {wildcards.window_size} {input[2]} {output} \
         --per_device_batch_size 8 --is_file \
-        --dataloader_num_workers $dataloader_num_workers
+        --dataloader_num_workers $dataloader_num_workers \
+        --checkpoint_batch_size {params.checkpoint_batch_size} \
+        --cleanup_checkpoints
         """
 
 
