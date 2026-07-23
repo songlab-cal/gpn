@@ -16,6 +16,7 @@ include: "rules/dist.smk"
 include: "rules/finemapping_dataset.smk"
 include: "rules/gpn.smk"
 include: "rules/ldsc.smk"
+include: "rules/plot.smk"
 include: "rules/seg.smk"
 
 
@@ -117,14 +118,7 @@ rule all:
         # expand(
         #     "results/output/quantile_consequence_{consequence}/{model}/{q}/{trait}.parquet",
         #     consequence=config["consequences_to_explore"],
-        #     model=[gpn_star_top_model],
-        #     q=[0.001],
-        #     trait=traits,
-        # ),
-        # expand(
-        #     "results/output/quantile_consequence_{consequence}/{model}/{q}/{trait}.parquet",
-        #     consequence=["dELS", "missense_variant"],
-        #     model=[gpn_star_top_model, "phastCons_43p", "phyloP_239p"],
+        #     model=config["consequence_comparison_models"],
         #     q=[0.001],
         #     trait=traits,
         # ),

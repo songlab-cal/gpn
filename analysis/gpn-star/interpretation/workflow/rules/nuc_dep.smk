@@ -1,18 +1,18 @@
 rule interpretation_nuc_dep:
+    input:
+        checkpoint="results/checkpoints/{model}",
     output:
         "results/interpretation/nuc_dep/{locus}/{model}.parquet",
     params:
-        lambda wc: config["nuc_dep"][wc.locus]["chrom"],
-        lambda wc: config["nuc_dep"][wc.locus]["start"],
-        lambda wc: config["nuc_dep"][wc.locus]["end"],
-        lambda wc: config["nuc_dep"][wc.locus]["strand"],
-        lambda wc: config["gpn_star"][wc.model]["model_path"],
-        lambda wc: config["gpn_star"][wc.model]["msa_path"],
-        lambda wc: config["gpn_star"][wc.model]["phylo_info_path"],
-        lambda wc: config["gpn_star"][wc.model]["window_size"],
+        chrom=lambda wc: config["nuc_dep"][wc.locus]["chrom"],
+        start=lambda wc: config["nuc_dep"][wc.locus]["start"],
+        end=lambda wc: config["nuc_dep"][wc.locus]["end"],
+        strand=lambda wc: config["nuc_dep"][wc.locus]["strand"],
+        msa_path=lambda wc: f"{config['external']['msa_base']}/{config['gpn_star'][wc.model]['msa_path']}",
+        window_size=lambda wc: config["gpn_star"][wc.model]["window_size"],
     threads: workflow.cores
     shell:
-        "python workflow/scripts/nuc_dep.py {params} {output}"
+        "python workflow/scripts/nuc_dep.py {params.chrom} {params.start} {params.end} {params.strand} {input.checkpoint} {params.msa_path} {params.window_size} {output}"
 
 
 rule interpretation_nuc_dep_plot:

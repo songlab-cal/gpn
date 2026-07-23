@@ -1,21 +1,63 @@
+rule interpretation_download_reference:
+    output:
+        "results/interpretation/genome.fa.gz",
+    shell:
+        "wget {config[external][fasta_url]} -O {output}"
+
+
 rule interpretation_intervals_all:
     input:
-        # intervals with no "N" and at least 512bp
-        "/scratch/users/gbenegas/projects/gpn-human/output/intervals/512/defined.parquet",
+        "results/interpretation/genome.fa.gz",
     output:
         "results/interpretation/intervals/all.parquet",
+    run:
+        genome = Genome(input[0])
+        genome.filter_chroms(CHROMS)
+        intervals = genome.get_defined_intervals()
+        intervals = filter_length(intervals, 512)  # at least 512bp
+        intervals.to_parquet(output[0], index=False)
+
+
+rule interpretation_download_rmsk:
+    output:
+        temp("results/interpretation/rmsk.txt.gz"),
     shell:
-        "cp {input} {output}"
+        "wget -O {output} https://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/rmsk.txt.gz"
+
+
+rule interpretation_process_rmsk:
+    input:
+        "results/interpretation/rmsk.txt.gz",
+    output:
+        temp("results/interpretation/rmsk.parquet"),
+    run:
+        df = pd.read_csv(
+            input[0], sep="\t", header=None,
+            names=["bin", "swScore", "milliDiv", "milliDel", "milliIns",
+                   "chrom", "start", "end", "genoLeft", "strand",
+                   "repName", "repClass", "repFamily", "repStart", "repEnd", "repLeft", "id"],
+        )
+        df.chrom = df.chrom.astype(str).str.replace("chr", "")
+        df = df[df.chrom.isin(CHROMS)]
+        df.to_parquet(output[0], index=False)
 
 
 rule interpretation_intervals_repeat:
     input:
-        # repeatmasker
-        "/scratch/users/gbenegas/projects/gpn-human/output/rmsk_merged.parquet",
+        "results/interpretation/rmsk.parquet",
     output:
         "results/interpretation/intervals/repeat.parquet",
+    run:
+        df = pd.read_parquet(input[0], columns=["chrom", "start", "end"])
+        df = bf.merge(df).drop(columns="n_intervals")
+        df.to_parquet(output[0], index=False)
+
+
+rule interpretation_download_phastcons:
+    output:
+        "results/interpretation/phastCons-43p.bw",
     shell:
-        "cp {input} {output}"
+        "wget https://cgl.gi.ucsc.edu/data/cactus/zoonomia-2021-track-hub/hg38/phyloPPrimates.bigWig -O {output}"
 
 
 rule interpretation_intervals_cre_download:
@@ -510,7 +552,7 @@ rule interpretation_enhancer_merge:
 rule interpretation_add_cons:
     input:
         "results/interpretation/windows/{anything}.parquet",
-        "/scratch/users/gbenegas/projects/functionality-prediction/results/conservation/phastCons-43p.bw",
+        "results/interpretation/phastCons-43p.bw",
     output:
         "results/interpretation/windows/{anything}_cons.parquet",
     run:
@@ -568,13 +610,14 @@ rule interpretation_subsample_stratified:
             n=min(len(df_background), n), random_state=42
         )
 
+        df_foreground = df_foreground.copy()
         df_foreground["conserved"] = df_foreground.cons >= 1
-        res_foreground = (
+        sampled_indices = (
             df_foreground.groupby(["label", "conserved"])
-            .apply(lambda x: x.sample(n=min(len(x), n // 2), random_state=42))
-            .reset_index(drop=True)
-            .drop(columns="conserved")
+            .apply(lambda x: x.sample(n=min(len(x), n // 2), random_state=42).index.tolist())
+            .explode()
         )
+        res_foreground = df_foreground.loc[sampled_indices].drop(columns="conserved")
 
         res = pd.concat([res_background, res_foreground]).sort_values(
             ["chrom", "start", "end"]
@@ -583,20 +626,33 @@ rule interpretation_subsample_stratified:
         res.to_parquet(output[0], index=False)
 
 
+rule download_gpn_star_model:
+    output:
+        directory("results/checkpoints/{model}")
+    params:
+        repo_id=lambda wc: config["gpn_star"][wc.model]["repo_id"]
+    threads: workflow.cores
+    shell:
+        "hf download {params.repo_id} --local-dir {output} --max-workers {threads}"
+
+
 rule interpretation_embed:
     input:
-        "results/interpretation/windows/{anything}.parquet",
+        windows="results/interpretation/windows/{anything}.parquet",
+        checkpoint="results/checkpoints/{model}",
     output:
         "results/interpretation/embed/{anything}/{model}.parquet",
     params:
-        model_path=lambda wc: config["gpn_star"][wc.model]["model_path"],
-        msa_path=lambda wc: config["gpn_star"][wc.model]["msa_path"],
-        phylo_info_path=lambda wc: config["gpn_star"][wc.model]["phylo_info_path"],
+        msa_path=lambda wc: f"{config['external']['msa_base']}/{config['gpn_star'][wc.model]['msa_path']}",
         window_size=lambda wc: config["gpn_star"][wc.model]["window_size"],
         center_window_size=CENTER_WINDOW_SIZE,
     threads: workflow.cores
     shell:
-        "python workflow/scripts/window_embed.py {input} {params.model_path} {params.msa_path} {params.phylo_info_path} {params.window_size} {params.center_window_size} {output}"
+        """
+        python workflow/scripts/window_embed.py \
+            {input.windows} {input.checkpoint} {params.msa_path} \
+            {params.window_size} {params.center_window_size} {output}
+        """
 
 
 rule interpretation_umap:

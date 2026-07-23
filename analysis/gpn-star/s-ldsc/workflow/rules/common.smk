@@ -1,13 +1,24 @@
+from adjustText import adjust_text
 from Bio.Seq import Seq
 import bioframe as bf
-from scipy.spatial.distance import cdist
 from gpn.data import Genome
 from liftover import get_lifter
+import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+import matplotlib.ticker as ticker
+from matplotlib_venn import venn3
 import numpy as np
 import os
 import pandas as pd
 import polars as pl
 import re
+import scipy
+from scipy.spatial.distance import cdist
+from scipy.stats import fisher_exact, pearsonr
+import seaborn as sns
+import statsmodels.api as sm
+from statsmodels.stats.meta_analysis import combine_effects
+from statsmodels.stats.multitest import fdrcorrection
 from tqdm import tqdm
 
 
@@ -24,6 +35,423 @@ NON_EXONIC_CONSEQUENCES = [
 ]
 
 TRAITGYM_PATH = "/accounts/projects/yss/gbenegas/projects/functionality-prediction/"
+
+
+def plot_venn(subsets: dict, palette: dict) -> plt.Figure:
+    fig = plt.figure(figsize=(2, 2))
+    labels = list(subsets.keys())
+    colors = tuple(palette[label] for label in labels)
+    venn3(list(subsets.values()), set_labels=labels, set_colors=colors)
+    return fig
+
+
+def calculate_enrichment(df: pd.DataFrame, renaming: dict) -> pd.DataFrame:
+    df = df.copy()
+    df["proportion"] = df["count"] / df["count"].sum()
+    df["other_proportion"] = df["other_count"] / df["other_count"].sum()
+    df["global_proportion"] = df["global_count"] / df["global_count"].sum()
+    df.consequence = df.consequence.str.replace("_variant", "").str.replace("_", "-")
+    df.consequence = df.consequence.map(lambda x: renaming.get(x, x))
+
+    total_count = df["count"].sum()
+    total_other_count = df["other_count"].sum()
+
+    results = []
+    for _, row in df.iterrows():
+        table = [
+            [row["count"], total_count - row["count"]],
+            [row["other_count"], total_other_count - row["other_count"]],
+        ]
+        odds_ratio, p_value = fisher_exact(table, alternative="two-sided")
+        results.append(
+            {"consequence": row["consequence"], "odds ratio": odds_ratio, "p_value": p_value}
+        )
+
+    results_df = pd.DataFrame(results)
+    df = pd.merge(df, results_df, on="consequence")
+
+    _, q_values = fdrcorrection(df["p_value"])
+    df["q_value"] = q_values
+    df["significant"] = q_values < 0.05
+
+    return df
+
+
+def plot_enrichment(df: pd.DataFrame, figsize: float = 8) -> plt.Figure:
+    fig, ax = plt.subplots(figsize=(figsize, figsize))
+    ax.scatter(df["proportion"], df["odds ratio"], alpha=0.7, edgecolors="w", s=100)
+    ax.axhline(y=1, color="gray", linestyle="--")
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_xlabel("Proportion")
+    ax.set_ylabel("Odds ratio")
+
+    texts = [
+        ax.text(row["proportion"], row["odds ratio"], row["consequence"])
+        for _, row in df.iterrows()
+    ]
+    adjust_text(texts, ax=ax, arrowprops=dict(arrowstyle="->", color="black", lw=0.5))
+    sns.despine()
+    plt.tight_layout()
+    return fig
+
+
+def custom_format(n: float) -> str:
+    if abs(n) < 0.01:
+        return f"{n:.0e}"
+    return f"{n:.2f}"
+
+
+def enrich_to_latex(df: pd.DataFrame) -> str:
+    df2 = df.copy()
+    df2.consequence = r"\verb|" + df2.consequence + r"|"
+    df2["odds ratio"] = df2.apply(
+        lambda row: f"\\textbf{{{row['odds ratio']:.2f}}}"
+        if row["significant"]
+        else f"{row['odds ratio']:.2f}",
+        axis=1,
+    )
+    df2.proportion = df2.proportion.apply(custom_format)
+    df2 = df2[["consequence", "count", "proportion", "odds ratio"]]
+    return df2.to_latex(index=False, escape=False)
+
+
+def calculate_enrichment_two_models(
+    df: pd.DataFrame, model1: str, model2: str, renaming: dict
+) -> pd.DataFrame:
+    df_models = df[df["model"].isin([model1, model2])].copy()
+    df_models.consequence = (
+        df_models.consequence.str.replace("_variant", "").str.replace("_", "-")
+    )
+    df_models.consequence = df_models.consequence.map(lambda x: renaming.get(x, x))
+
+    contingency_table = df_models.pivot_table(
+        index="consequence", columns="model", values="count", fill_value=0
+    )
+
+    total_model1 = contingency_table[model1].sum()
+    total_model2 = contingency_table[model2].sum()
+
+    results = []
+    for consequence, row in contingency_table.iterrows():
+        count_model1 = row[model1]
+        count_model2 = row[model2]
+
+        table = [
+            [count_model1, count_model2],
+            [total_model1 - count_model1, total_model2 - count_model2],
+        ]
+
+        try:
+            odds_ratio, p_value = fisher_exact(table)
+            results.append(
+                {"consequence": consequence, "odds_ratio": odds_ratio, "p_value": p_value}
+            )
+        except ValueError:
+            results.append(
+                {"consequence": consequence, "odds_ratio": float("nan"), "p_value": float("nan")}
+            )
+
+    results_df = pd.DataFrame(results)
+    if not results_df.empty:
+        _, q_values = fdrcorrection(results_df["p_value"], alpha=0.05)
+        results_df["q_value"] = q_values
+
+    return results_df.sort_values(by="q_value").reset_index(drop=True)
+
+
+def enrich_two_models_to_latex(df: pd.DataFrame) -> str:
+    df2 = df.copy()
+    df2.consequence = r"\verb|" + df2.consequence + r"|"
+    for col in ["p_value", "q_value"]:
+        df2[col] = [f"{x:.0e}" for x in df2[col]]
+    return df2.to_latex(index=False, escape=False, float_format="%.2f")
+
+
+def load_ldsc_results(
+    traits: pd.DataFrame,
+    models: list[str],
+    qs: list[float],
+    approaches: list[str],
+    model_renaming: dict[str, str],
+) -> pd.DataFrame:
+    res = []
+    for _, trait in traits.iterrows():
+        trait_path = trait["File name"]
+        trait_name = trait["Trait"]
+        for model in models:
+            for q in qs:
+                for approach in approaches:
+                    path = f"results/output/{approach}/{model}/{q}/{trait_path}.parquet"
+                    df = pd.read_parquet(path)
+                    df["trait"] = trait_name
+                    df["model"] = model_renaming.get(model, model)
+                    df["q"] = q
+                    df["approach"] = approach
+                    res.append(df)
+    res = pd.concat(res)
+    res = res.rename(columns={"tau_star_se": "tau_star_std_error"})
+    return res
+
+
+def combine_effects_wrapper(effects, variances):
+    res = combine_effects(effects, variances).summary_frame().loc["random effect"]
+    p_value = scipy.stats.norm.sf(res.eff / res.sd_eff)
+    return res.eff, res.sd_eff, p_value
+
+
+def run_ldsc_meta_analysis(res: pd.DataFrame) -> pd.DataFrame:
+    x = (
+        res.groupby(["model", "q", "approach"])
+        .apply(
+            lambda df: pd.Series(
+                dict(
+                    **dict(
+                        zip(
+                            ["Enrichment", "Enrichment_sd", "Enrichment_p"],
+                            combine_effects_wrapper(
+                                df.Enrichment, df.Enrichment_std_error**2
+                            ),
+                        )
+                    ),
+                    **dict(
+                        zip(
+                            ["Coefficient", "Coefficient_sd", "Coefficient_p"],
+                            combine_effects_wrapper(
+                                df.Coefficient, df.Coefficient_std_error**2
+                            ),
+                        )
+                    ),
+                    **dict(
+                        zip(
+                            ["tau_star", "tau_star_sd", "tau_star_p"],
+                            combine_effects_wrapper(
+                                df.tau_star, df.tau_star_std_error**2
+                            ),
+                        )
+                    ),
+                )
+            )
+        )
+        .reset_index()
+    )
+    for col in ["Enrichment_p", "Coefficient_p", "tau_star_p"]:
+        x[col + "_minuslog10"] = -np.log10(x[col])
+    return x
+
+
+def plot_bar_ldsc(
+    df: pd.DataFrame,
+    x: str,
+    xlabel: str,
+    palette: dict,
+    limit: float,
+    major_locator: float | None = None,
+) -> plt.Figure:
+    fig = plt.figure(figsize=(3, 3.5))
+    sns.barplot(data=df, y="model", x=x, palette=palette)
+    err_col = x + "_sd"
+    if err_col in df.columns:
+        plt.errorbar(
+            x=df[x], y=df["model"], xerr=df[err_col], fmt="none", ecolor="black"
+        )
+    plt.xlabel(xlabel)
+    sns.despine()
+    ax = plt.gca()
+    if major_locator is not None:
+        ax.xaxis.set_major_locator(ticker.MultipleLocator(major_locator))
+    ax.set_xlim(left=limit)
+    plt.ylabel("")
+    return fig
+
+
+def plot_agg_relplot(
+    df: pd.DataFrame,
+    palette: dict,
+    x_label: str = "q",
+    y_label: str = "value",
+    values_to_plot: list[str] | None = None,
+) -> plt.Figure:
+    if values_to_plot is None:
+        values_to_plot = ["Enrichment", "Tau_star"]
+    sd_vars = [f"{col}_sd" for col in values_to_plot]
+
+    value_df = df.melt(
+        id_vars=["Model", "q"],
+        value_vars=values_to_plot,
+        var_name="metric",
+        value_name="value",
+    )
+    sd_df = df.melt(
+        id_vars=["Model", "q"], value_vars=sd_vars, var_name="metric", value_name="sd"
+    )
+    sd_df["metric"] = sd_df["metric"].str.replace("_sd", "")
+    long_df = pd.merge(value_df, sd_df, on=["Model", "q", "metric"])
+    long_df = long_df.sort_values("value", ascending=False)
+
+    g = sns.relplot(
+        data=long_df,
+        x="q",
+        y="value",
+        hue="Model",
+        kind="line",
+        marker="o",
+        palette=palette,
+        facet_kws={"sharex": True, "sharey": False},
+        height=3,
+        aspect=1.1,
+        errorbar=None,
+        linewidth=1,
+        markersize=5,
+    )
+
+    metrics = long_df["metric"].unique()
+    for i, ax in enumerate(g.axes.flat):
+        current_metric = metrics[i]
+        subset = long_df[long_df["metric"] == current_metric]
+        for model in subset["Model"].unique():
+            model_data = subset[subset["Model"] == model]
+            color = palette[model]
+            ax.errorbar(
+                x=model_data["q"],
+                y=model_data["value"],
+                yerr=model_data["sd"],
+                color=color,
+                fmt="none",
+                linewidth=1,
+            )
+        if current_metric == "Enrichment":
+            ax.set_ylim(bottom=1)
+        elif current_metric == "Tau_star":
+            ax.set_ylim(bottom=0)
+        ax.set_xlim(right=long_df.q.max() + 0.001)
+
+    g.set_axis_labels(x_label, y_label)
+    sns.despine()
+    return g.figure
+
+
+def load_consequence_ldsc_results(
+    traits: pd.DataFrame,
+    consequences: list[str],
+) -> pd.DataFrame:
+    res = []
+    for _, trait in traits.iterrows():
+        trait_path = trait["File name"]
+        trait_name = trait["Trait"]
+        for consequence in consequences:
+            path = f"results/output/consequence_{consequence}/{trait_path}.parquet"
+            df = pd.read_parquet(path)
+            df["trait"] = trait_name
+            df["consequence"] = consequence
+            res.append(df)
+    res = pd.concat(res)
+    res = res.rename(columns={"tau_star_se": "tau_star_std_error"})
+    return res
+
+
+def load_quantile_consequence_ldsc_results(
+    traits: pd.DataFrame,
+    consequences: list[str],
+    models: list[str],
+    q: float,
+    model_renaming: dict[str, str],
+) -> pd.DataFrame:
+    res = []
+    for _, trait in traits.iterrows():
+        trait_path = trait["File name"]
+        trait_name = trait["Trait"]
+        for consequence in consequences:
+            for model in models:
+                path = f"results/output/quantile_consequence_{consequence}/{model}/{q}/{trait_path}.parquet"
+                df = pd.read_parquet(path)
+                df["trait"] = trait_name
+                df["consequence"] = consequence
+                df["model"] = model_renaming.get(model, model)
+                res.append(df)
+    res = pd.concat(res)
+    res = res.rename(columns={"tau_star_se": "tau_star_std_error"})
+    return res
+
+
+def run_consequence_meta_analysis(res: pd.DataFrame) -> pd.DataFrame:
+    x = (
+        res.groupby(["consequence"])
+        .apply(
+            lambda df: pd.Series(
+                dict(
+                    **dict(
+                        zip(
+                            ["Enrichment", "Enrichment_sd", "Enrichment_p"],
+                            combine_effects_wrapper(
+                                df.Enrichment, df.Enrichment_std_error**2
+                            ),
+                        )
+                    ),
+                    **dict(
+                        zip(
+                            ["Coefficient", "Coefficient_sd", "Coefficient_p"],
+                            combine_effects_wrapper(
+                                df.Coefficient, df.Coefficient_std_error**2
+                            ),
+                        )
+                    ),
+                    **dict(
+                        zip(
+                            ["tau_star", "tau_star_sd", "tau_star_p"],
+                            combine_effects_wrapper(
+                                df.tau_star, df.tau_star_std_error**2
+                            ),
+                        )
+                    ),
+                )
+            )
+        )
+        .reset_index()
+    )
+    for col in ["Enrichment_p", "Coefficient_p", "tau_star_p"]:
+        x[col + "_minuslog10"] = -np.log10(x[col])
+    return x
+
+
+def run_consequence_model_meta_analysis(res: pd.DataFrame) -> pd.DataFrame:
+    x = (
+        res.groupby(["consequence", "model"])
+        .apply(
+            lambda df: pd.Series(
+                dict(
+                    **dict(
+                        zip(
+                            ["Enrichment", "Enrichment_sd", "Enrichment_p"],
+                            combine_effects_wrapper(
+                                df.Enrichment, df.Enrichment_std_error**2
+                            ),
+                        )
+                    ),
+                    **dict(
+                        zip(
+                            ["Coefficient", "Coefficient_sd", "Coefficient_p"],
+                            combine_effects_wrapper(
+                                df.Coefficient, df.Coefficient_std_error**2
+                            ),
+                        )
+                    ),
+                    **dict(
+                        zip(
+                            ["tau_star", "tau_star_sd", "tau_star_p"],
+                            combine_effects_wrapper(
+                                df.tau_star, df.tau_star_std_error**2
+                            ),
+                        )
+                    ),
+                )
+            )
+        )
+        .reset_index()
+    )
+    for col in ["Enrichment_p", "Coefficient_p", "tau_star_p"]:
+        x[col + "_minuslog10"] = -np.log10(x[col])
+    return x
 
 
 def filter_snp(V):

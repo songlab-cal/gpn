@@ -1,4 +1,5 @@
 import bioframe as bf
+from gpn.data import Genome, filter_length
 from itertools import combinations
 import numpy as np
 import pandas as pd
