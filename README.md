@@ -243,6 +243,7 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-star-hg38-p243-200m")
 #### [Ye, Benegas, Albors, Li, Prillo, Fields, Clarke and Song "Predicting functional constraints across evolutionary timescales with phylogeny-informed genomic language models" *bioRxiv* (2025)](https://doi.org/10.1101/2025.09.21.677619)
 
 - **Collection:** [HuggingFace 🤗](https://huggingface.co/collections/songlab/gpn-star-68c0c055acc2ee51d5c4f129)
+- **Genome-wide scores and UCSC Genome Browser tracks:** [gpn-star-scores](https://huggingface.co/datasets/songlab/gpn-star-scores)
 - **Pretraining datasets:**
   - Vertebrate alignment: [multiz100way](https://huggingface.co/datasets/songlab/multiz100way-pigz) (100 species)
   - Mammalian alignment: [cactus447way](https://huggingface.co/datasets/songlab/hg38_cactus447way) (447 species)
