@@ -187,6 +187,8 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-msa-sapiens")
   - Training regions: [gpn-msa-sapiens-dataset](https://huggingface.co/datasets/songlab/gpn-msa-sapiens-dataset)
 - **Models:**
   - [gpn-msa-sapiens](https://huggingface.co/songlab/gpn-msa-sapiens)
+- **Additional resources:**
+  - [Genome-wide scores and UCSC Genome Browser tracks](https://huggingface.co/datasets/songlab/gpn-star-scores)
 - **Benchmark datasets (including predictions from all models):**
   - [ClinVar](https://huggingface.co/datasets/songlab/clinvar) - Missense variants with clinical pathogenic/benign labels
   - [COSMIC](https://huggingface.co/datasets/songlab/cosmic) - Somatic missense mutations in cancer
