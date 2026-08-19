@@ -63,7 +63,7 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-brassicales")
 ```
 
 * Play with the model: [examples/ss/basic_example.ipynb](https://github.com/songlab-cal/gpn/blob/main/examples/ss/basic_example.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/songlab-cal/gpn/blob/main/examples/ss/basic_example.ipynb)
-* Model implementation: [gpn/ss/model.py](https://github.com/songlab-cal/gpn/blob/main/gpn/ss/model.py)
+* Model implementation: [src/gpn/ss/model.py](https://github.com/songlab-cal/gpn/blob/main/src/gpn/ss/model.py)
 
 ### Papers
 
@@ -150,7 +150,7 @@ register_auto_classes("msa")
 model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-msa-sapiens")
 ```
 
-* Model implementation: [gpn/msa/model.py](https://github.com/songlab-cal/gpn/blob/main/gpn/msa/model.py)
+* Model implementation: [src/gpn/msa/model.py](https://github.com/songlab-cal/gpn/blob/main/src/gpn/msa/model.py)
 * Scientific baseline: [published-model fixtures](https://github.com/songlab-cal/gpn/tree/main/tests/fixtures)
 
 ### Papers
@@ -192,7 +192,7 @@ model = AutoModel.from_pretrained("songlab/PhyloGPN")
 ```
 
 * Play with the model: [examples/phylogpn/basic_example.ipynb](https://github.com/songlab-cal/gpn/blob/main/examples/phylogpn/basic_example.ipynb)
-* Model implementation: [gpn/phylo/model.py](https://github.com/songlab-cal/gpn/blob/main/gpn/phylo/model.py)
+* Model implementation: [src/gpn/phylo/model.py](https://github.com/songlab-cal/gpn/blob/main/src/gpn/phylo/model.py)
 
 ### Papers
 
@@ -215,7 +215,7 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-star-hg38-p243-200m")
 ```
 
 * Play with the model: [examples/star/demo.ipynb](https://github.com/songlab-cal/gpn/blob/main/examples/star/demo.ipynb)
-* Model implementation: [gpn/star/model.py](https://github.com/songlab-cal/gpn/blob/main/gpn/star/model.py)
+* Model implementation: [src/gpn/star/model.py](https://github.com/songlab-cal/gpn/blob/main/src/gpn/star/model.py)
 * Training on prepared data: [GPN-Star recipe](https://github.com/songlab-cal/gpn/tree/main/recipes/gpn_star_training)
 
 ### Papers

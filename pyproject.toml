@@ -96,11 +96,11 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["gpn"]
+packages = ["src/gpn"]
 
 [tool.hatch.build.targets.sdist]
 include = [
-  "/gpn",
+  "/src/gpn",
   "/docs",
   "/recipes",
   "/tests",
