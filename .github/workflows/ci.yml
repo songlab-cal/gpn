@@ -47,6 +47,7 @@ jobs:
             src/gpn/scoring.py \
             src/gpn/training.py \
             tests/conftest.py \
+            tests/test_dependency_boundaries.py \
             tests/fixtures/regenerate_alignment_fixture.py \
             tests/test_msa_model_loading.py \
             tests/test_published_models.py \
@@ -60,6 +61,7 @@ jobs:
             src/gpn/scoring.py \
             src/gpn/training.py \
             tests/conftest.py \
+            tests/test_dependency_boundaries.py \
             tests/fixtures/regenerate_alignment_fixture.py \
             tests/test_msa_model_loading.py \
             tests/test_published_models.py \
