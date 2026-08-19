@@ -67,8 +67,19 @@ tracking = ["wandb>=0.18"]
 [project.urls]
 Issues = "https://github.com/songlab-cal/gpn/issues"
 Repository = "https://github.com/songlab-cal/gpn"
+Changelog = "https://github.com/songlab-cal/gpn/blob/main/CHANGELOG.md"
 
 [dependency-groups]
+docs = [
+  "myst-nb>=1.3",
+  "nbclient>=0.10",
+  "nbformat>=5.10",
+  "sphinx>=7,<10",
+  "sphinx-autodoc-typehints>=2.5",
+  "sphinx-book-theme>=1.2",
+  "sphinx-copybutton>=0.5",
+  "sphinx-design>=0.6",
+]
 dev = [
   "check-wheel-contents>=0.6",
   "deptry>=0.24",
@@ -87,9 +98,14 @@ packages = ["src/gpn"]
 include = [
   "/src/gpn",
   "/docs",
+  "/colabs",
   "/recipes",
   "/tests",
   "/LICENSE",
+  "/CHANGELOG.md",
+  "/CITATION.cff",
+  "/CONTRIBUTING.md",
+  "/SECURITY.md",
   "/README.md",
   "/pyproject.toml",
 ]
@@ -144,6 +160,7 @@ ignore_missing_imports = true
 [tool.deptry]
 known_first_party = ["gpn"]
 ignore_notebooks = true
+extend_exclude = ["docs"]
 
 [tool.deptry.package_module_name_map]
 biopython = "Bio"
@@ -171,6 +188,9 @@ select = ["E4", "E7", "E9", "F", "I"]
 "src/gpn/phylo/model.py" = ["F722"]
 "src/gpn/scoring.py" = ["F722"]
 "src/gpn/star/train.py" = ["F722"]
+
+[tool.uv]
+default-groups = []
 
 [[tool.uv.index]]
 name = "pytorch-cpu"

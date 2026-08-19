@@ -13,7 +13,7 @@ inference only. Dataset-building workflows are not maintained.
 Install Python 3.13 and [uv](https://docs.astral.sh/uv/), then run:
 
 ```bash
-uv sync --extra train --group dev
+uv sync --extra train --group dev --group docs
 uv run pre-commit install
 ```
 
@@ -27,6 +27,8 @@ Run the same offline gates used for pull requests:
 ```bash
 uv run pre-commit run --all-files
 uv run pytest
+python docs/prepare_notebooks.py
+uv run sphinx-build -n -W --keep-going -b html docs docs/_build/html
 ```
 
 The published-model suite is an explicit networked audit, not a routine CI job:
@@ -41,6 +43,10 @@ Transformers versions, device and dtype, generation command, checksum,
 numerical tolerances, and why the new expectation or tolerance is correct.
 Genomic intervals are zero-based and half-open, VCF positions are one-based,
 and variant log-likelihood ratios are alternate minus reference.
+
+Committed quick-start outputs are refreshed only on a dedicated compute node with
+`python -m docs.refresh_notebooks`; see `docs/development.md`. Do not execute the
+refresh on a login node or download a whole-genome MSA for it.
 
 ## Dependency placement
 

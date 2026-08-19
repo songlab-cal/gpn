@@ -16,7 +16,7 @@ on `main`.
 Use Python 3.13 and uv. The supported development environment is:
 
 ```bash
-uv sync --extra train --group dev
+uv sync --extra train --group dev --group docs
 uv run pre-commit install
 ```
 
@@ -25,6 +25,8 @@ Before proposing a change, run:
 ```bash
 uv run pre-commit run --all-files
 uv run pytest
+python docs/prepare_notebooks.py
+uv run sphinx-build -n -W --keep-going -b html docs docs/_build/html
 ```
 
 Normal tests are network-free. Published-model tests download pinned Hugging
@@ -70,6 +72,12 @@ annotation behavior make it necessary.
 Place dependencies in base runtime, a feature extra, `dev`, or `docs` according
 to their actual consumers. Research-only dependencies never belong in the root
 project.
+
+Keep exactly the three canonical notebooks under `colabs/`. Documentation renders
+their committed outputs without execution. Do not add notebook-only scientific
+logic, local paths, secrets, downloaded models, or whole-genome MSAs.
+Refresh their outputs together with `python -m docs.refresh_notebooks` only in a
+dedicated compute allocation, then review output diffs and the scientific audit.
 
 ## Research branches
 
