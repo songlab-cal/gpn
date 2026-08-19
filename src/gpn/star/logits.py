@@ -5,6 +5,7 @@ from transformers import AutoModelForMaskedLM
 
 from gpn import register_auto_classes
 from gpn.data import Tokenizer
+from gpn.scoring import validate_centered_window_size
 
 
 class MLMforLogitsModel(torch.nn.Module):
@@ -63,6 +64,7 @@ class LogitsInference(object):
         disable_aux_features=False,
         phylo_dist_path=None,
     ):
+        validate_centered_window_size(window_size)
         self.model = MLMforLogitsModel(
             model_path,
             phylo_dist_path=phylo_dist_path,

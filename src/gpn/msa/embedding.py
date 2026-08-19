@@ -5,13 +5,13 @@ from transformers import AutoModel
 
 from gpn import register_auto_classes
 
-register_auto_classes("msa")
-
 
 class ModelCenterEmbedding(torch.nn.Module):
     def __init__(self, model_path, center_window_size):
         super().__init__()
+        register_auto_classes("msa")
         self.model = AutoModel.from_pretrained(model_path)
+        self.model.eval()
         self.center_window_size = center_window_size
 
     def get_center_embedding(self, input_ids, aux_features=None):

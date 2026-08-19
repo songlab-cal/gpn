@@ -5,6 +5,7 @@ Code and resources for genomic language models [GPN](https://doi.org/10.1073/pna
 
 ## Table of contents
 - [Installation](#installation)
+- [Command line](#command-line)
 - [Modeling frameworks](#modeling-frameworks)
 - [GPN](#gpn)
 - [GPN-MSA](#gpn-msa)
@@ -40,6 +41,22 @@ git clone https://github.com/songlab-cal/gpn.git
 cd gpn
 uv sync --all-extras --group dev
 ```
+
+## Command line
+
+The installed package provides a stable, lazy-loading command:
+
+```text
+gpn ss {train,vep,logits,embedding} ...
+gpn msa {vep,logits,embedding} ...
+gpn star {train,vep,logits,embedding} ...
+```
+
+GPN-MSA is inference-only by construction. See the
+[CLI guide](docs/cli.md) for inputs, distributed launches, precision controls, and
+the maintained command contract.
+PhyloGPN and the sorghum gene-expression fine-tune are maintained through explicit
+Transformers AutoClass registration and intentionally have no dedicated CLI.
 
 ## Modeling frameworks
 | Model | Paper | Notes |
@@ -108,29 +125,15 @@ an already prepared sequence dataset and includes tiny CPU and realistic GPU
 profiles. Dataset construction is deliberately outside the maintained package.
 
 <details>
-<summary><strong>Extract embeddings</strong></summary>
-
-Input file requires `chrom`, `start`, `end` columns.
-
-Example command:
-```bash
-torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{print NF}') -m gpn.ss.get_embeddings \
-    windows.parquet genome.fa.gz 100 your_output_dir results.parquet \
-    --per_device_batch_size 4000 --is_file --dataloader_num_workers 16
-```
-
-</details>
-
-<details>
 <summary><strong>Variant effect prediction</strong></summary>
 
-Input file requires `chrom`, `pos`, `ref`, `alt` columns.
+Input requires `chrom`, one-based `pos`, and distinct uppercase canonical SNV
+`ref`/`alt` columns. A mismatch between `ref` and the local genome is an error.
 
 Example command:
 ```bash
-torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{print NF}') -m gpn.ss.run_vep \
-    variants.parquet genome.fa.gz 512 your_output_dir results.parquet \
-    --per_device_batch_size 4000 --is_file --dataloader_num_workers 16
+gpn ss vep variants.parquet genome.fa.gz 512 songlab/gpn-brassicales results.parquet \
+    --per-device-batch-size 64 --is-file --dataloader-num-workers 8
 ```
 
 </details>
@@ -190,6 +193,9 @@ from transformers import AutoModel
 register_auto_classes("phylo")
 model = AutoModel.from_pretrained("songlab/PhyloGPN")
 ```
+
+PhyloGPN inference is supported through this explicit AutoClass API; it does not
+have a dedicated `gpn` CLI command.
 
 * Play with the model: [examples/phylogpn/basic_example.ipynb](https://github.com/songlab-cal/gpn/blob/main/examples/phylogpn/basic_example.ipynb)
 * Model implementation: [src/gpn/phylo/model.py](https://github.com/songlab-cal/gpn/blob/main/src/gpn/phylo/model.py)

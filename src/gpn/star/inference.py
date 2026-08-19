@@ -1,5 +1,6 @@
 import argparse
 import hashlib
+import importlib
 import importlib.metadata
 import json
 import os
@@ -7,6 +8,7 @@ import tempfile
 from pathlib import Path
 
 import pandas as pd
+import torch
 from accelerate.utils import broadcast_object_list
 from datasets import Dataset, disable_caching
 from transformers import Trainer, TrainingArguments
@@ -18,21 +20,23 @@ from gpn.star.checkpoint import (
     write_dataframe_atomic,
 )
 from gpn.star.data import GenomeMSA, load_dataset_from_file_or_dir
-from gpn.star.embedding import EmbeddingInference
-from gpn.star.logits import LogitsInference
 from gpn.star.utils import find_directory_sum_paths
-from gpn.star.vep import VEPInference
-from gpn.star.vep_embedding import VEPEmbeddingInference
-
-disable_caching()
-
 
 class_mapping = {
-    "vep": VEPInference,
-    "logits": LogitsInference,
-    "embedding": EmbeddingInference,
-    "vep_embedding": VEPEmbeddingInference,
+    "vep": "gpn.star.vep:VEPInference",
+    "logits": "gpn.star.logits:LogitsInference",
+    "embedding": "gpn.star.embedding:EmbeddingInference",
+    "vep_embedding": "gpn.star.vep_embedding:VEPEmbeddingInference",
 }
+
+
+def _resolve_acceleration_option(value):
+    return torch.cuda.is_available() if value is None else value
+
+
+def _load_inference_class(command):
+    module_name, class_name = class_mapping[command].split(":", maxsplit=1)
+    return getattr(importlib.import_module(module_name), class_name)
 
 
 def _validate_runtime_options(
@@ -55,6 +59,8 @@ def _create_trainer(
     inference,
     per_device_batch_size,
     dataloader_num_workers,
+    fp16=None,
+    torch_compile=None,
 ):
     temporary_output_dir = tempfile.TemporaryDirectory(prefix="gpn-star-inference-")
     training_args = TrainingArguments(
@@ -62,8 +68,8 @@ def _create_trainer(
         per_device_eval_batch_size=per_device_batch_size,
         dataloader_num_workers=dataloader_num_workers,
         remove_unused_columns=False,
-        torch_compile=True,
-        fp16=True,
+        torch_compile=_resolve_acceleration_option(torch_compile),
+        fp16=_resolve_acceleration_option(fp16),
         report_to="none",
     )
     trainer = Trainer(model=inference.model, args=training_args)
@@ -90,6 +96,8 @@ def run_inference(
     inference,
     per_device_batch_size=8,
     dataloader_num_workers=0,
+    fp16=None,
+    torch_compile=None,
 ):
     """Run one inference pass and return predictions on the main process."""
 
@@ -103,6 +111,8 @@ def run_inference(
         inference,
         per_device_batch_size,
         dataloader_num_workers,
+        fp16=fp16,
+        torch_compile=torch_compile,
     )
     return _predict_with_trainer(dataset, inference, trainer)
 
@@ -156,6 +166,8 @@ def run_inference_with_checkpoints(
     per_device_batch_size=8,
     dataloader_num_workers=0,
     cleanup_checkpoints=False,
+    fp16=None,
+    torch_compile=None,
 ):
     """Run resumable inference and atomically assemble the final Parquet file.
 
@@ -186,6 +198,8 @@ def run_inference_with_checkpoints(
         inference,
         per_device_batch_size,
         dataloader_num_workers,
+        fp16=fp16,
+        torch_compile=torch_compile,
     )
 
     def prepare_checkpoints():
@@ -486,6 +500,10 @@ def build_run_signature(args, dataset, msa_paths, inference):
             "implementation": (
                 f"{type(inference).__module__}.{type(inference).__qualname__}"
             ),
+            "fp16": _resolve_acceleration_option(getattr(args, "fp16", None)),
+            "torch_compile": _resolve_acceleration_option(
+                getattr(args, "torch_compile", None)
+            ),
             "window_size": args.window_size,
         },
         "model": {
@@ -516,45 +534,57 @@ def _write_parquet_atomic(frame, output_path):
     return write_dataframe_atomic(frame, output_path)
 
 
-def _build_parser():
+def _build_parser(command=None):
     parser = argparse.ArgumentParser(
         description="Run inference with AutoModelForMaskedLM",
     )
-    parser.add_argument(
-        "command",
-        type=str,
-        help="""Command to run:
-        - vep: zero-shot variant effect prediction (LLR)
-        - logits: masked language model logits
-        - embedding: averaged embedding from last layer
-        """,
-        choices=["vep", "logits", "embedding", "vep_embedding"],
-    )
+    if command is None:
+        parser.add_argument(
+            "command",
+            type=str,
+            help="""Command to run:
+            - vep: zero-shot variant effect prediction (LLR)
+            - logits: masked language model logits
+            - embedding: averaged embedding from last layer
+            """,
+            choices=class_mapping.keys(),
+        )
+    else:
+        if command not in class_mapping:
+            raise ValueError(f"Unknown GPN-Star inference command: {command}")
+        parser.set_defaults(command=command)
     parser.add_argument(
         "input_path",
         type=str,
         help="""Input path, either HF dataset, parquet, csv/tsv, vcf, with columns:
-        - vep: chrom, pos, ref, alt
-        - logits: chrom, pos
-        - embedding: chrom, start, end
+        - vep: chrom, one-based pos, canonical ref, canonical alt
+        - logits: chrom, one-based pos
+        - embedding: chrom, zero-based half-open start, end
         """,
     )
     parser.add_argument(
         "msa_path",
         type=str,
-        help="Genome MSA path (zarr)",
+        help=(
+            "Local MSA parent: a numeric species-count directory containing "
+            "all.zarr, or a root containing such numeric directories"
+        ),
     )
     parser.add_argument("window_size", type=int, help="Genomic window size")
     parser.add_argument("model_path", help="Model path (local or on HF hub)", type=str)
     parser.add_argument("output_path", help="Output path (parquet)", type=str)
     parser.add_argument(
+        "--per-device-batch-size",
         "--per_device_batch_size",
+        dest="per_device_batch_size",
         help="Per device batch size",
         type=int,
         default=8,
     )
     parser.add_argument(
+        "--dataloader-num-workers",
         "--dataloader_num_workers",
+        dest="dataloader_num_workers",
         type=int,
         default=0,
         help="Dataloader num workers",
@@ -566,21 +596,29 @@ def _build_parser():
         help="Dataset split",
     )
     parser.add_argument(
+        "--is-file",
         "--is_file",
+        dest="is_file",
         action="store_true",
         help="INPUT_PATH is a file, not a directory or Hub dataset",
     )
     parser.add_argument(
+        "--disable-aux-features",
         "--disable_aux_features",
+        dest="disable_aux_features",
         action="store_true",
     )
     parser.add_argument(
+        "--center-window-size",
         "--center_window_size",
+        dest="center_window_size",
         type=int,
         help="[embedding] Genomic window size to average at the center of the windows",
     )
     parser.add_argument(
+        "--checkpoint-batch-size",
         "--checkpoint_batch_size",
+        dest="checkpoint_batch_size",
         type=int,
         default=None,
         help=(
@@ -588,13 +626,17 @@ def _build_parser():
         ),
     )
     parser.add_argument(
+        "--checkpoint-dir",
         "--checkpoint_dir",
+        dest="checkpoint_dir",
         type=str,
         default=None,
         help=("Checkpoint directory. Defaults to OUTPUT_PATH + '_checkpoints'."),
     )
     parser.add_argument(
+        "--checkpoint-revision",
         "--checkpoint_revision",
+        dest="checkpoint_revision",
         type=str,
         default=None,
         help=(
@@ -605,18 +647,34 @@ def _build_parser():
         ),
     )
     parser.add_argument(
+        "--cleanup-checkpoints",
         "--cleanup_checkpoints",
+        dest="cleanup_checkpoints",
         action="store_true",
         help="Remove managed checkpoints after the final output is committed",
     )
     parser.add_argument(
+        "--phylo-dist-path",
         "--phylo_dist_path",
+        dest="phylo_dist_path",
         type=str,
         default=None,
         help=(
             "[logits] Override the phylogenetic-distance directory stored in "
             "the model config"
         ),
+    )
+    parser.add_argument(
+        "--fp16",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Use FP16 inference (default: enabled when CUDA is available)",
+    )
+    parser.add_argument(
+        "--torch-compile",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Use torch.compile (default: enabled when CUDA is available)",
     )
     return parser
 
@@ -625,28 +683,30 @@ def _validate_cli_args(parser, args):
     if args.window_size <= 0:
         parser.error("window_size must be positive")
     if args.per_device_batch_size <= 0:
-        parser.error("--per_device_batch_size must be positive")
+        parser.error("--per-device-batch-size must be positive")
     if args.dataloader_num_workers < 0:
-        parser.error("--dataloader_num_workers must be non-negative")
+        parser.error("--dataloader-num-workers must be non-negative")
     if args.checkpoint_batch_size is not None and args.checkpoint_batch_size <= 0:
-        parser.error("--checkpoint_batch_size must be positive")
+        parser.error("--checkpoint-batch-size must be positive")
     if args.checkpoint_dir is not None and args.checkpoint_batch_size is None:
-        parser.error("--checkpoint_dir requires --checkpoint_batch_size")
+        parser.error("--checkpoint-dir requires --checkpoint-batch-size")
     if args.checkpoint_revision is not None and args.checkpoint_batch_size is None:
-        parser.error("--checkpoint_revision requires --checkpoint_batch_size")
+        parser.error("--checkpoint-revision requires --checkpoint-batch-size")
     if args.cleanup_checkpoints and args.checkpoint_batch_size is None:
-        parser.error("--cleanup_checkpoints requires --checkpoint_batch_size")
+        parser.error("--cleanup-checkpoints requires --checkpoint-batch-size")
     if args.phylo_dist_path is not None and args.command != "logits":
-        parser.error("--phylo_dist_path is only supported by the logits command")
+        parser.error("--phylo-dist-path is only supported by the logits command")
     if args.center_window_size is not None and args.center_window_size <= 0:
-        parser.error("--center_window_size must be positive")
+        parser.error("--center-window-size must be positive")
+    if args.command != "embedding" and args.window_size % 2:
+        parser.error("window_size must be even for centered MSA inference")
 
 
-def main(argv=None):
-    parser = _build_parser()
+def main(argv=None, *, command=None):
+    parser = _build_parser(command=command)
     args = parser.parse_args(argv)
     _validate_cli_args(parser, args)
-    print(args)
+    disable_caching()
 
     try:
         dataset = load_dataset_from_file_or_dir(
@@ -684,7 +744,8 @@ def main(argv=None):
     if args.command == "logits" and args.phylo_dist_path is not None:
         kwargs["phylo_dist_path"] = args.phylo_dist_path
 
-    inference = class_mapping[args.command](
+    inference_class = _load_inference_class(args.command)
+    inference = inference_class(
         args.model_path,
         genome_msa_list,
         args.window_size,
@@ -710,6 +771,8 @@ def main(argv=None):
             per_device_batch_size=args.per_device_batch_size,
             dataloader_num_workers=args.dataloader_num_workers,
             cleanup_checkpoints=args.cleanup_checkpoints,
+            fp16=args.fp16,
+            torch_compile=args.torch_compile,
         )
     else:
         predictions = run_inference(
@@ -717,6 +780,8 @@ def main(argv=None):
             inference,
             per_device_batch_size=args.per_device_batch_size,
             dataloader_num_workers=args.dataloader_num_workers,
+            fp16=args.fp16,
+            torch_compile=args.torch_compile,
         )
         if predictions is not None:
             _write_parquet_atomic(predictions, args.output_path)

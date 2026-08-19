@@ -6,13 +6,13 @@ from transformers import AutoModel
 from gpn import register_auto_classes
 from gpn.data import ReverseComplementer, Tokenizer
 
-register_auto_classes("msa")
-
 
 class VEPDeltaEmbed(torch.nn.Module):
     def __init__(self, model_path):
         super().__init__()
+        register_auto_classes("msa")
         self.model = AutoModel.from_pretrained(model_path)
+        self.model.eval()
 
     def get_embedding(self, input_ids, aux_features):
         return self.model(

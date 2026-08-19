@@ -63,14 +63,14 @@ Edit the two local alignment paths in `cpu-smoke.json`, then verify the complete
 Hub-dataset/MSA plumbing with one small CPU step:
 
 ```bash
-uv run python -m gpn.star.train recipes/gpn_star_training/cpu-smoke.json
+uv run gpn star train recipes/gpn_star_training/cpu-smoke.json
 ```
 
 For a realistic four-GPU starting point, edit `gpu.json` and run:
 
 ```bash
-uv run --no-sync torchrun --standalone --nproc_per_node=4 \
-  -m gpn.star.train recipes/gpn_star_training/gpu.json
+uv run --no-sync torchrun --standalone --nproc-per-node=4 --module gpn.cli \
+  star train recipes/gpn_star_training/gpu.json
 ```
 
 The GPU profile records the architecture of the published 200M-parameter model.

@@ -5,14 +5,15 @@ from transformers import AutoModelForMaskedLM
 
 from gpn import register_auto_classes
 from gpn.data import Tokenizer
-
-register_auto_classes("msa")
+from gpn.scoring import validate_centered_window_size
 
 
 class MLMforLogitsModel(torch.nn.Module):
     def __init__(self, model_path):
         super().__init__()
+        register_auto_classes("msa")
         self.model = AutoModelForMaskedLM.from_pretrained(model_path)
+        self.model.eval()
         tokenizer = Tokenizer()
         self.id_a = tokenizer.vocab.index("A")
         self.id_c = tokenizer.vocab.index("C")
@@ -50,6 +51,7 @@ class MLMforLogitsModel(torch.nn.Module):
 
 class LogitsInference(object):
     def __init__(self, model_path, genome_msa, window_size, disable_aux_features=False):
+        validate_centered_window_size(window_size)
         self.model = MLMforLogitsModel(model_path)
         self.genome_msa = genome_msa
         self.window_size = window_size

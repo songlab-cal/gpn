@@ -33,17 +33,20 @@ def load_training_dataset(
 
 
 def parse_training_arguments(
-    model_arguments: type[Any], data_arguments: type[Any]
+    model_arguments: type[Any],
+    data_arguments: type[Any],
+    argv: list[str] | None = None,
 ) -> tuple[Any, Any, "GPNTrainingArguments"]:
     """Parse either one JSON profile or ordinary command-line arguments."""
 
+    arguments = sys.argv[1:] if argv is None else list(argv)
     parser = HfArgumentParser((model_arguments, data_arguments, GPNTrainingArguments))
-    if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
-        arguments = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
+    if len(arguments) == 1 and arguments[0].endswith(".json"):
+        parsed = parser.parse_json_file(json_file=os.path.abspath(arguments[0]))
     else:
-        arguments = parser.parse_args_into_dataclasses()
-    reject_unsupported_hub_push(arguments[2])
-    return arguments
+        parsed = parser.parse_args_into_dataclasses(args=arguments)
+    reject_unsupported_hub_push(parsed[2])
+    return parsed
 
 
 def reject_unsupported_hub_push(training_args: "GPNTrainingArguments") -> None:

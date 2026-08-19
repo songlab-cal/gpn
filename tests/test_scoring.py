@@ -1,7 +1,13 @@
 import pytest
 import torch
 
-from gpn.scoring import log_likelihood_ratio, nucleotide_probabilities
+from gpn.scoring import (
+    log_likelihood_ratio,
+    nucleotide_probabilities,
+    require_reference_matches,
+    validate_centered_window_size,
+    validate_snv_batch,
+)
 
 
 def test_nucleotide_probabilities_normalize_final_axis():
@@ -64,3 +70,46 @@ def test_log_likelihood_ratio_rejects_non_integer_indices():
 
     with pytest.raises(TypeError, match="indices must be integers"):
         log_likelihood_ratio(logits, reference_index=0.0, alternate_index=1)
+
+
+def test_validate_snv_batch_accepts_canonical_one_based_variants():
+    actual = validate_snv_batch(["chr1"], [42], ["A"], ["C"])
+
+    assert actual == (["chr1"], [42], ["A"], ["C"])
+
+
+@pytest.mark.parametrize(
+    ("positions", "references", "alternates", "message"),
+    (
+        ([0], ["A"], ["C"], "positive one-based"),
+        ([1], ["a"], ["C"], "reference allele"),
+        ([1], ["N"], ["C"], "reference allele"),
+        ([1], ["AA"], ["C"], "reference allele"),
+        ([1], ["A"], ["A"], "identical reference"),
+    ),
+)
+def test_validate_snv_batch_rejects_ambiguous_or_non_snv_rows(
+    positions,
+    references,
+    alternates,
+    message,
+):
+    with pytest.raises(ValueError, match=message):
+        validate_snv_batch(["chr1"], positions, references, alternates)
+
+
+def test_reference_mismatch_reports_source_coordinate():
+    with pytest.raises(ValueError, match=r"chr7:123.*genome has 'C'.*input has 'A'"):
+        require_reference_matches(
+            ["C"],
+            ["A"],
+            ["chr7"],
+            [123],
+            orientation="forward",
+        )
+
+
+@pytest.mark.parametrize("window_size", [0, -2, 5])
+def test_centered_msa_windows_must_be_positive_and_even(window_size):
+    with pytest.raises(ValueError, match="window_size"):
+        validate_centered_window_size(window_size)

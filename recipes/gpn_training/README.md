@@ -45,14 +45,14 @@ The GPN trainer streams this Hub dataset, so the one-step smoke run does not
 materialize the complete dataset locally:
 
 ```bash
-uv run python -m gpn.ss.train recipes/gpn_training/cpu-smoke.json
+uv run gpn ss train recipes/gpn_training/cpu-smoke.json
 ```
 
 For a realistic four-GPU starting point, edit `gpu.json` and run:
 
 ```bash
-uv run --no-sync torchrun --standalone --nproc_per_node=4 \
-  -m gpn.ss.train recipes/gpn_training/gpu.json
+uv run --no-sync torchrun --standalone --nproc-per-node=4 --module gpn.cli \
+  ss train recipes/gpn_training/gpu.json
 ```
 
 The GPU config has effective global batch size

@@ -5,14 +5,19 @@ from transformers import AutoModelForMaskedLM
 
 from gpn import register_auto_classes
 from gpn.data import ReverseComplementer, Tokenizer
-
-register_auto_classes("msa")
+from gpn.scoring import (
+    require_reference_matches,
+    validate_centered_window_size,
+    validate_snv_batch,
+)
 
 
 class MLMforVEPModel(torch.nn.Module):
     def __init__(self, model_path):
         super().__init__()
+        register_auto_classes("msa")
         self.model = AutoModelForMaskedLM.from_pretrained(model_path)
+        self.model.eval()
 
     def get_llr(self, input_ids, aux_features, pos, ref, alt):
         logits = self.model.forward(
@@ -50,6 +55,7 @@ class MLMforVEPModel(torch.nn.Module):
 
 class VEPInference(object):
     def __init__(self, model_path, genome_msa, window_size, disable_aux_features=False):
+        validate_centered_window_size(window_size)
         self.model = MLMforVEPModel(model_path)
         self.genome_msa = genome_msa
         self.window_size = window_size
@@ -60,8 +66,11 @@ class VEPInference(object):
     def tokenize_function(self, V):
         # we convert from 1-based coordinate (standard in VCF) to
         # 0-based, to use with GenomeMSA
-        chrom = np.array(V["chrom"])
-        pos = np.array(V["pos"]) - 1
+        chromosomes, positions, references, alternates = validate_snv_batch(
+            V["chrom"], V["pos"], V["ref"], V["alt"]
+        )
+        chrom = np.array(chromosomes)
+        pos = np.array(positions) - 1
         start = pos - self.window_size // 2
         end = pos + self.window_size // 2
         msa_fwd, msa_rev = self.genome_msa.get_msa_batch_fwd_rev(
@@ -74,19 +83,23 @@ class VEPInference(object):
         pos_rev = pos_fwd - 1 if self.window_size % 2 == 0 else pos_fwd
 
         ref_fwd = np.array(
-            [np.frombuffer(x.encode("ascii"), dtype="S1") for x in V["ref"]]
+            [np.frombuffer(x.encode("ascii"), dtype="S1") for x in references]
         )
         alt_fwd = np.array(
-            [np.frombuffer(x.encode("ascii"), dtype="S1") for x in V["alt"]]
+            [np.frombuffer(x.encode("ascii"), dtype="S1") for x in alternates]
         )
         ref_rev = self.reverse_complementer(ref_fwd)
         alt_rev = self.reverse_complementer(alt_fwd)
 
-        def prepare_output(msa, pos, ref, alt):
+        def prepare_output(msa, pos, ref, alt, orientation):
             ref, alt = self.tokenizer(ref.flatten()), self.tokenizer(alt.flatten())
             input_ids, aux_features = msa[:, :, 0], msa[:, :, 1:]
-            assert (input_ids[:, pos] == ref).all(), (
-                f"{input_ids[:, pos].tolist()}, {ref.tolist()}"
+            require_reference_matches(
+                [self.tokenizer.vocab[int(value)] for value in input_ids[:, pos]],
+                [self.tokenizer.vocab[int(value)] for value in ref],
+                chromosomes,
+                positions,
+                orientation=orientation,
             )
             input_ids[:, pos] = self.tokenizer.mask_token_id()
             input_ids = input_ids.astype(np.int64)
@@ -101,14 +114,20 @@ class VEPInference(object):
             res["pos_fwd"],
             res["ref_fwd"],
             res["alt_fwd"],
-        ) = prepare_output(msa_fwd, pos_fwd, ref_fwd, alt_fwd)
+        ) = prepare_output(msa_fwd, pos_fwd, ref_fwd, alt_fwd, "forward")
         (
             res["input_ids_rev"],
             res["aux_features_rev"],
             res["pos_rev"],
             res["ref_rev"],
             res["alt_rev"],
-        ) = prepare_output(msa_rev, pos_rev, ref_rev, alt_rev)
+        ) = prepare_output(
+            msa_rev,
+            pos_rev,
+            ref_rev,
+            alt_rev,
+            "reverse-complement",
+        )
         if self.disable_aux_features:
             del res["aux_features_fwd"]
             del res["aux_features_rev"]

@@ -109,10 +109,10 @@ class DataTrainingArguments:
     )
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
     register_auto_classes("ss")
     model_args, data_args, training_args = parse_training_arguments(
-        ModelArguments, DataTrainingArguments
+        ModelArguments, DataTrainingArguments, argv
     )
     configure_training_logging(training_args, logger)
     checkpoint = find_training_checkpoint(training_args)

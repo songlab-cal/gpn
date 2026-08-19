@@ -175,9 +175,9 @@ class DataTrainingArguments:
     soft_masked_loss_weight_evaluation: float = field(default=1.0)
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
     model_args, data_args, training_args = parse_training_arguments(
-        ModelArguments, DataTrainingArguments
+        ModelArguments, DataTrainingArguments, argv
     )
     configure_training_logging(training_args, logger)
     checkpoint = find_training_checkpoint(training_args)

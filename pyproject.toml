@@ -39,6 +39,9 @@ dependencies = [
   "transformers==5.15.0",
 ]
 
+[project.scripts]
+gpn = "gpn.cli:main"
+
 [project.optional-dependencies]
 inference = [
   "accelerate>=1",
@@ -103,6 +106,7 @@ markers = [
 [tool.mypy]
 python_version = "3.13"
 files = [
+  "src/gpn/cli.py",
   "src/gpn/_registration.py",
   "src/gpn/scoring.py",
   "src/gpn/training.py",
