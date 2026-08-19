@@ -32,9 +32,7 @@ def test_external_mutation_ledger_conforms_to_schema() -> None:
         if action["disposition"] == "approval_ready"
     ]
     deferred = [
-        action
-        for action in ledger["pending"]
-        if action["disposition"] == "deferred"
+        action for action in ledger["pending"] if action["disposition"] == "deferred"
     ]
     assert ready and deferred
     assert {action["authorization"] for action in ready} == {
@@ -96,8 +94,7 @@ def test_hub_mutations_are_exact_or_explicitly_deferred() -> None:
         model["repo_id"]: model["sha"] for model in audit["inventory"]["models"]
     }
     audited_heads = model_heads | {
-        dataset["repo_id"]: dataset["sha"]
-        for dataset in audit["inventory"]["datasets"]
+        dataset["repo_id"]: dataset["sha"] for dataset in audit["inventory"]["datasets"]
     }
 
     ready = pending["update-ready-supported-hub-cards"]
@@ -105,7 +102,7 @@ def test_hub_mutations_are_exact_or_explicitly_deferred() -> None:
     for payload in ready["payloads"]:
         assert model_heads[payload["target"]] == payload["current_head"]
         assert (ROOT / payload["source"]).is_file()
-        expected_targets.add(f'{payload["target"]}@{payload["current_head"]}')
+        expected_targets.add(f"{payload['target']}@{payload['current_head']}")
     assert set(ready["targets"]) == expected_targets
 
     supported_star = "songlab/gpn-star-hg38-v100-200m"
@@ -137,12 +134,8 @@ def test_archive_mutation_identifies_tag_object_and_peeled_commit() -> None:
     pending = {action["id"]: action for action in ledger["pending"]}
     archive = pending["publish-analysis-archive"]
 
-    assert "tag object 312a6c70de6700e729bcea4c9a67ab42a72f05f7" in archive[
-        "targets"
-    ]
-    assert "commit 30dee6cf45849dfdcfc043ca8baf44fd6ba51d74" in archive[
-        "targets"
-    ]
+    assert "tag object 312a6c70de6700e729bcea4c9a67ab42a72f05f7" in archive["targets"]
+    assert "commit 30dee6cf45849dfdcfc043ca8baf44fd6ba51d74" in archive["targets"]
 
 
 def test_proposed_main_ruleset_matches_ci_and_solo_maintenance() -> None:
