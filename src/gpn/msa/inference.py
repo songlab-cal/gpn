@@ -171,6 +171,13 @@ def _validate_cli_args(parser, args):
         parser.error("window_size must be even for centered MSA inference")
 
 
+def _command_kwargs(args):
+    kwargs = {}
+    if args.command == "embedding" and args.center_window_size is not None:
+        kwargs["center_window_size"] = args.center_window_size
+    return kwargs
+
+
 def main(argv=None, *, command=None):
     parser = _build_parser(command=command)
     args = parser.parse_args(argv)
@@ -185,12 +192,7 @@ def main(argv=None, *, command=None):
     genome_msa = GenomeMSA(
         args.msa_path, subset_chroms=dataset.unique("chrom"), in_memory=False
     )
-    # sorry this is hacky, should use subparsers
-    kwargs = (
-        dict(center_window_size=args.center_window_size)
-        if args.command == "embedding"
-        else {}
-    )
+    kwargs = _command_kwargs(args)
     inference_class = _load_inference_class(args.command)
     inference = inference_class(
         args.model_path,

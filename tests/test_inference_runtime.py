@@ -358,3 +358,15 @@ def test_msa_compile_errors_are_suppressed_only_during_compiled_prediction(
     assert result["score"].tolist() == [1.25]
     assert observed == [True]
     assert msa_inference.torch._dynamo.config.suppress_errors is False
+
+
+def test_msa_embedding_cli_preserves_default_center_window_size():
+    args = SimpleNamespace(command="embedding", center_window_size=None)
+
+    assert msa_inference._command_kwargs(args) == {}
+
+
+def test_msa_embedding_cli_forwards_explicit_center_window_size():
+    args = SimpleNamespace(command="embedding", center_window_size=32)
+
+    assert msa_inference._command_kwargs(args) == {"center_window_size": 32}
