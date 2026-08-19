@@ -111,6 +111,9 @@ include = [
 [tool.pytest.ini_options]
 addopts = "-ra"
 testpaths = ["tests"]
+markers = [
+  "published_models: opt-in tests that download pinned Hugging Face checkpoints",
+]
 
 [tool.ruff]
 target-version = "py311"

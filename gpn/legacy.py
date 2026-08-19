@@ -362,6 +362,16 @@ class GPNRoFormerModel(GPNRoFormerPreTrainedModel):
 
 
 class GPNRoFormerForMaskedLM(GPNRoFormerPreTrainedModel):
+    # The published checkpoints store the learned output bias as
+    # ``cls.predictions.bias``.  Transformers 5 no longer aliases that
+    # parameter to the decoder bias inside ``RoFormerOnlyMLMHead``, so declare
+    # the relationship explicitly for version-independent loading.  The
+    # decoder weight is deliberately independent because GPNRoFormer has no
+    # trainable input embedding to tie it to.
+    _tied_weights_keys = {
+        "cls.predictions.decoder.bias": "cls.predictions.bias",
+    }
+
     def __init__(self, config):
         super().__init__(config)
 

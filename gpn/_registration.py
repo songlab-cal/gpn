@@ -5,9 +5,9 @@ from __future__ import annotations
 from threading import Lock
 from typing import Literal
 
-ModelFamily = Literal["gpn", "star"]
+ModelFamily = Literal["gpn", "phylogpn", "star"]
 
-_FAMILIES: tuple[ModelFamily, ...] = ("gpn", "star")
+_FAMILIES: tuple[ModelFamily, ...] = ("gpn", "phylogpn", "star")
 _registered_families: set[ModelFamily] = set()
 _registration_lock = Lock()
 
@@ -16,8 +16,8 @@ def register_auto_classes(*families: ModelFamily) -> None:
     """Register GPN configurations and models with Transformers AutoClasses.
 
     Calling this function repeatedly is safe. With no arguments, all installed GPN
-    model families are registered. Pass ``"gpn"`` or ``"star"`` to register only
-    one family and avoid importing the other implementation.
+    model families are registered. Pass a family name to register only that family
+    and avoid importing the other implementations.
 
     Raises:
         ValueError: If an unknown family is requested or a Transformers mapping is
@@ -37,6 +37,8 @@ def register_auto_classes(*families: ModelFamily) -> None:
                 continue
             if family == "gpn":
                 _register_gpn()
+            elif family == "phylogpn":
+                _register_phylogpn()
             else:
                 _register_star()
             _registered_families.add(family)
@@ -94,3 +96,16 @@ def _register_star() -> None:
     AutoConfig.register("GPNStar", GPNStarConfig)
     AutoModel.register(GPNStarConfig, GPNStarModel)
     AutoModelForMaskedLM.register(GPNStarConfig, GPNStarForMaskedLM)
+
+
+def _register_phylogpn() -> None:
+    from transformers import AutoConfig, AutoModel, AutoTokenizer
+
+    from .phylogpn import PhyloGPNConfig, PhyloGPNModel, PhyloGPNTokenizer
+
+    AutoConfig.register("phylogpn", PhyloGPNConfig)
+    AutoModel.register(PhyloGPNConfig, PhyloGPNModel)
+    AutoTokenizer.register(
+        PhyloGPNConfig,
+        slow_tokenizer_class=PhyloGPNTokenizer,
+    )

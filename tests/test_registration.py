@@ -10,6 +10,7 @@ from transformers import (
     AutoModelForMaskedLM,
     AutoModelForSequenceClassification,
     AutoModelForTokenClassification,
+    AutoTokenizer,
 )
 
 from gpn import register_auto_classes
@@ -72,6 +73,44 @@ def test_star_registration_is_explicit_and_idempotent():
     assert type(AutoConfig.for_model("GPNStar")) is GPNStarConfig
     assert AutoModel._model_mapping[GPNStarConfig] is GPNStarModel
     assert AutoModelForMaskedLM._model_mapping[GPNStarConfig] is GPNStarForMaskedLM
+
+
+def test_phylogpn_registration_is_explicit_and_idempotent(tmp_path: Path):
+    from gpn.phylogpn import PhyloGPNConfig, PhyloGPNModel, PhyloGPNTokenizer
+
+    register_auto_classes("phylogpn")
+    register_auto_classes("phylogpn")
+
+    config = AutoConfig.for_model(
+        "phylogpn",
+        outer_dim=8,
+        inner_dim=4,
+        kernel_size=3,
+        stack_size=1,
+        num_stacks=2,
+    )
+    assert type(config) is PhyloGPNConfig
+    assert AutoModel._model_mapping[PhyloGPNConfig] is PhyloGPNModel
+
+    config.save_pretrained(tmp_path)
+    PhyloGPNTokenizer().save_pretrained(tmp_path)
+    tokenizer = AutoTokenizer.from_pretrained(tmp_path)
+    assert type(tokenizer) is PhyloGPNTokenizer
+
+    model = AutoModel.from_config(config).eval()
+    input_ids = tokenizer("ACGTACGT", return_tensors="pt")["input_ids"]
+    with torch.no_grad():
+        outputs = model(input_ids=input_ids)
+
+    assert set(outputs) == set("ACGT")
+    assert all(output.shape == (1, 4) for output in outputs.values())
+
+    model.save_pretrained(tmp_path)
+    restored = AutoModel.from_pretrained(tmp_path).eval()
+    with torch.no_grad():
+        restored_outputs = restored(input_ids=input_ids)
+    for nucleotide in "ACGT":
+        torch.testing.assert_close(restored_outputs[nucleotide], outputs[nucleotide])
 
 
 def test_tiny_gpn_model_round_trip(tmp_path: Path):
