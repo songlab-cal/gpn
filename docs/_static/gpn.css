@@ -1,0 +1,23 @@
+:root {
+  --pst-color-primary: #5b3f96;
+  --pst-color-link: #5b3f96;
+}
+
+.bd-main .bd-content .bd-article-container {
+  max-width: 54rem;
+}
+
+.gpn-hero {
+  padding: 1.25rem 0 0.5rem;
+}
+
+.gpn-hero h1 {
+  font-size: clamp(2.3rem, 6vw, 4.4rem);
+  letter-spacing: -0.04em;
+  margin-bottom: 0.25rem;
+}
+
+.gpn-hero p {
+  font-size: 1.25rem;
+  max-width: 48rem;
+}

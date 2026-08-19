@@ -5,6 +5,8 @@
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
+docs/_build/
+docs/_notebooks/
 *.py[cod]
 *$py.class
 

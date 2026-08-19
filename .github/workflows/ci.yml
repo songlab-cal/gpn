@@ -64,6 +64,35 @@ jobs:
           TRANSFORMERS_OFFLINE: "1"
         run: uv run pytest
 
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.28"
+          enable-cache: true
+
+      - name: Install documentation environment
+        run: >-
+          uv sync --locked --python 3.13
+          --no-default-groups --group docs
+
+      - name: Prepare static notebooks
+        run: uv run --no-sync python docs/prepare_notebooks.py
+
+      - name: Build documentation strictly
+        run: >-
+          uv run --no-sync sphinx-build -n -W --keep-going
+          -b html docs docs/_build/html
   package:
     name: Package
     runs-on: ubuntu-latest

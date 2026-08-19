@@ -1,0 +1,246 @@
+import ast
+import hashlib
+import importlib.util
+import json
+import re
+from datetime import date
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).parents[1]
+COLABS = ROOT / "colabs"
+NOTEBOOKS = {
+    "gpn_quick_start.ipynb": "gpn",
+    "gpn_star_quick_start.ipynb": "gpn_star",
+    "phylogpn_quick_start.ipynb": "phylogpn",
+}
+BASELINE = json.loads(
+    (ROOT / "tests" / "fixtures" / "published_model_baseline.json").read_text()
+)
+FORBIDDEN_TEXT = (
+    "/accounts/",
+    "/scratch/",
+    "os.system",
+    "import gpn.model",
+    "import gpn.star.model",
+    "trust_remote_code",
+)
+BASELINE_SHA256 = hashlib.sha256(
+    (ROOT / "tests" / "fixtures" / "published_model_baseline.json").read_bytes()
+).hexdigest()
+
+
+def _load_notebook(name):
+    return json.loads((COLABS / name).read_text())
+
+
+def _cell(notebook, cell_id):
+    return next(cell for cell in notebook["cells"] if cell["id"] == cell_id)
+
+
+def _plain_output(notebook, cell_id):
+    parts = []
+    for output in _cell(notebook, cell_id).get("outputs", []):
+        plain = output.get("data", {}).get("text/plain", "")
+        parts.append("".join(plain) if isinstance(plain, list) else plain)
+    return "\n".join(parts)
+
+
+def _nucleotide_table(text):
+    rows = re.findall(
+        r"^\s*\d+\s+([ACGT])\s+(-?\d+\.\d+)\s+(\d+\.\d+)",
+        text,
+        flags=re.MULTILINE,
+    )
+    return {
+        base: (float(logit), float(probability)) for base, logit, probability in rows
+    }
+
+
+def _base_vectors(text):
+    vectors = re.findall(r"'([ACGT])': tensor\(\[([^]]+)\]\)", text)
+    return {
+        base: [float(value) for value in values.split(",")] for base, values in vectors
+    }
+
+
+def test_exactly_three_canonical_quick_starts_are_maintained():
+    actual = {path.name for path in COLABS.glob("*.ipynb")}
+    validation_dates = {
+        _load_notebook(name)["metadata"]["gpn"]["last_scientific_validation"]
+        for name in NOTEBOOKS
+    }
+
+    assert actual == set(NOTEBOOKS)
+    assert len(validation_dates) == 1
+    date.fromisoformat(validation_dates.pop())
+
+
+def test_quick_starts_are_portable_static_colabs():
+    for name, family in NOTEBOOKS.items():
+        path = COLABS / name
+        serialized = path.read_text()
+        notebook = json.loads(serialized)
+        source = "\n".join(
+            "".join(cell.get("source", [])) for cell in notebook["cells"]
+        )
+
+        assert path.stat().st_size < 2 * 1024 * 1024
+        assert notebook["nbformat"] == 4
+        assert notebook["metadata"]["kernelspec"]["name"] == "python3"
+        assert (
+            notebook["metadata"]["gpn"]["model_id"]
+            == (BASELINE["models"][family]["model_id"])
+        )
+        assert (
+            notebook["metadata"]["gpn"]["model_revision"]
+            == (BASELINE["models"][family]["revision"])
+        )
+        assert notebook["metadata"]["gpn"]["baseline_sha256"] == BASELINE_SHA256
+        assert set(notebook["metadata"]["gpn"]["output_environment"]) == {
+            "device",
+            "dtype",
+            "gpn",
+            "python",
+            "torch",
+            "transformers",
+        }
+        assert f"github/songlab-cal/gpn/blob/main/colabs/{name}" in source
+        for forbidden in FORBIDDEN_TEXT:
+            assert forbidden not in serialized
+
+        install_cells = [
+            cell
+            for cell in notebook["cells"]
+            if cell["cell_type"] == "code" and "pip install" in "".join(cell["source"])
+        ]
+        assert len(install_cells) == 1
+        assert "skip-execution" in install_cells[0]["metadata"]["tags"]
+        assert "remove-input" in install_cells[0]["metadata"]["tags"]
+
+        executable_cells = [
+            cell
+            for cell in notebook["cells"]
+            if cell["cell_type"] == "code"
+            and "skip-execution" not in cell.get("metadata", {}).get("tags", [])
+        ]
+        for cell in executable_cells:
+            ast.parse("".join(cell["source"]), filename=f"{path}:{cell['id']}")
+
+        error_outputs = [
+            output
+            for cell in notebook["cells"]
+            for output in cell.get("outputs", [])
+            if output.get("output_type") == "error"
+        ]
+        assert error_outputs == []
+        committed_outputs = [
+            output for cell in notebook["cells"] for output in cell.get("outputs", [])
+        ]
+        assert committed_outputs
+        if family in {"gpn", "gpn_star"}:
+            assert any(
+                "image/png" in output.get("data", {}) for output in committed_outputs
+            )
+        stderr_outputs = [
+            output
+            for cell in notebook["cells"]
+            for output in cell.get("outputs", [])
+            if output.get("output_type") == "stream" and output.get("name") == "stderr"
+        ]
+        assert stderr_outputs == []
+
+
+def test_gpn_committed_outputs_match_approved_baseline():
+    notebook = _load_notebook("gpn_quick_start.ipynb")
+    expected = BASELINE["models"]["gpn"]["expected"]
+    observed = _nucleotide_table(_plain_output(notebook, "gpn-mlm"))
+
+    assert list(observed) == expected["nucleotide_order"]
+    for index, base in enumerate(expected["nucleotide_order"]):
+        assert observed[base][0] == pytest.approx(expected["logits"][index], abs=1e-4)
+        assert observed[base][1] == pytest.approx(
+            expected["probabilities"][index], abs=1e-4
+        )
+
+
+def test_gpn_star_committed_outputs_match_approved_baseline():
+    notebook = _load_notebook("gpn_star_quick_start.ipynb")
+    expected = BASELINE["models"]["gpn_star"]["expected"]
+    observed = _nucleotide_table(_plain_output(notebook, "star-model"))
+
+    assert list(observed) == expected["nucleotide_order"]
+    for index, base in enumerate(expected["nucleotide_order"]):
+        assert observed[base][0] == pytest.approx(expected["logits"][index], abs=1e-4)
+        assert observed[base][1] == pytest.approx(
+            expected["probabilities"][index], abs=1e-4
+        )
+
+    raw_rows = re.findall(
+        r"^\s*\d+\s+A>([CGT])\s+[CGT]\s+(-?\d+\.\d+)",
+        _plain_output(notebook, "star-llr"),
+        flags=re.MULTILINE,
+    )
+    observed_raw = {alternate: float(value) for alternate, value in raw_rows}
+    assert observed_raw == pytest.approx(expected["llr_alt_minus_ref"], abs=1e-4)
+
+    calibrated_rows = re.findall(
+        r"^\s*\d+\s+A>([CGT])\s+(-?\d+\.\d+)\s+(-?\d+\.\d+)\s+(-?\d+\.\d+)",
+        _plain_output(notebook, "star-calibration"),
+        flags=re.MULTILINE,
+    )
+    observed_calibrated = {
+        alternate: float(calibrated)
+        for alternate, _raw, _neutral, calibrated in calibrated_rows
+    }
+    assert observed_calibrated == pytest.approx(expected["llr_calibrated"], abs=1e-4)
+
+    source = "".join(_cell(notebook, "star-fixture-download")["source"])
+    fixture_sha256 = BASELINE["alignment_fixture"]["sha256"]
+    assert "/main/tests/fixtures/" not in source
+    assert fixture_sha256 in source
+    assert notebook["metadata"]["gpn"]["fixture_sha256"] == fixture_sha256
+
+
+def test_phylogpn_committed_outputs_match_approved_baseline():
+    notebook = _load_notebook("phylogpn_quick_start.ipynb")
+    expected = BASELINE["models"]["phylogpn"]["expected"]
+
+    observed_logits = _base_vectors(_plain_output(notebook, "phylo-rates"))
+    observed_probabilities = _base_vectors(
+        _plain_output(notebook, "phylo-probabilities")
+    )
+    for index, base in enumerate(expected["nucleotide_order"]):
+        expected_logits = [row[index] for row in expected["first_sequence_logits"]]
+        expected_probabilities = [
+            row[index] for row in expected["first_sequence_probabilities"]
+        ]
+        assert observed_logits[base] == pytest.approx(expected_logits, abs=1e-4)
+        assert observed_probabilities[base] == pytest.approx(
+            expected_probabilities, abs=1e-4
+        )
+
+    llr_match = re.search(
+        r"tensor\((-?\d+\.\d+)\)", _plain_output(notebook, "phylo-llr")
+    )
+    assert llr_match is not None
+    assert float(llr_match.group(1)) == pytest.approx(
+        expected["c_to_t_llr_position_one_zero_based"], abs=1e-4
+    )
+
+
+def test_sphinx_notebook_copy_is_deterministic(tmp_path, monkeypatch):
+    spec = importlib.util.spec_from_file_location(
+        "gpn_prepare_notebooks", ROOT / "docs" / "prepare_notebooks.py"
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    prepare_notebooks = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(prepare_notebooks)
+
+    monkeypatch.setattr(prepare_notebooks, "DESTINATION", tmp_path)
+    prepare_notebooks.main()
+
+    for name in NOTEBOOKS:
+        assert (tmp_path / name).read_bytes() == (COLABS / name).read_bytes()
