@@ -70,8 +70,11 @@ Repository = "https://github.com/songlab-cal/gpn"
 [dependency-groups]
 dev = [
   "check-wheel-contents>=0.6",
+  "deptry>=0.24",
+  "mypy>=1.18",
+  "pre-commit>=4.2",
   "pytest>=8.3",
-  "ruff>=0.11",
+  "ruff>=0.16.3",
   "twine>=6",
 ]
 
@@ -90,11 +93,48 @@ include = [
 ]
 
 [tool.pytest.ini_options]
-addopts = "-ra"
+addopts = "-ra --strict-config --strict-markers"
 testpaths = ["tests"]
+xfail_strict = true
 markers = [
   "published_models: opt-in tests that download pinned Hugging Face checkpoints",
 ]
+
+[tool.mypy]
+python_version = "3.11"
+files = [
+  "src/gpn/_registration.py",
+  "src/gpn/scoring.py",
+  "src/gpn/training.py",
+  "src/gpn/star/checkpoint.py",
+]
+follow_imports = "skip"
+check_untyped_defs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+no_implicit_optional = true
+strict_equality = true
+warn_redundant_casts = true
+warn_unused_configs = true
+warn_unused_ignores = true
+show_error_codes = true
+pretty = true
+
+[[tool.mypy.overrides]]
+module = ["pandas", "pyarrow", "pyarrow.*"]
+ignore_missing_imports = true
+
+[tool.deptry]
+known_first_party = ["gpn"]
+ignore_notebooks = true
+
+[tool.deptry.package_module_name_map]
+biopython = "Bio"
+wandb = "wandb"
+
+[tool.deptry.per_rule_ignores]
+# Transformers discovers optional experiment trackers dynamically.
+DEP002 = ["wandb"]
 
 [tool.ruff]
 target-version = "py311"

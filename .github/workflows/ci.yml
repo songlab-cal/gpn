@@ -13,7 +13,30 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  quality:
+    name: Quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.28"
+          enable-cache: true
+
+      - name: Install locked environment
+        run: uv sync --locked --python 3.13 --extra train --group dev
+
+      - name: Run repository checks
+        run: uv run pre-commit run --all-files --show-diff-on-failure
+
+  tests:
     name: Python 3.13
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -35,47 +58,54 @@ jobs:
       - name: Install locked environment
         run: uv sync --locked --python 3.13 --extra train --group dev
 
-      - name: Check maintained code
-        run: |
-          uv run ruff format --check \
-            src/gpn/__init__.py \
-            src/gpn/_registration.py \
-            src/gpn/scoring.py \
-            src/gpn/training.py \
-            tests/conftest.py \
-            tests/test_dependency_boundaries.py \
-            tests/fixtures/regenerate_alignment_fixture.py \
-            tests/test_msa_model_loading.py \
-            tests/test_published_models.py \
-            tests/test_registration.py \
-            tests/test_scientific_fixtures.py \
-            tests/test_scoring.py \
-            tests/test_training_recipes.py
-          uv run ruff check \
-            src/gpn/__init__.py \
-            src/gpn/_registration.py \
-            src/gpn/scoring.py \
-            src/gpn/training.py \
-            tests/conftest.py \
-            tests/test_dependency_boundaries.py \
-            tests/fixtures/regenerate_alignment_fixture.py \
-            tests/test_msa_model_loading.py \
-            tests/test_published_models.py \
-            tests/test_registration.py \
-            tests/test_scientific_fixtures.py \
-            tests/test_scoring.py \
-            tests/test_training_recipes.py
-
       - name: Run offline tests
         env:
           HF_HUB_OFFLINE: "1"
           TRANSFORMERS_OFFLINE: "1"
         run: uv run pytest
 
-      - name: Build distributions
-        run: uv build
+  package:
+    name: Package
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
 
-      - name: Check distributions
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.28"
+          enable-cache: true
+
+      - name: Install locked build tools
+        run: uv sync --locked --python 3.13 --group dev
+
+      - name: Build and check distributions
         run: |
+          uv build
           uv run twine check dist/*
           uv run check-wheel-contents dist/*.whl
+
+      - name: Rebuild wheel from source distribution
+        run: |
+          mkdir -p /tmp/gpn-wheel-from-sdist
+          uv build dist/gpn-*.tar.gz --wheel --out-dir /tmp/gpn-wheel-from-sdist
+          uv run twine check /tmp/gpn-wheel-from-sdist/*.whl
+          uv run check-wheel-contents /tmp/gpn-wheel-from-sdist/*.whl
+
+      - name: Smoke-test installed wheel outside the checkout
+        run: |
+          uv version --short > /tmp/gpn-expected-version
+          uv venv --python 3.13 /tmp/gpn-wheel-smoke
+          uv pip install \
+            --python /tmp/gpn-wheel-smoke/bin/python \
+            --torch-backend cpu \
+            --no-config \
+            /tmp/gpn-wheel-from-sdist/*.whl
+          cd /tmp
+          /tmp/gpn-wheel-smoke/bin/python -c \
+            "from importlib.metadata import version; from pathlib import Path; import gpn; gpn.register_auto_classes(); assert version('gpn') == Path('/tmp/gpn-expected-version').read_text().strip()"

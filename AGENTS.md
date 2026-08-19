@@ -1,0 +1,69 @@
+# Repository guidance
+
+## Maintained scope
+
+Maintain `src/gpn/`, `tests/`, `docs/`, and the GPN and GPN-Star recipes.
+GPN and GPN-Star support training and inference. GPN-MSA is deprecated and
+supports inference only. PhyloGPN and the Sorghum gene-expression models support
+inference only. Dataset-building workflows are not maintained.
+
+Historical analysis, dataset builders, GPN-MSA training, and retired notebooks
+are preserved at `analysis-archive-2026-08-18`. Do not restore or modernize them
+on `main`.
+
+## Development workflow
+
+Use Python 3.11 or newer and uv. The default development environment is:
+
+```bash
+uv sync --extra train --group dev
+uv run pre-commit install
+```
+
+Before proposing a change, run:
+
+```bash
+uv run pre-commit run --all-files
+uv run pytest
+```
+
+Normal tests are network-free. Published-model tests download pinned Hugging
+Face assets and run only with `uv run pytest --run-published-models`. Never add
+scheduled Hub checks.
+
+## Scientific changes
+
+Treat fixture updates as scientific changes. Record coordinates, assembly,
+species/nucleotide/label order, model revision, GPN and Transformers versions,
+device and dtype, generation command, artifact checksum, numerical tolerances,
+and the reason for approving new expectations or tolerance changes. Do not
+casually regenerate stored notebook output or fixtures.
+
+Genomic intervals are zero-based and half-open; VCF positions are one-based.
+Variant log-likelihood ratios are alternate minus reference. Give jaxtyping axes
+stable semantic names; put runtime shape checks at boundaries and in tests, not
+in hot loops.
+
+## APIs and dependencies
+
+Register Hugging Face Auto classes through the explicit
+`gpn.register_auto_classes()` API. Do not rely on imports for side effects and do
+not add a custom model-loading abstraction.
+
+Place dependencies in base runtime, a feature extra, `dev`, or `docs` according
+to their actual consumers. Research-only dependencies never belong in the root
+project.
+
+## Research branches
+
+Paper-specific and exploratory analysis must not be committed to `main`.
+Projects may live indefinitely on any off-main branch and evolve independently.
+See `docs/research.md` and `CONTRIBUTING.md` for non-binding project conventions.
+Contributing reusable code back to the maintained package is encouraged but
+optional; duplicated non-core analysis code is acceptable.
+
+## Protected operations
+
+Releases, tags, PyPI publication, model-card writes, and merges require explicit
+maintainer authorization. More specific `AGENTS.md` files may refine guidance
+for a subtree without expanding maintained scope.
