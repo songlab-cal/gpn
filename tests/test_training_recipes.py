@@ -195,6 +195,34 @@ def test_star_collator_uses_stable_keyword_arguments():
     assert batch["labels"].shape == (1, 8, 2)
 
 
+def test_star_collator_normalizes_production_numpy_dtypes():
+    collator = StarDataCollator(
+        tokenizer=StarTokenizer(),
+        clades=torch.arange(20),
+        mlm_probability=0,
+    )
+    examples = [
+        {
+            "input_ids": np.full((4, 2), 2, dtype=np.uint8),
+            "source_ids": np.full((4, 20), 2, dtype=np.uint8),
+            "target_species": np.array([0, 1], dtype=np.int32),
+            "loss_weight": np.ones((4, 2), dtype=float),
+        }
+    ]
+
+    batch = collator.torch_call(examples)
+
+    assert batch["input_ids"].dtype == torch.long
+    assert batch["source_ids"].dtype == torch.long
+    assert batch["target_species"].dtype == torch.long
+    assert batch["labels"].dtype == torch.long
+    assert torch.equal(
+        batch["labels"],
+        torch.full((1, 4, 2), -100, dtype=torch.long),
+    )
+    assert batch["loss_weight"].dtype == torch.float32
+
+
 def test_tiny_gpn_training_step():
     model = GPNForMaskedLM(
         GPNConfig(
