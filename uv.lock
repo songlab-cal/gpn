@@ -677,6 +677,7 @@ train = [
 dev = [
     { name = "check-wheel-contents" },
     { name = "deptry" },
+    { name = "jsonschema" },
     { name = "mypy" },
     { name = "nbclient" },
     { name = "nbformat" },
@@ -728,6 +729,7 @@ provides-extras = ["inference", "train", "tracking"]
 dev = [
     { name = "check-wheel-contents", specifier = ">=0.6" },
     { name = "deptry", specifier = ">=0.24" },
+    { name = "jsonschema", specifier = ">=4.23" },
     { name = "mypy", specifier = ">=1.18" },
     { name = "nbclient", specifier = ">=0.10" },
     { name = "nbformat", specifier = ">=5.10" },

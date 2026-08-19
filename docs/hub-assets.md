@@ -14,6 +14,19 @@ Python files.
 - [Sorghum gene-expression collection](https://huggingface.co/collections/songlab/sorghum-gene-expression-prediction-68963dd31658bfb98c07ae1b)
 
 The [model support page](models.md) distinguishes package support from historical
-availability. A machine-readable full asset inventory and dated compatibility
-report are prepared in the separate Hugging Face audit workstream before card or
-collection updates are applied.
+availability. The repository now keeps:
+
+- a [machine-readable supported-model manifest](https://github.com/songlab-cal/gpn/blob/main/hub/manifest.json);
+- a [dated compatibility report](https://github.com/songlab-cal/gpn/blob/main/hub/audits/2026-08-19.md)
+  covering the broader public asset inventory; and
+- [review-only card proposals](https://github.com/songlab-cal/gpn/tree/main/hub/card-proposals).
+
+All five supported checkpoint heads matched their approved revisions in the dated
+audit. Card, config, and collection findings are documented separately from runtime
+compatibility: an empty card does not make a numerically validated checkpoint fail,
+and collection membership does not create a package-support promise.
+
+The audit is deliberate rather than scheduled. Normal CI validates the committed
+manifest and report without contacting the Hub. Model-card and collection writes
+require maintainer review and explicit authorization; local proposals are never
+published automatically.

@@ -10,6 +10,8 @@ Hugging Face model revisions.
 - Published-model fixtures and offline scientific regression tests for every
   supported model family.
 - Canonical prepared-data training recipes for GPN and GPN-Star.
+- A public-only Hugging Face asset manifest, dated one-time compatibility audit,
+  and review-only card proposals for supported checkpoints.
 - Explicit AutoClass registration, a stable `gpn` CLI, uv-managed development,
   Ruff, incremental mypy and jaxtyping, offline CI, and built-wheel checks.
 - Sphinx/MyST documentation prepared for Read the Docs.

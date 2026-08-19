@@ -1,0 +1,224 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/songlab-cal/gpn/blob/main/hub/manifest.schema.json",
+  "title": "GPN supported Hugging Face asset manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "canonical_implementation",
+    "supported_models",
+    "required_data_artifacts",
+    "collections",
+    "inventory_scope"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "canonical_implementation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "package",
+        "minimum_version",
+        "registration_api",
+        "repository"
+      ],
+      "properties": {
+        "package": {
+          "const": "gpn"
+        },
+        "minimum_version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:a[0-9]+)?$"
+        },
+        "registration_api": {
+          "const": "gpn.register_auto_classes"
+        },
+        "repository": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "supported_models": {
+      "type": "array",
+      "minItems": 5,
+      "items": {
+        "$ref": "#/$defs/supportedModel"
+      }
+    },
+    "required_data_artifacts": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "$ref": "#/$defs/dataArtifact"
+      }
+    },
+    "collections": {
+      "type": "array",
+      "minItems": 5,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[^/]+/[^/]+$"
+      }
+    },
+    "inventory_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model_name_prefixes",
+        "dataset_name_fragments",
+        "dataset_names",
+        "external_assets"
+      ],
+      "properties": {
+        "model_name_prefixes": {
+          "$ref": "#/$defs/nonEmptyStringArray"
+        },
+        "dataset_name_fragments": {
+          "$ref": "#/$defs/nonEmptyStringArray"
+        },
+        "dataset_names": {
+          "$ref": "#/$defs/nonEmptyStringArray"
+        },
+        "external_assets": {
+          "$ref": "#/$defs/nonEmptyStringArray"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "repoId": {
+      "type": "string",
+      "pattern": "^[^/]+/[^/]+$"
+    },
+    "nonEmptyStringArray": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "supportedModel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "repo_id",
+        "revision",
+        "family",
+        "support",
+        "hub_pipeline_policy",
+        "auto_class",
+        "model_type",
+        "architecture",
+        "required_files",
+        "fixture"
+      ],
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "repo_id": {
+          "$ref": "#/$defs/repoId"
+        },
+        "revision": {
+          "$ref": "#/$defs/commit"
+        },
+        "family": {
+          "enum": [
+            "gpn",
+            "phylogpn",
+            "star"
+          ]
+        },
+        "support": {
+          "enum": [
+            "training_and_inference",
+            "inference_only",
+            "deprecated_inference_only"
+          ]
+        },
+        "hub_pipeline_policy": {
+          "enum": [
+            "local_fill_mask_only",
+            "none_custom_inputs",
+            "none_custom_outputs",
+            "none_regression"
+          ]
+        },
+        "auto_class": {
+          "enum": [
+            "AutoModel",
+            "AutoModelForMaskedLM",
+            "AutoModelForSequenceClassification"
+          ]
+        },
+        "model_type": {
+          "type": "string"
+        },
+        "architecture": {
+          "type": "string"
+        },
+        "required_files": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/nonEmptyStringArray"
+            },
+            {
+              "minItems": 3
+            }
+          ]
+        },
+        "fixture": {
+          "type": "string",
+          "pattern": "^tests/fixtures/published_model_baseline.json#models\\."
+        }
+      }
+    },
+    "dataArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "repo_id",
+        "repo_type",
+        "revision",
+        "required_files",
+        "maintenance"
+      ],
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "repo_id": {
+          "$ref": "#/$defs/repoId"
+        },
+        "repo_type": {
+          "const": "dataset"
+        },
+        "revision": {
+          "$ref": "#/$defs/commit"
+        },
+        "required_files": {
+          "$ref": "#/$defs/nonEmptyStringArray"
+        },
+        "maintenance": {
+          "enum": [
+            "inference_fixture_only",
+            "provenance_only_do_not_download"
+          ]
+        }
+      }
+    }
+  }
+}

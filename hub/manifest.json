@@ -1,0 +1,167 @@
+{
+  "schema_version": 1,
+  "canonical_implementation": {
+    "package": "gpn",
+    "minimum_version": "0.9.0a1",
+    "registration_api": "gpn.register_auto_classes",
+    "repository": "https://github.com/songlab-cal/gpn"
+  },
+  "supported_models": [
+    {
+      "key": "gpn",
+      "repo_id": "songlab/gpn-brassicales",
+      "revision": "eb9c35d0d18571abe84390d22e74f2b21d319ce3",
+      "family": "gpn",
+      "support": "training_and_inference",
+      "hub_pipeline_policy": "local_fill_mask_only",
+      "auto_class": "AutoModelForMaskedLM",
+      "model_type": "ConvNet",
+      "architecture": "ConvNetForMaskedLM",
+      "required_files": [
+        "README.md",
+        "config.json",
+        "model.safetensors",
+        "special_tokens_map.json",
+        "tokenizer.json",
+        "tokenizer_config.json"
+      ],
+      "fixture": "tests/fixtures/published_model_baseline.json#models.gpn"
+    },
+    {
+      "key": "gpn_msa",
+      "repo_id": "songlab/gpn-msa-sapiens",
+      "revision": "4a7d4f75449cb2abd560b2af024d76f99233c6db",
+      "family": "gpn",
+      "support": "deprecated_inference_only",
+      "hub_pipeline_policy": "none_custom_inputs",
+      "auto_class": "AutoModelForMaskedLM",
+      "model_type": "GPNRoFormer",
+      "architecture": "GPNRoFormerForMaskedLM",
+      "required_files": [
+        "README.md",
+        "config.json",
+        "model.safetensors"
+      ],
+      "fixture": "tests/fixtures/published_model_baseline.json#models.gpn_msa"
+    },
+    {
+      "key": "gpn_star",
+      "repo_id": "songlab/gpn-star-hg38-v100-200m",
+      "revision": "0c949f132d35619a3eb188b402848c998a3313ae",
+      "family": "star",
+      "support": "training_and_inference",
+      "hub_pipeline_policy": "none_custom_inputs",
+      "auto_class": "AutoModelForMaskedLM",
+      "model_type": "GPNStar",
+      "architecture": "GPNStarForMaskedLM",
+      "required_files": [
+        "README.md",
+        "calibration_table/llr.parquet",
+        "config.json",
+        "model.safetensors",
+        "phylo_dist/in_clade.npy",
+        "phylo_dist/pairwise.npy"
+      ],
+      "fixture": "tests/fixtures/published_model_baseline.json#models.gpn_star"
+    },
+    {
+      "key": "phylogpn",
+      "repo_id": "songlab/PhyloGPN",
+      "revision": "3556db4c469e67d25f0f7a0a6653b48be3eebf51",
+      "family": "phylogpn",
+      "support": "inference_only",
+      "hub_pipeline_policy": "none_custom_outputs",
+      "auto_class": "AutoModel",
+      "model_type": "phylogpn",
+      "architecture": "PhyloGPNModel",
+      "required_files": [
+        "README.md",
+        "config.json",
+        "model.safetensors",
+        "special_tokens_map.json",
+        "tokenizer_config.json"
+      ],
+      "fixture": "tests/fixtures/published_model_baseline.json#models.phylogpn"
+    },
+    {
+      "key": "sorghum_expression",
+      "repo_id": "songlab/gpn-brassicales-gxa-sorghum-v1",
+      "revision": "53209151b497d4840d50526d44c0460b6e6768b7",
+      "family": "gpn",
+      "support": "inference_only",
+      "hub_pipeline_policy": "none_regression",
+      "auto_class": "AutoModelForSequenceClassification",
+      "model_type": "ConvNet",
+      "architecture": "ConvNetForSequenceClassification",
+      "required_files": [
+        "README.md",
+        "config.json",
+        "model.safetensors",
+        "special_tokens_map.json",
+        "tokenizer.json",
+        "tokenizer_config.json"
+      ],
+      "fixture": "tests/fixtures/published_model_baseline.json#models.sorghum_expression"
+    }
+  ],
+  "required_data_artifacts": [
+    {
+      "key": "sorghum_expression_examples",
+      "repo_id": "songlab/gxa-sorghum-v1",
+      "repo_type": "dataset",
+      "revision": "0545539b3229946b90c1073c99a97bfb9f95cd83",
+      "required_files": [
+        "labels.txt",
+        "test.parquet"
+      ],
+      "maintenance": "inference_fixture_only"
+    },
+    {
+      "key": "multiz100way_fixture_source",
+      "repo_id": "songlab/multiz100way-pigz",
+      "repo_type": "dataset",
+      "revision": "6a9d42a35e7debbba845979dea6064f14d5cb3f9",
+      "required_files": [
+        "99.zarr.tar.gz"
+      ],
+      "maintenance": "provenance_only_do_not_download"
+    }
+  ],
+  "collections": [
+    "songlab/gpn-653191edcb0270ed05ad2c3e",
+    "songlab/gpn-msa-65319280c93c85e11c803887",
+    "songlab/gpn-star-68c0c055acc2ee51d5c4f129",
+    "songlab/sorghum-gene-expression-prediction-68963dd31658bfb98c07ae1b",
+    "songlab/traitgym-6796d4fbb825d5b94e65d30f"
+  ],
+  "inventory_scope": {
+    "model_name_prefixes": [
+      "PhyloGPN",
+      "deprecated-gpn-",
+      "gpn-",
+      "mlm-baseline-",
+      "tokenizer-dna-"
+    ],
+    "dataset_name_fragments": [
+      "TraitGym",
+      "cactus",
+      "clinvar",
+      "cosmic",
+      "gpn",
+      "gxa-sorghum",
+      "multiz"
+    ],
+    "dataset_names": [
+      "ce11_multiz135way",
+      "dm6_multiz124way",
+      "galGal6_multiz77way",
+      "genomes-brassicales-balanced-v1",
+      "mm39_multiz35way",
+      "tair10_multiz18way"
+    ],
+    "external_assets": [
+      "gonzalobenegas/processed-data-arabidopsis",
+      "songlab/TraitGym-leaderboard"
+    ]
+  }
+}

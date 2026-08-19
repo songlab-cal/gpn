@@ -83,6 +83,7 @@ docs = [
 dev = [
   "check-wheel-contents>=0.6",
   "deptry>=0.24",
+  "jsonschema>=4.23",
   "mypy>=1.18",
   "nbclient>=0.10",
   "nbformat>=5.10",
@@ -100,6 +101,7 @@ packages = ["src/gpn"]
 include = [
   "/src/gpn",
   "/docs",
+  "/hub",
   "/colabs",
   "/recipes",
   "/tests",

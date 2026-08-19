@@ -1,0 +1,2036 @@
+{
+  "generated_at": "2026-08-19T08:05:23.625534+00:00",
+  "inventory": {
+    "collections": [
+      {
+        "description": "https://www.pnas.org/doi/10.1073/pnas.2311219120",
+        "items": [
+          {
+            "note": null,
+            "position": 0,
+            "repo_id": "songlab/gpn-brassicales",
+            "repo_type": "model"
+          },
+          {
+            "note": null,
+            "position": 1,
+            "repo_id": "songlab/genomes-brassicales-balanced-v1",
+            "repo_type": "dataset"
+          },
+          {
+            "note": null,
+            "position": 2,
+            "repo_id": "songlab/tokenizer-dna-mlm",
+            "repo_type": "model"
+          },
+          {
+            "note": null,
+            "position": 3,
+            "repo_id": "gonzalobenegas/processed-data-arabidopsis",
+            "repo_type": "dataset"
+          }
+        ],
+        "last_updated": "2025-09-11T17:50:45.968000+00:00",
+        "slug": "songlab/gpn-653191edcb0270ed05ad2c3e",
+        "title": "GPN"
+      },
+      {
+        "description": "https://www.nature.com/articles/s41587-024-02511-w",
+        "items": [
+          {
+            "note": null,
+            "position": 0,
+            "repo_id": "songlab/gpn-msa-sapiens",
+            "repo_type": "model"
+          },
+          {
+            "note": null,
+            "position": 1,
+            "repo_id": "songlab/gpn-msa-hg38-scores",
+            "repo_type": "dataset"
+          },
+          {
+            "note": null,
+            "position": 2,
+            "repo_id": "songlab/clinvar",
+            "repo_type": "dataset"
+          },
+          {
+            "note": null,
+            "position": 3,
+            "repo_id": "songlab/cosmic",
+            "repo_type": "dataset"
+          },
+          {
+            "note": null,
+            "position": 4,
+            "repo_id": "songlab/omim",
+            "repo_type": "dataset"
+          },
+          {
+            "note": null,
+            "position": 5,
+            "repo_id": "songlab/gnomad",
+            "repo_type": "dataset"
+          },
+          {
+            "note": null,
+            "position": 6,
+            "repo_id": "songlab/gpn-msa-sapiens-dataset",
+            "repo_type": "dataset"
+          },
+          {
+            "note": null,
+            "position": 7,
+            "repo_id": "songlab/multiz100way",
+            "repo_type": "dataset"
+          },
+          {
+            "note": null,
+            "position": 8,
+            "repo_id": "songlab/gpn-msa-hg38-gene-essentiality-scores",
+            "repo_type": "dataset"
+          },
+          {
+            "note": null,
+            "position": 9,
+            "repo_id": "lpigou/89.zarr",
+            "repo_type": "dataset"
+          },
+          {
+            "note": null,
+            "position": 10,
+            "repo_id": "songlab/multiz100way-pigz",
+            "repo_type": "dataset"
+          }
+        ],
+        "last_updated": "2025-09-11T17:50:45.968000+00:00",
+        "slug": "songlab/gpn-msa-65319280c93c85e11c803887",
+        "title": "GPN-MSA"
+      },
+      {
+        "description": "paper: https://www.biorxiv.org/content/10.1101/2025.09.21.677619v1 code: https://github.com/songlab-cal/gpn",
+        "items": [
+          {
+            "note": "Genome-wide scores",
+            "position": 0,
+            "repo_id": "songlab/gpn-star-scores",
+            "repo_type": "dataset"
+          },
+          {
+            "note": "Vertebrates model",
+            "position": 1,
+            "repo_id": "songlab/gpn-star-hg38-v100-200m",
+            "repo_type": "model"
+          },
+          {
+            "note": "Mammals model",
+            "position": 2,
+            "repo_id": "songlab/gpn-star-hg38-m447-200m",
+            "repo_type": "model"
+          },
+          {
+            "note": "Primates model",
+            "position": 3,
+            "repo_id": "songlab/gpn-star-hg38-p243-200m",
+            "repo_type": "model"
+          },
+          {
+            "note": "Mouse model",
+            "position": 4,
+            "repo_id": "songlab/gpn-star-mm39-v35-85m",
+            "repo_type": "model"
+          },
+          {
+            "note": "Chicken model",
+            "position": 5,
+            "repo_id": "songlab/gpn-star-galGal6-v77-85m",
+            "repo_type": "model"
+          },
+          {
+            "note": "Drosophila model",
+            "position": 6,
+            "repo_id": "songlab/gpn-star-dm6-i124-85m",
+            "repo_type": "model"
+          },
+          {
+            "note": "C. elegans model",
+            "position": 7,
+            "repo_id": "songlab/gpn-star-ce11-n135-25m",
+            "repo_type": "model"
+          },
+          {
+            "note": "Arabidopsis model",
+            "position": 8,
+            "repo_id": "songlab/gpn-star-tair10-b18-25m",
+            "repo_type": "model"
+          },
+          {
+            "note": "Human and 100 vertebrates alignment",
+            "position": 9,
+            "repo_id": "songlab/multiz100way-pigz",
+            "repo_type": "dataset"
+          },
+          {
+            "note": "Human and 447 mammals alignment",
+            "position": 10,
+            "repo_id": "songlab/hg38_cactus447way",
+            "repo_type": "dataset"
+          },
+          {
+            "note": "Mouse  and 35 vertebrates alignment",
+            "position": 11,
+            "repo_id": "songlab/mm39_multiz35way",
+            "repo_type": "dataset"
+          },
+          {
+            "note": "Chicken and 77  vertebrates alignment",
+            "position": 12,
+            "repo_id": "songlab/galGal6_multiz77way",
+            "repo_type": "dataset"
+          },
+          {
+            "note": "Drosophila and 124 insects alignment",
+            "position": 13,
+            "repo_id": "songlab/dm6_multiz124way",
+            "repo_type": "dataset"
+          },
+          {
+            "note": "C. elegans and 135 nematodes alignment",
+            "position": 14,
+            "repo_id": "songlab/ce11_multiz135way",
+            "repo_type": "dataset"
+          },
+          {
+            "note": "Arabidopsis and 18 Brassicales alignment",
+            "position": 15,
+            "repo_id": "songlab/tair10_multiz18way",
+            "repo_type": "dataset"
+          },
+          {
+            "note": "S-LDSC variants and model predictions",
+            "position": 16,
+            "repo_id": "songlab/ldsc",
+            "repo_type": "dataset"
+          },
+          {
+            "note": "COSMIC variants and model predictions",
+            "position": 17,
+            "repo_id": "songlab/cosmic",
+            "repo_type": "dataset"
+          },
+          {
+            "note": "ClinVar variants and model predictions",
+            "position": 18,
+            "repo_id": "songlab/clinvar_vs_benign",
+            "repo_type": "dataset"
+          },
+          {
+            "note": "UKBB finemapped coding variants and model predictions",
+            "position": 19,
+            "repo_id": "songlab/ukb_finemapped_coding",
+            "repo_type": "dataset"
+          },
+          {
+            "note": "UKBB finemapped non-coding variants and model predictions",
+            "position": 20,
+            "repo_id": "songlab/ukb_finemapped_nc_traitgym",
+            "repo_type": "dataset"
+          },
+          {
+            "note": "OMIM regulatory variants and model predictions",
+            "position": 21,
+            "repo_id": "songlab/omim_traitgym",
+            "repo_type": "dataset"
+          },
+          {
+            "note": "gnomAD variants and model predictions",
+            "position": 22,
+            "repo_id": "songlab/gnomad_balanced",
+            "repo_type": "dataset"
+          },
+          {
+            "note": "Mouse WMGP variants and model predictions",
+            "position": 23,
+            "repo_id": "songlab/wmgp_balanced",
+            "repo_type": "dataset"
+          },
+          {
+            "note": "Drosophila DEST variants and model predictions",
+            "position": 24,
+            "repo_id": "songlab/dest",
+            "repo_type": "dataset"
+          },
+          {
+            "note": "C. elegans CaeNDR variants and model predictions",
+            "position": 25,
+            "repo_id": "songlab/caendr",
+            "repo_type": "dataset"
+          },
+          {
+            "note": "Chicken Galbase variants and model predictions",
+            "position": 26,
+            "repo_id": "songlab/galbase",
+            "repo_type": "dataset"
+          },
+          {
+            "note": "Arabidopsis 1001 Genomes Project variants and model predictions",
+            "position": 27,
+            "repo_id": "songlab/1001gp",
+            "repo_type": "dataset"
+          },
+          {
+            "note": "Mouse MMRdb variants and model predictions",
+            "position": 28,
+            "repo_id": "songlab/mmrdb",
+            "repo_type": "dataset"
+          },
+          {
+            "note": "Drosophila FlyBase variants and model predictions",
+            "position": 29,
+            "repo_id": "songlab/flybase_lethal",
+            "repo_type": "dataset"
+          },
+          {
+            "note": "C. elegans  lethal variants and model predictions",
+            "position": 30,
+            "repo_id": "songlab/celegans_lethal",
+            "repo_type": "dataset"
+          },
+          {
+            "note": "Regions used in UMAP analysis",
+            "position": 31,
+            "repo_id": "songlab/gpn-star-umap-regions",
+            "repo_type": "dataset"
+          }
+        ],
+        "last_updated": "2026-07-22T18:53:02.461000+00:00",
+        "slug": "songlab/gpn-star-68c0c055acc2ee51d5c4f129",
+        "title": "GPN-Star"
+      },
+      {
+        "description": "",
+        "items": [
+          {
+            "note": null,
+            "position": 0,
+            "repo_id": "songlab/gxa-sorghum-v1",
+            "repo_type": "dataset"
+          },
+          {
+            "note": null,
+            "position": 1,
+            "repo_id": "songlab/gpn-brassicales-gxa-sorghum-v1",
+            "repo_type": "model"
+          }
+        ],
+        "last_updated": "2025-09-11T17:50:45.968000+00:00",
+        "slug": "songlab/sorghum-gene-expression-prediction-68963dd31658bfb98c07ae1b",
+        "title": "Sorghum gene expression prediction"
+      },
+      {
+        "description": "https://www.biorxiv.org/content/10.1101/2025.02.11.637758v2",
+        "items": [
+          {
+            "note": null,
+            "position": 0,
+            "repo_id": "songlab/TraitGym",
+            "repo_type": "dataset"
+          },
+          {
+            "note": null,
+            "position": 1,
+            "repo_id": "songlab/TraitGym-leaderboard",
+            "repo_type": "space"
+          },
+          {
+            "note": null,
+            "position": 2,
+            "repo_id": "songlab/gpn-animal-promoter",
+            "repo_type": "model"
+          },
+          {
+            "note": null,
+            "position": 3,
+            "repo_id": "songlab/gpn-animal-promoter-dataset",
+            "repo_type": "dataset"
+          },
+          {
+            "note": null,
+            "position": 4,
+            "repo_id": "songlab/gpn-animal-promoter-checkpoints",
+            "repo_type": "dataset"
+          }
+        ],
+        "last_updated": "2025-11-05T16:28:44.390000+00:00",
+        "slug": "songlab/traitgym-6796d4fbb825d5b94e65d30f",
+        "title": "TraitGym"
+      }
+    ],
+    "datasets": [
+      {
+        "gated": false,
+        "last_modified": "2025-07-03T18:22:08+00:00",
+        "license": null,
+        "private": false,
+        "repo_id": "gonzalobenegas/processed-data-arabidopsis",
+        "sha": "a66a7885530ba7491fea1f94fbc69508156ca16d",
+        "tags": [
+          "region:us"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2024-02-15T08:03:09+00:00",
+        "license": "mit",
+        "private": false,
+        "repo_id": "lpigou/89.zarr",
+        "sha": "2f870f1b55e24515d816c76371e8183372c6d8c1",
+        "tags": [
+          "license:mit",
+          "region:us"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-12-09T16:33:43+00:00",
+        "license": "mit",
+        "private": false,
+        "repo_id": "songlab/1001gp",
+        "sha": "341391427e283fa877a15b0964cb0963f42ce8f1",
+        "tags": [
+          "biology",
+          "dna",
+          "format:parquet",
+          "genomics",
+          "library:datasets",
+          "library:mlcroissant",
+          "library:pandas",
+          "library:polars",
+          "license:mit",
+          "modality:tabular",
+          "modality:text",
+          "region:us",
+          "size_categories:1M<n<10M",
+          "variant-effect-prediction"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-12-09T16:31:56+00:00",
+        "license": "mit",
+        "private": false,
+        "repo_id": "songlab/caendr",
+        "sha": "b9eb71f197cb0d15fba9650397b193a3feb64569",
+        "tags": [
+          "biology",
+          "dna",
+          "format:parquet",
+          "genomics",
+          "library:datasets",
+          "library:mlcroissant",
+          "library:pandas",
+          "library:polars",
+          "license:mit",
+          "modality:tabular",
+          "modality:text",
+          "region:us",
+          "size_categories:100K<n<1M",
+          "variant-effect-prediction"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-04-10T16:56:58+00:00",
+        "license": null,
+        "private": false,
+        "repo_id": "songlab/ce11_multiz135way",
+        "sha": "1e4b77d776882977bc72986bdf4c5194a21c2d17",
+        "tags": [
+          "format:text",
+          "library:datasets",
+          "library:mlcroissant",
+          "modality:text",
+          "region:us",
+          "size_categories:n<1K"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-12-09T16:35:56+00:00",
+        "license": "mit",
+        "private": false,
+        "repo_id": "songlab/celegans_lethal",
+        "sha": "0e074b97ae76b75c881f4bed647afd6d615318a1",
+        "tags": [
+          "biology",
+          "dna",
+          "format:parquet",
+          "genomics",
+          "library:datasets",
+          "library:mlcroissant",
+          "library:pandas",
+          "library:polars",
+          "license:mit",
+          "modality:tabular",
+          "modality:text",
+          "region:us",
+          "size_categories:10K<n<100K",
+          "variant-effect-prediction"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-01-02T21:21:57+00:00",
+        "license": "mit",
+        "private": false,
+        "repo_id": "songlab/clinvar",
+        "sha": "4dd687ab6fd8f73b737148891afc4956bc42ab9a",
+        "tags": [
+          "biology",
+          "dna",
+          "format:parquet",
+          "genomics",
+          "library:datasets",
+          "library:mlcroissant",
+          "library:pandas",
+          "library:polars",
+          "license:mit",
+          "modality:tabular",
+          "modality:text",
+          "region:us",
+          "size_categories:10K<n<100K",
+          "variant-effect-prediction"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-12-07T23:31:29+00:00",
+        "license": "mit",
+        "private": false,
+        "repo_id": "songlab/clinvar_vs_benign",
+        "sha": "c64a938c4e10072245c0572fb5167d82adc78ccf",
+        "tags": [
+          "biology",
+          "dna",
+          "format:parquet",
+          "genomics",
+          "library:datasets",
+          "library:mlcroissant",
+          "library:pandas",
+          "library:polars",
+          "license:mit",
+          "modality:text",
+          "region:us",
+          "size_categories:10K<n<100K",
+          "variant-effect-prediction"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-12-07T23:29:54+00:00",
+        "license": "mit",
+        "private": false,
+        "repo_id": "songlab/cosmic",
+        "sha": "424a58fdba15fe4a5bf8db0b9e7c76d6c5f9fc28",
+        "tags": [
+          "biology",
+          "dna",
+          "format:parquet",
+          "genomics",
+          "library:datasets",
+          "library:mlcroissant",
+          "library:pandas",
+          "library:polars",
+          "license:mit",
+          "modality:tabular",
+          "modality:text",
+          "region:us",
+          "size_categories:10K<n<100K",
+          "variant-effect-prediction"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2023-01-27T19:02:43+00:00",
+        "license": null,
+        "private": false,
+        "repo_id": "songlab/deprecated-clinvar-missense",
+        "sha": "a728fb44c9dab1c0f4e1fc54839febcf0753e858",
+        "tags": [
+          "format:parquet",
+          "library:datasets",
+          "library:mlcroissant",
+          "library:pandas",
+          "library:polars",
+          "modality:tabular",
+          "modality:text",
+          "region:us",
+          "size_categories:10K<n<100K"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-12-09T16:30:14+00:00",
+        "license": "mit",
+        "private": false,
+        "repo_id": "songlab/dest",
+        "sha": "00e62a63010b06c3b3b10a675719233d8d656873",
+        "tags": [
+          "biology",
+          "dna",
+          "format:parquet",
+          "genomics",
+          "library:datasets",
+          "library:mlcroissant",
+          "library:pandas",
+          "library:polars",
+          "license:mit",
+          "modality:tabular",
+          "modality:text",
+          "region:us",
+          "size_categories:1M<n<10M",
+          "variant-effect-prediction"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-04-06T21:49:36+00:00",
+        "license": null,
+        "private": false,
+        "repo_id": "songlab/dm6_multiz124way",
+        "sha": "e192eeeb41b00a8841c730c234020bc427d0872a",
+        "tags": [
+          "format:text",
+          "library:datasets",
+          "library:mlcroissant",
+          "modality:text",
+          "region:us",
+          "size_categories:n<1K"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-12-09T16:35:14+00:00",
+        "license": "mit",
+        "private": false,
+        "repo_id": "songlab/flybase_lethal",
+        "sha": "a5708d2c9a00422a8c65ea82b9518fbfde4ae77e",
+        "tags": [
+          "biology",
+          "dna",
+          "format:parquet",
+          "genomics",
+          "library:datasets",
+          "library:mlcroissant",
+          "library:pandas",
+          "library:polars",
+          "license:mit",
+          "modality:tabular",
+          "modality:text",
+          "region:us",
+          "size_categories:10K<n<100K",
+          "variant-effect-prediction"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-12-09T16:32:44+00:00",
+        "license": "mit",
+        "private": false,
+        "repo_id": "songlab/galbase",
+        "sha": "e454ceae05b7fdd50ff1275cce654e0e40ae835e",
+        "tags": [
+          "biology",
+          "dna",
+          "format:parquet",
+          "genomics",
+          "library:datasets",
+          "library:mlcroissant",
+          "library:pandas",
+          "library:polars",
+          "license:mit",
+          "modality:tabular",
+          "modality:text",
+          "region:us",
+          "size_categories:1M<n<10M",
+          "variant-effect-prediction"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-04-09T05:46:54+00:00",
+        "license": null,
+        "private": false,
+        "repo_id": "songlab/galGal6_multiz77way",
+        "sha": "684864853062dcd578efba218114b9c64d873882",
+        "tags": [
+          "format:text",
+          "library:datasets",
+          "library:mlcroissant",
+          "modality:text",
+          "region:us",
+          "size_categories:n<1K"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2024-01-27T18:18:26+00:00",
+        "license": "mit",
+        "private": false,
+        "repo_id": "songlab/genomes-brassicales-balanced-v1",
+        "sha": "d11c6084dd2bb5575f9ce224cbcc435a687e67bf",
+        "tags": [
+          "biology",
+          "dna",
+          "format:json",
+          "genomics",
+          "library:dask",
+          "library:datasets",
+          "library:mlcroissant",
+          "library:polars",
+          "license:mit",
+          "modality:tabular",
+          "modality:text",
+          "region:us",
+          "size_categories:1M<n<10M"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-04-22T01:23:51+00:00",
+        "license": "mit",
+        "private": false,
+        "repo_id": "songlab/gnomad",
+        "sha": "214d2deaeae698fb2ec4ea36d8b2f60ee3d357f6",
+        "tags": [
+          "biology",
+          "dna",
+          "format:parquet",
+          "genomics",
+          "library:datasets",
+          "library:mlcroissant",
+          "library:pandas",
+          "library:polars",
+          "license:mit",
+          "modality:tabular",
+          "modality:text",
+          "region:us",
+          "size_categories:100M<n<1B",
+          "variant-effect-prediction"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-12-07T23:36:19+00:00",
+        "license": "mit",
+        "private": false,
+        "repo_id": "songlab/gnomad_balanced",
+        "sha": "946b7faf6995c736a33d9b4ba2777952d2e4d0a0",
+        "tags": [
+          "biology",
+          "dna",
+          "format:parquet",
+          "genomics",
+          "library:datasets",
+          "library:mlcroissant",
+          "library:pandas",
+          "library:polars",
+          "license:mit",
+          "modality:text",
+          "region:us",
+          "size_categories:10M<n<100M",
+          "variant-effect-prediction"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-11-05T16:53:32+00:00",
+        "license": null,
+        "private": false,
+        "repo_id": "songlab/gpn-animal-promoter-checkpoints",
+        "sha": "0881476209be8a3b79fb7f4e650a554a6ee4007d",
+        "tags": [
+          "region:us"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-01-27T17:57:35+00:00",
+        "license": "mit",
+        "private": false,
+        "repo_id": "songlab/gpn-animal-promoter-dataset",
+        "sha": "09d363c86202374986c4a7ed6d39073aa1ac2e23",
+        "tags": [
+          "biology",
+          "dna",
+          "format:json",
+          "genomics",
+          "library:dask",
+          "library:datasets",
+          "library:mlcroissant",
+          "license:mit",
+          "modality:text",
+          "region:us",
+          "size_categories:1M<n<10M",
+          "variant-effect-prediction"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-01-02T21:24:32+00:00",
+        "license": "mit",
+        "private": false,
+        "repo_id": "songlab/gpn-msa-hg38-gene-essentiality-scores",
+        "sha": "4d350170939499a3300bfd398897b718173deb6f",
+        "tags": [
+          "biology",
+          "dna",
+          "format:parquet",
+          "genomics",
+          "library:datasets",
+          "library:mlcroissant",
+          "library:pandas",
+          "library:polars",
+          "license:mit",
+          "modality:text",
+          "region:us",
+          "size_categories:10K<n<100K",
+          "variant-effect-prediction"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-01-02T21:21:01+00:00",
+        "license": "mit",
+        "private": false,
+        "repo_id": "songlab/gpn-msa-hg38-scores",
+        "sha": "cf1718a926db35d078bcb08b9dcebc803494bf37",
+        "tags": [
+          "biology",
+          "dna",
+          "genomics",
+          "license:mit",
+          "region:us",
+          "variant-effect-prediction"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-01-02T21:23:34+00:00",
+        "license": "mit",
+        "private": false,
+        "repo_id": "songlab/gpn-msa-sapiens-dataset",
+        "sha": "57c0e187c674761955518f3579eb0d7b5a0b7078",
+        "tags": [
+          "biology",
+          "dna",
+          "format:parquet",
+          "genomics",
+          "library:datasets",
+          "library:mlcroissant",
+          "library:pandas",
+          "library:polars",
+          "license:mit",
+          "modality:tabular",
+          "modality:text",
+          "modality:timeseries",
+          "region:us",
+          "size_categories:1M<n<10M"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2026-07-26T23:20:57+00:00",
+        "license": "apache-2.0",
+        "private": false,
+        "repo_id": "songlab/gpn-star-scores",
+        "sha": "a7b13bbf0d2338d74a7e5f0f8466e41ac0722f50",
+        "tags": [
+          "biology",
+          "doi:10.57967/hf/9849",
+          "format:parquet",
+          "genomics",
+          "library:dask",
+          "library:datasets",
+          "library:mlcroissant",
+          "library:polars",
+          "license:apache-2.0",
+          "modality:tabular",
+          "modality:text",
+          "region:us",
+          "size_categories:10B<n<100B",
+          "variant-effect-prediction"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2026-07-21T14:13:16+00:00",
+        "license": null,
+        "private": false,
+        "repo_id": "songlab/gpn-star-scores-layout-benchmark-staging",
+        "sha": "78efdb0f9a7b6e25f2568a879304836af75dd8b1",
+        "tags": [
+          "format:parquet",
+          "library:datasets",
+          "library:mlcroissant",
+          "library:pandas",
+          "library:polars",
+          "modality:tabular",
+          "modality:text",
+          "region:us",
+          "size_categories:100M<n<1B"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2026-06-03T19:53:31+00:00",
+        "license": "apache-2.0",
+        "private": false,
+        "repo_id": "songlab/gpn-star-umap-regions",
+        "sha": "c4410a865e52897f74cbbe5c26b98cba5dd36970",
+        "tags": [
+          "DNA",
+          "GPN",
+          "GPN-Star",
+          "conservation",
+          "format:parquet",
+          "functional-genomics",
+          "genomics",
+          "hg38",
+          "library:datasets",
+          "library:mlcroissant",
+          "library:pandas",
+          "library:polars",
+          "license:apache-2.0",
+          "modality:tabular",
+          "modality:text",
+          "region:us",
+          "size_categories:100K<n<1M",
+          "task_categories:tabular-classification"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-07-17T23:12:29+00:00",
+        "license": null,
+        "private": false,
+        "repo_id": "songlab/gxa-sorghum-v1",
+        "sha": "0545539b3229946b90c1073c99a97bfb9f95cd83",
+        "tags": [
+          "format:parquet",
+          "library:datasets",
+          "library:mlcroissant",
+          "library:pandas",
+          "library:polars",
+          "modality:tabular",
+          "modality:text",
+          "region:us",
+          "size_categories:10K<n<100K"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-09-12T23:26:12+00:00",
+        "license": "mit",
+        "private": false,
+        "repo_id": "songlab/hg38_cactus447way",
+        "sha": "f523f0467bc143b62fb5b3b9a91c510e8dc2a7f6",
+        "tags": [
+          "format:webdataset",
+          "library:datasets",
+          "library:mlcroissant",
+          "library:webdataset",
+          "license:mit",
+          "modality:text",
+          "region:us",
+          "size_categories:10M<n<100M"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2026-08-09T06:22:21+00:00",
+        "license": "mit",
+        "private": false,
+        "repo_id": "songlab/ldsc",
+        "sha": "0921fed7f6b9aee4c37b0162a41557579ec5fbc4",
+        "tags": [
+          "biology",
+          "dna",
+          "format:optimized-parquet",
+          "format:parquet",
+          "genomics",
+          "library:datasets",
+          "library:mlcroissant",
+          "library:pandas",
+          "library:polars",
+          "license:mit",
+          "modality:tabular",
+          "modality:text",
+          "region:us",
+          "size_categories:1M<n<10M",
+          "variant-effect-prediction"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-04-07T02:48:51+00:00",
+        "license": null,
+        "private": false,
+        "repo_id": "songlab/mm39_multiz35way",
+        "sha": "0e4f0417b4983df5f03ff1f27d8f7ab682a91c5c",
+        "tags": [
+          "format:text",
+          "library:datasets",
+          "library:mlcroissant",
+          "modality:text",
+          "region:us",
+          "size_categories:n<1K"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-12-09T16:34:21+00:00",
+        "license": "mit",
+        "private": false,
+        "repo_id": "songlab/mmrdb",
+        "sha": "92f2ebaed567ccb0fdeaa5d9662f9ab98458b89c",
+        "tags": [
+          "biology",
+          "dna",
+          "format:parquet",
+          "genomics",
+          "library:datasets",
+          "library:mlcroissant",
+          "library:pandas",
+          "library:polars",
+          "license:mit",
+          "modality:tabular",
+          "modality:text",
+          "region:us",
+          "size_categories:100K<n<1M",
+          "variant-effect-prediction"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-01-02T21:24:16+00:00",
+        "license": "mit",
+        "private": false,
+        "repo_id": "songlab/multiz100way",
+        "sha": "a790ef9ea692cd2bc9703f3b918337a6de08db9b",
+        "tags": [
+          "biology",
+          "dna",
+          "genomics",
+          "license:mit",
+          "region:us"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2024-10-26T01:22:34+00:00",
+        "license": "mit",
+        "private": false,
+        "repo_id": "songlab/multiz100way-pigz",
+        "sha": "6a9d42a35e7debbba845979dea6064f14d5cb3f9",
+        "tags": [
+          "format:webdataset",
+          "library:datasets",
+          "library:mlcroissant",
+          "library:webdataset",
+          "license:mit",
+          "modality:text",
+          "region:us",
+          "size_categories:1M<n<10M"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-01-02T21:22:54+00:00",
+        "license": "mit",
+        "private": false,
+        "repo_id": "songlab/omim",
+        "sha": "719e8ec28f3dd655cb38c46086313993942d10d3",
+        "tags": [
+          "biology",
+          "dna",
+          "format:parquet",
+          "genomics",
+          "library:datasets",
+          "library:mlcroissant",
+          "library:pandas",
+          "library:polars",
+          "license:mit",
+          "modality:tabular",
+          "modality:text",
+          "region:us",
+          "size_categories:1M<n<10M",
+          "variant-effect-prediction"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-12-07T23:35:24+00:00",
+        "license": "mit",
+        "private": false,
+        "repo_id": "songlab/omim_traitgym",
+        "sha": "9317562efb8c61f31bb5fc62a19f731b2f8b4384",
+        "tags": [
+          "biology",
+          "dna",
+          "format:parquet",
+          "genomics",
+          "library:datasets",
+          "library:mlcroissant",
+          "library:pandas",
+          "library:polars",
+          "license:mit",
+          "modality:tabular",
+          "modality:text",
+          "region:us",
+          "size_categories:1K<n<10K",
+          "variant-effect-prediction"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-04-17T04:41:22+00:00",
+        "license": null,
+        "private": false,
+        "repo_id": "songlab/tair10_multiz18way",
+        "sha": "34b56f69320c4d81ecbea53a7709f4e06cc5ef6f",
+        "tags": [
+          "format:text",
+          "library:datasets",
+          "library:mlcroissant",
+          "modality:text",
+          "region:us",
+          "size_categories:n<1K"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-03-25T19:09:05+00:00",
+        "license": "mit",
+        "private": false,
+        "repo_id": "songlab/TraitGym",
+        "sha": "1fde19555fe8c0a55b1382bdf4c6f7082209f566",
+        "tags": [
+          "biology",
+          "dna",
+          "format:parquet",
+          "genomics",
+          "library:datasets",
+          "library:mlcroissant",
+          "library:pandas",
+          "library:polars",
+          "license:mit",
+          "modality:tabular",
+          "modality:text",
+          "region:us",
+          "size_categories:10M<n<100M",
+          "variant-effect-prediction"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-12-07T23:33:02+00:00",
+        "license": "mit",
+        "private": false,
+        "repo_id": "songlab/ukb_finemapped_coding",
+        "sha": "14799c5214aa05d457e90e417f302c7a3fa6853f",
+        "tags": [
+          "biology",
+          "dna",
+          "format:parquet",
+          "genomics",
+          "library:datasets",
+          "library:mlcroissant",
+          "library:pandas",
+          "library:polars",
+          "license:mit",
+          "modality:tabular",
+          "modality:text",
+          "region:us",
+          "size_categories:1K<n<10K",
+          "variant-effect-prediction"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-12-07T23:34:08+00:00",
+        "license": "mit",
+        "private": false,
+        "repo_id": "songlab/ukb_finemapped_nc_traitgym",
+        "sha": "947e2320f66b83489063aa41252ff76498aeefbb",
+        "tags": [
+          "biology",
+          "dna",
+          "format:parquet",
+          "genomics",
+          "library:datasets",
+          "library:mlcroissant",
+          "library:pandas",
+          "library:polars",
+          "license:mit",
+          "modality:tabular",
+          "modality:text",
+          "region:us",
+          "size_categories:10K<n<100K",
+          "variant-effect-prediction"
+        ]
+      },
+      {
+        "gated": false,
+        "last_modified": "2025-12-07T23:38:02+00:00",
+        "license": "mit",
+        "private": false,
+        "repo_id": "songlab/wmgp_balanced",
+        "sha": "0834140e4ead0b831707b971a9ec7482da5109b6",
+        "tags": [
+          "biology",
+          "dna",
+          "format:parquet",
+          "genomics",
+          "library:datasets",
+          "library:mlcroissant",
+          "library:pandas",
+          "library:polars",
+          "license:mit",
+          "modality:tabular",
+          "modality:text",
+          "region:us",
+          "size_categories:10M<n<100M",
+          "variant-effect-prediction"
+        ]
+      }
+    ],
+    "external_assets": [
+      "gonzalobenegas/processed-data-arabidopsis",
+      "songlab/TraitGym-leaderboard"
+    ],
+    "models": [
+      {
+        "classification": "published_related_not_supported",
+        "gated": false,
+        "last_modified": "2023-10-19T04:26:58+00:00",
+        "library_name": "transformers",
+        "license": "mit",
+        "pipeline_tag": "fill-mask",
+        "private": false,
+        "repo_id": "songlab/deprecated-gpn-arabidopsis",
+        "sha": "8a3f3becfd2fc7832877ca840646810cfa58e6fc",
+        "tags": [
+          "ConvNet",
+          "endpoints_compatible",
+          "fill-mask",
+          "license:mit",
+          "pytorch",
+          "region:us",
+          "transformers"
+        ]
+      },
+      {
+        "classification": "published_research_not_supported",
+        "gated": false,
+        "last_modified": "2025-01-28T22:25:07+00:00",
+        "library_name": "transformers",
+        "license": "mit",
+        "pipeline_tag": "fill-mask",
+        "private": false,
+        "repo_id": "songlab/gpn-animal-promoter",
+        "sha": "7cf3276a03b5e243efd421b8939ed3d1e7dcf9cc",
+        "tags": [
+          "GPN",
+          "arxiv:1910.09700",
+          "biology",
+          "dataset:songlab/gpn-animal-promoter-dataset",
+          "deploy:azure",
+          "dna",
+          "endpoints_compatible",
+          "fill-mask",
+          "genomics",
+          "license:mit",
+          "region:us",
+          "safetensors",
+          "transformers",
+          "variant-effect-prediction"
+        ]
+      },
+      {
+        "classification": "supported",
+        "gated": false,
+        "last_modified": "2025-01-28T22:25:53+00:00",
+        "library_name": "transformers",
+        "license": "mit",
+        "pipeline_tag": "fill-mask",
+        "private": false,
+        "repo_id": "songlab/gpn-brassicales",
+        "sha": "eb9c35d0d18571abe84390d22e74f2b21d319ce3",
+        "tags": [
+          "ConvNet",
+          "biology",
+          "dataset:songlab/genomes-brassicales-balanced-v1",
+          "deploy:azure",
+          "dna",
+          "endpoints_compatible",
+          "fill-mask",
+          "genomics",
+          "language-model",
+          "license:mit",
+          "pytorch",
+          "region:us",
+          "safetensors",
+          "transformers",
+          "variant-effect-prediction"
+        ]
+      },
+      {
+        "classification": "supported",
+        "gated": false,
+        "last_modified": "2025-08-08T18:12:49+00:00",
+        "library_name": "transformers",
+        "license": null,
+        "pipeline_tag": "text-classification",
+        "private": false,
+        "repo_id": "songlab/gpn-brassicales-gxa-sorghum-v1",
+        "sha": "53209151b497d4840d50526d44c0460b6e6768b7",
+        "tags": [
+          "ConvNet",
+          "arxiv:1910.09700",
+          "base_model:finetune:songlab/gpn-brassicales",
+          "base_model:songlab/gpn-brassicales",
+          "dataset:songlab/gxa-sorghum-v1",
+          "endpoints_compatible",
+          "region:us",
+          "safetensors",
+          "text-classification",
+          "transformers"
+        ]
+      },
+      {
+        "classification": "supported",
+        "gated": false,
+        "last_modified": "2025-01-27T18:03:42+00:00",
+        "library_name": "transformers",
+        "license": "mit",
+        "pipeline_tag": "fill-mask",
+        "private": false,
+        "repo_id": "songlab/gpn-msa-sapiens",
+        "sha": "4a7d4f75449cb2abd560b2af024d76f99233c6db",
+        "tags": [
+          "GPNRoFormer",
+          "biology",
+          "dataset:songlab/gpn-msa-sapiens-dataset",
+          "dataset:songlab/multiz100way",
+          "deploy:azure",
+          "dna",
+          "endpoints_compatible",
+          "fill-mask",
+          "genomics",
+          "language-model",
+          "license:mit",
+          "pytorch",
+          "region:us",
+          "safetensors",
+          "transformers",
+          "variant-effect-prediction"
+        ]
+      },
+      {
+        "classification": "family_checkpoint_not_individually_validated",
+        "gated": false,
+        "last_modified": "2025-09-17T21:06:03+00:00",
+        "library_name": null,
+        "license": "mit",
+        "pipeline_tag": null,
+        "private": false,
+        "repo_id": "songlab/gpn-star-ce11-n135-25m",
+        "sha": "078ad60c23bbaf40fbeae89fb509a21320a71bbb",
+        "tags": [
+          "GPNStar",
+          "license:mit",
+          "region:us",
+          "safetensors"
+        ]
+      },
+      {
+        "classification": "family_checkpoint_not_individually_validated",
+        "gated": false,
+        "last_modified": "2025-09-17T21:06:34+00:00",
+        "library_name": null,
+        "license": "mit",
+        "pipeline_tag": null,
+        "private": false,
+        "repo_id": "songlab/gpn-star-ce11-n135-85m",
+        "sha": "ef0ca07bea1b126123e01de3a3a85845d633c6d7",
+        "tags": [
+          "GPNStar",
+          "license:mit",
+          "region:us",
+          "safetensors"
+        ]
+      },
+      {
+        "classification": "family_checkpoint_not_individually_validated",
+        "gated": false,
+        "last_modified": "2025-09-17T21:05:03+00:00",
+        "library_name": null,
+        "license": "mit",
+        "pipeline_tag": null,
+        "private": false,
+        "repo_id": "songlab/gpn-star-dm6-i124-25m",
+        "sha": "f034d0aaaf2d3486fc29e4b1f269313768cbf7fe",
+        "tags": [
+          "GPNStar",
+          "license:mit",
+          "region:us",
+          "safetensors"
+        ]
+      },
+      {
+        "classification": "family_checkpoint_not_individually_validated",
+        "gated": false,
+        "last_modified": "2025-09-17T21:05:34+00:00",
+        "library_name": null,
+        "license": "mit",
+        "pipeline_tag": null,
+        "private": false,
+        "repo_id": "songlab/gpn-star-dm6-i124-85m",
+        "sha": "82e9751a31ae479f0a3b59f9309496c376e4a60a",
+        "tags": [
+          "GPNStar",
+          "license:mit",
+          "region:us",
+          "safetensors"
+        ]
+      },
+      {
+        "classification": "family_checkpoint_not_individually_validated",
+        "gated": false,
+        "last_modified": "2025-09-17T21:04:03+00:00",
+        "library_name": null,
+        "license": "mit",
+        "pipeline_tag": null,
+        "private": false,
+        "repo_id": "songlab/gpn-star-galGal6-v77-25m",
+        "sha": "c9a80de91b49f6afdfda6d756d837c34fb084d32",
+        "tags": [
+          "GPNStar",
+          "license:mit",
+          "region:us",
+          "safetensors"
+        ]
+      },
+      {
+        "classification": "family_checkpoint_not_individually_validated",
+        "gated": false,
+        "last_modified": "2025-09-17T21:04:35+00:00",
+        "library_name": null,
+        "license": "mit",
+        "pipeline_tag": null,
+        "private": false,
+        "repo_id": "songlab/gpn-star-galGal6-v77-85m",
+        "sha": "48a680f32150def601be17c120690df1294c0a90",
+        "tags": [
+          "GPNStar",
+          "license:mit",
+          "region:us",
+          "safetensors"
+        ]
+      },
+      {
+        "classification": "family_checkpoint_not_individually_validated",
+        "gated": false,
+        "last_modified": "2025-09-17T20:37:29+00:00",
+        "library_name": null,
+        "license": "mit",
+        "pipeline_tag": null,
+        "private": false,
+        "repo_id": "songlab/gpn-star-hg38-m447-200m",
+        "sha": "0d8f5164fba8e8108200c160370b86652bfb6244",
+        "tags": [
+          "GPNStar",
+          "license:mit",
+          "region:us",
+          "safetensors"
+        ]
+      },
+      {
+        "classification": "family_checkpoint_not_individually_validated",
+        "gated": false,
+        "last_modified": "2025-09-17T20:56:54+00:00",
+        "library_name": null,
+        "license": "mit",
+        "pipeline_tag": null,
+        "private": false,
+        "repo_id": "songlab/gpn-star-hg38-m447-25m",
+        "sha": "386b4be7b22490d1fd1fab3c691bedbde046230d",
+        "tags": [
+          "GPNStar",
+          "license:mit",
+          "region:us",
+          "safetensors"
+        ]
+      },
+      {
+        "classification": "family_checkpoint_not_individually_validated",
+        "gated": false,
+        "last_modified": "2025-09-17T20:38:26+00:00",
+        "library_name": null,
+        "license": "mit",
+        "pipeline_tag": null,
+        "private": false,
+        "repo_id": "songlab/gpn-star-hg38-m447-85m",
+        "sha": "ac9ac24320fcc483f1f498338c318d8533ccf7d4",
+        "tags": [
+          "GPNStar",
+          "license:mit",
+          "region:us",
+          "safetensors"
+        ]
+      },
+      {
+        "classification": "family_checkpoint_not_individually_validated",
+        "gated": false,
+        "last_modified": "2025-09-17T20:37:53+00:00",
+        "library_name": null,
+        "license": "mit",
+        "pipeline_tag": null,
+        "private": false,
+        "repo_id": "songlab/gpn-star-hg38-p243-200m",
+        "sha": "16773016130e826cd3d72e91ed312a3cb27ba2b5",
+        "tags": [
+          "GPNStar",
+          "license:mit",
+          "region:us",
+          "safetensors"
+        ]
+      },
+      {
+        "classification": "family_checkpoint_not_individually_validated",
+        "gated": false,
+        "last_modified": "2025-09-17T21:02:23+00:00",
+        "library_name": null,
+        "license": "mit",
+        "pipeline_tag": null,
+        "private": false,
+        "repo_id": "songlab/gpn-star-hg38-p243-25m",
+        "sha": "4e2a971b9a84af03967bb10f3faf39bf3b6f54ee",
+        "tags": [
+          "GPNStar",
+          "license:mit",
+          "region:us",
+          "safetensors"
+        ]
+      },
+      {
+        "classification": "family_checkpoint_not_individually_validated",
+        "gated": false,
+        "last_modified": "2025-09-17T20:38:43+00:00",
+        "library_name": null,
+        "license": "mit",
+        "pipeline_tag": null,
+        "private": false,
+        "repo_id": "songlab/gpn-star-hg38-p243-85m",
+        "sha": "96aaced29d80994c020eed4ee6a1db59f077eb4b",
+        "tags": [
+          "GPNStar",
+          "license:mit",
+          "region:us",
+          "safetensors"
+        ]
+      },
+      {
+        "classification": "supported",
+        "gated": false,
+        "last_modified": "2025-09-17T20:37:06+00:00",
+        "library_name": null,
+        "license": "mit",
+        "pipeline_tag": null,
+        "private": false,
+        "repo_id": "songlab/gpn-star-hg38-v100-200m",
+        "sha": "0c949f132d35619a3eb188b402848c998a3313ae",
+        "tags": [
+          "GPNStar",
+          "license:mit",
+          "region:us",
+          "safetensors"
+        ]
+      },
+      {
+        "classification": "family_checkpoint_not_individually_validated",
+        "gated": false,
+        "last_modified": "2025-09-17T20:38:55+00:00",
+        "library_name": null,
+        "license": "mit",
+        "pipeline_tag": null,
+        "private": false,
+        "repo_id": "songlab/gpn-star-hg38-v100-25m",
+        "sha": "6f12f9004e6a32782cdcbe18c6b1868834079d5f",
+        "tags": [
+          "GPNStar",
+          "license:mit",
+          "region:us",
+          "safetensors"
+        ]
+      },
+      {
+        "classification": "family_checkpoint_not_individually_validated",
+        "gated": false,
+        "last_modified": "2025-09-17T20:38:10+00:00",
+        "library_name": null,
+        "license": "mit",
+        "pipeline_tag": null,
+        "private": false,
+        "repo_id": "songlab/gpn-star-hg38-v100-85m",
+        "sha": "34b230200e687552e603bf13487137be62161aba",
+        "tags": [
+          "GPNStar",
+          "license:mit",
+          "region:us",
+          "safetensors"
+        ]
+      },
+      {
+        "classification": "family_checkpoint_not_individually_validated",
+        "gated": false,
+        "last_modified": "2025-09-17T21:03:04+00:00",
+        "library_name": null,
+        "license": "mit",
+        "pipeline_tag": null,
+        "private": false,
+        "repo_id": "songlab/gpn-star-mm39-v35-25m",
+        "sha": "cdb30ba4d94055a7d368bb7179557d500139ad9b",
+        "tags": [
+          "GPNStar",
+          "license:mit",
+          "region:us",
+          "safetensors"
+        ]
+      },
+      {
+        "classification": "family_checkpoint_not_individually_validated",
+        "gated": false,
+        "last_modified": "2025-09-17T21:03:21+00:00",
+        "library_name": null,
+        "license": "mit",
+        "pipeline_tag": null,
+        "private": false,
+        "repo_id": "songlab/gpn-star-mm39-v35-85m",
+        "sha": "dac8b6b1debe89e20dd96c94c25fb6273fb6fa38",
+        "tags": [
+          "GPNStar",
+          "license:mit",
+          "region:us",
+          "safetensors"
+        ]
+      },
+      {
+        "classification": "family_checkpoint_not_individually_validated",
+        "gated": false,
+        "last_modified": "2025-09-17T21:07:02+00:00",
+        "library_name": null,
+        "license": "mit",
+        "pipeline_tag": null,
+        "private": false,
+        "repo_id": "songlab/gpn-star-tair10-b18-25m",
+        "sha": "317841ed55164ff4cd3d14e636bcc2d5de23cf49",
+        "tags": [
+          "GPNStar",
+          "license:mit",
+          "region:us",
+          "safetensors"
+        ]
+      },
+      {
+        "classification": "family_checkpoint_not_individually_validated",
+        "gated": false,
+        "last_modified": "2025-09-17T21:07:34+00:00",
+        "library_name": null,
+        "license": "mit",
+        "pipeline_tag": null,
+        "private": false,
+        "repo_id": "songlab/gpn-star-tair10-b18-85m",
+        "sha": "eb0382170c3536be14f46c08045695afb9d6a3dc",
+        "tags": [
+          "GPNStar",
+          "license:mit",
+          "region:us",
+          "safetensors"
+        ]
+      },
+      {
+        "classification": "supported",
+        "gated": false,
+        "last_modified": "2026-04-02T20:29:00+00:00",
+        "library_name": null,
+        "license": "cc",
+        "pipeline_tag": null,
+        "private": false,
+        "repo_id": "songlab/PhyloGPN",
+        "sha": "3556db4c469e67d25f0f7a0a6653b48be3eebf51",
+        "tags": [
+          "arxiv:2503.03773",
+          "custom_code",
+          "license:cc",
+          "phylogpn",
+          "region:us",
+          "safetensors"
+        ]
+      },
+      {
+        "classification": "published_related_not_supported",
+        "gated": "manual",
+        "last_modified": "2026-07-07T20:37:09+00:00",
+        "library_name": "pytorch",
+        "license": "mit",
+        "pipeline_tag": null,
+        "private": false,
+        "repo_id": "songlab/PhyloGPN2",
+        "sha": "e104c89800d5b4e6cfcdddb74cb12c6c4c712204",
+        "tags": [
+          "cnn",
+          "dna",
+          "genomics",
+          "license:mit",
+          "pytorch",
+          "region:us",
+          "safetensors",
+          "variant-effect-prediction"
+        ]
+      },
+      {
+        "classification": "supporting_tokenizer",
+        "gated": false,
+        "last_modified": "2024-04-18T17:04:31+00:00",
+        "library_name": null,
+        "license": "mit",
+        "pipeline_tag": null,
+        "private": false,
+        "repo_id": "songlab/tokenizer-dna-clm",
+        "sha": "98492332a93e58b2760f1a78e010037da4ee2abb",
+        "tags": [
+          "biology",
+          "dna",
+          "genomics",
+          "license:mit",
+          "region:us"
+        ]
+      },
+      {
+        "classification": "supporting_tokenizer",
+        "gated": false,
+        "last_modified": "2024-01-27T18:19:00+00:00",
+        "library_name": null,
+        "license": "mit",
+        "pipeline_tag": null,
+        "private": false,
+        "repo_id": "songlab/tokenizer-dna-mlm",
+        "sha": "7181f4c593afe1966b9a26dc8604e4fb88f6eed9",
+        "tags": [
+          "biology",
+          "dna",
+          "genomics",
+          "license:mit",
+          "region:us"
+        ]
+      }
+    ]
+  },
+  "mode": "metadata_only_no_weight_or_msa_downloads",
+  "passed": true,
+  "required_data_artifacts": [
+    {
+      "approved_revision": "0545539b3229946b90c1073c99a97bfb9f95cd83",
+      "checks": {
+        "immutable_revision_resolved": true,
+        "main_matches_approved_revision": true,
+        "required_files_present": true
+      },
+      "current_main_revision": "0545539b3229946b90c1073c99a97bfb9f95cd83",
+      "key": "sorghum_expression_examples",
+      "maintenance": "inference_fixture_only",
+      "passed": true,
+      "repo_id": "songlab/gxa-sorghum-v1",
+      "required_files": [
+        "labels.txt",
+        "test.parquet"
+      ]
+    },
+    {
+      "approved_revision": "6a9d42a35e7debbba845979dea6064f14d5cb3f9",
+      "checks": {
+        "immutable_revision_resolved": true,
+        "main_matches_approved_revision": true,
+        "required_files_present": true
+      },
+      "current_main_revision": "6a9d42a35e7debbba845979dea6064f14d5cb3f9",
+      "key": "multiz100way_fixture_source",
+      "maintenance": "provenance_only_do_not_download",
+      "passed": true,
+      "repo_id": "songlab/multiz100way-pigz",
+      "required_files": [
+        "99.zarr.tar.gz"
+      ]
+    }
+  ],
+  "schema_version": 1,
+  "supported_models": [
+    {
+      "approved_revision": "eb9c35d0d18571abe84390d22e74f2b21d319ce3",
+      "card": {
+        "findings": [
+          "implicit_registration_example"
+        ],
+        "library_name": "transformers",
+        "license": "mit",
+        "needs_update": true,
+        "pipeline_policy": "local_fill_mask_only",
+        "pipeline_tag": "fill-mask"
+      },
+      "checks": {
+        "architecture_matches": true,
+        "immutable_revision_resolved": true,
+        "main_matches_approved_revision": true,
+        "model_type_matches": true,
+        "required_files_present": true,
+        "safetensors_present": true
+      },
+      "config": {
+        "architectures": [
+          "ConvNetForMaskedLM"
+        ],
+        "auto_map": null,
+        "model_type": "ConvNet",
+        "name_or_path_kind": "absolute"
+      },
+      "current_main_revision": "eb9c35d0d18571abe84390d22e74f2b21d319ce3",
+      "files": [
+        ".gitattributes",
+        "README.md",
+        "config.json",
+        "model.safetensors",
+        "pytorch_model.bin",
+        "special_tokens_map.json",
+        "tokenizer.json",
+        "tokenizer_config.json"
+      ],
+      "key": "gpn",
+      "passed": true,
+      "portability": {
+        "findings": [
+          "inert_absolute_name_or_path"
+        ],
+        "status": "self_contained"
+      },
+      "repo_id": "songlab/gpn-brassicales",
+      "support": "training_and_inference"
+    },
+    {
+      "approved_revision": "4a7d4f75449cb2abd560b2af024d76f99233c6db",
+      "card": {
+        "findings": [
+          "implicit_registration_example",
+          "misleading_pipeline_metadata"
+        ],
+        "library_name": "transformers",
+        "license": "mit",
+        "needs_update": true,
+        "pipeline_policy": "none_custom_inputs",
+        "pipeline_tag": "fill-mask"
+      },
+      "checks": {
+        "architecture_matches": true,
+        "immutable_revision_resolved": true,
+        "main_matches_approved_revision": true,
+        "model_type_matches": true,
+        "required_files_present": true,
+        "safetensors_present": true
+      },
+      "config": {
+        "architectures": [
+          "GPNRoFormerForMaskedLM"
+        ],
+        "auto_map": null,
+        "model_type": "GPNRoFormer",
+        "name_or_path_kind": "relative"
+      },
+      "current_main_revision": "4a7d4f75449cb2abd560b2af024d76f99233c6db",
+      "files": [
+        ".gitattributes",
+        "README.md",
+        "config.json",
+        "model.safetensors",
+        "pytorch_model.bin"
+      ],
+      "key": "gpn_msa",
+      "passed": true,
+      "portability": {
+        "findings": [],
+        "status": "self_contained"
+      },
+      "repo_id": "songlab/gpn-msa-sapiens",
+      "support": "deprecated_inference_only"
+    },
+    {
+      "approved_revision": "0c949f132d35619a3eb188b402848c998a3313ae",
+      "card": {
+        "findings": [
+          "empty_or_stub_card",
+          "missing_library_metadata"
+        ],
+        "library_name": null,
+        "license": "mit",
+        "needs_update": true,
+        "pipeline_policy": "none_custom_inputs",
+        "pipeline_tag": null
+      },
+      "checks": {
+        "architecture_matches": true,
+        "immutable_revision_resolved": true,
+        "main_matches_approved_revision": true,
+        "model_type_matches": true,
+        "portable_auxiliary_assets": true,
+        "required_files_present": true,
+        "safetensors_present": true
+      },
+      "config": {
+        "architectures": [
+          "GPNStarForMaskedLM"
+        ],
+        "auto_map": null,
+        "model_type": "GPNStar",
+        "name_or_path_kind": null
+      },
+      "current_main_revision": "0c949f132d35619a3eb188b402848c998a3313ae",
+      "files": [
+        ".gitattributes",
+        "README.md",
+        "calibration_table/entropy.parquet",
+        "calibration_table/llr.parquet",
+        "config.json",
+        "model.safetensors",
+        "phylo_dist/.snakemake_timestamp",
+        "phylo_dist/in_clade.npy",
+        "phylo_dist/pairwise.npy"
+      ],
+      "key": "gpn_star",
+      "passed": true,
+      "portability": {
+        "bundled_fallback_present": true,
+        "configured_path_kind": "relative",
+        "findings": [
+          "nonportable_configured_path"
+        ],
+        "status": "package_fallback_required"
+      },
+      "repo_id": "songlab/gpn-star-hg38-v100-200m",
+      "support": "training_and_inference"
+    },
+    {
+      "approved_revision": "3556db4c469e67d25f0f7a0a6653b48be3eebf51",
+      "card": {
+        "findings": [
+          "remote_code_presented_as_primary",
+          "ambiguous_license",
+          "missing_library_metadata"
+        ],
+        "library_name": null,
+        "license": "cc",
+        "needs_update": true,
+        "pipeline_policy": "none_custom_outputs",
+        "pipeline_tag": null
+      },
+      "checks": {
+        "architecture_matches": true,
+        "immutable_revision_resolved": true,
+        "main_matches_approved_revision": true,
+        "model_type_matches": true,
+        "required_files_present": true,
+        "safetensors_present": true
+      },
+      "config": {
+        "architectures": [
+          "PhyloGPNModel"
+        ],
+        "auto_map": {
+          "AutoConfig": "configuration_phylogpn.PhyloGPNConfig",
+          "AutoModel": "modeling_phylogpn.PhyloGPNModel"
+        },
+        "model_type": "phylogpn",
+        "name_or_path_kind": null
+      },
+      "current_main_revision": "3556db4c469e67d25f0f7a0a6653b48be3eebf51",
+      "files": [
+        ".gitattributes",
+        "README.md",
+        "config.json",
+        "configuration_phylogpn.py",
+        "model.safetensors",
+        "modeling_phylogpn.py",
+        "special_tokens_map.json",
+        "tokenization_phylogpn.py",
+        "tokenizer_config.json"
+      ],
+      "key": "phylogpn",
+      "passed": true,
+      "portability": {
+        "findings": [],
+        "status": "self_contained"
+      },
+      "repo_id": "songlab/PhyloGPN",
+      "support": "inference_only"
+    },
+    {
+      "approved_revision": "53209151b497d4840d50526d44c0460b6e6768b7",
+      "card": {
+        "findings": [
+          "generated_placeholders",
+          "missing_license",
+          "misleading_pipeline_metadata"
+        ],
+        "library_name": "transformers",
+        "license": null,
+        "needs_update": true,
+        "pipeline_policy": "none_regression",
+        "pipeline_tag": "text-classification"
+      },
+      "checks": {
+        "architecture_matches": true,
+        "immutable_revision_resolved": true,
+        "main_matches_approved_revision": true,
+        "model_type_matches": true,
+        "required_files_present": true,
+        "safetensors_present": true
+      },
+      "config": {
+        "architectures": [
+          "ConvNetForSequenceClassification"
+        ],
+        "auto_map": null,
+        "model_type": "ConvNet",
+        "name_or_path_kind": "relative"
+      },
+      "current_main_revision": "53209151b497d4840d50526d44c0460b6e6768b7",
+      "files": [
+        ".gitattributes",
+        "README.md",
+        "config.json",
+        "model.safetensors",
+        "special_tokens_map.json",
+        "tokenizer.json",
+        "tokenizer_config.json"
+      ],
+      "key": "sorghum_expression",
+      "passed": true,
+      "portability": {
+        "findings": [],
+        "status": "self_contained"
+      },
+      "repo_id": "songlab/gpn-brassicales-gxa-sorghum-v1",
+      "support": "inference_only"
+    }
+  ]
+}
