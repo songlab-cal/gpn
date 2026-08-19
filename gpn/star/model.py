@@ -9,7 +9,6 @@ from dataclasses import dataclass
 
 from transformers import (
     AutoConfig,
-    AutoModel,
     AutoModelForMaskedLM,
     PreTrainedModel,
 )
@@ -969,6 +968,9 @@ def load_model(model_path, phylo_dist_path=None):
     the model config. Without an override, an invalid configured path falls
     back to ``model_path/phylo_dist``.
     """
+    from gpn import register_auto_classes
+
+    register_auto_classes("star")
     config = AutoConfig.from_pretrained(model_path)
     configured_path = None
 
@@ -1001,8 +1003,3 @@ def load_model(model_path, phylo_dist_path=None):
         config.phylo_dist_path = configured_path
 
     return AutoModelForMaskedLM.from_pretrained(model_path, config=config)
-
-
-AutoConfig.register("GPNStar", GPNStarConfig)
-AutoModel.register(GPNStarConfig, GPNStarModel)
-AutoModelForMaskedLM.register(GPNStarConfig, GPNStarForMaskedLM)

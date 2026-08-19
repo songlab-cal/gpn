@@ -54,7 +54,7 @@ from transformers.utils import check_min_version, send_example_telemetry
 from transformers.utils.versions import require_version
 
 from Bio.Seq import Seq
-import gpn.model
+from gpn import register_auto_classes
 from gpn.data import GenomeMSA, Tokenizer
 import numpy as np
 import pandas as pd
@@ -63,6 +63,8 @@ from torch.utils.data import DataLoader, IterableDataset, get_worker_info
 
 
 from numpy.lib.stride_tricks import sliding_window_view
+
+register_auto_classes("gpn")
 
 
 disable_caching()

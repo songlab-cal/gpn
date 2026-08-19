@@ -54,9 +54,11 @@ from transformers.trainer_utils import get_last_checkpoint
 from transformers.utils import check_min_version, send_example_telemetry
 from transformers.utils.versions import require_version
 
-import gpn.model
+from gpn import register_auto_classes
 import numpy as np
 import pandas as pd
+
+register_auto_classes("gpn")
 
 
 def standardize(x):

@@ -15,18 +15,18 @@ Code and resources for genomic language models [GPN](https://doi.org/10.1073/pna
 
 ## Installation
 
-Install directly from GitHub:
+Install the alpha release from PyPI:
 
 ```bash
-pip install git+https://github.com/songlab-cal/gpn.git
+pip install "gpn==0.9.0a1"
 ```
 
-For development (editable install):
+For development, use the locked uv environment:
 
 ```bash
 git clone https://github.com/songlab-cal/gpn.git
 cd gpn
-pip install -e .
+uv sync --all-extras --group dev
 ```
 
 ## Modeling frameworks
@@ -43,9 +43,10 @@ A single-sequence genomic language model trained on unaligned genomes. Also know
 ### Quick start
 
 ```python
-import gpn.model  # registers architecture for AutoModel
+from gpn import register_auto_classes
 from transformers import AutoModelForMaskedLM
 
+register_auto_classes("gpn")
 model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-brassicales")
 ```
 
@@ -166,9 +167,10 @@ A genomic language model trained on whole-genome alignments across multiple spec
 ### Quick start
 
 ```python
-import gpn.model  # registers architecture for AutoModel
+from gpn import register_auto_classes
 from transformers import AutoModelForMaskedLM
 
+register_auto_classes("gpn")
 model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-msa-sapiens")
 ```
 
@@ -229,9 +231,10 @@ A phylogeny-aware genomic language model trained on whole-genome alignments acro
 ### Quick start
 
 ```python
-import gpn.star.model  # registers architecture for AutoModel
+from gpn import register_auto_classes
 from transformers import AutoModelForMaskedLM
 
+register_auto_classes("star")
 model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-star-hg38-p243-200m")
 ```
 

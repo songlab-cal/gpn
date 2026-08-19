@@ -4,11 +4,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss, MSELoss, BCEWithLogitsLoss
 from transformers import (
-    AutoConfig,
-    AutoModel,
-    AutoModelForMaskedLM,
-    AutoModelForSequenceClassification,
-    AutoModelForTokenClassification,
     PretrainedConfig,
     PreTrainedModel,
 )
@@ -500,12 +495,6 @@ class GPNForTokenClassification(GPNPreTrainedModel):
         )
 
 
-AutoConfig.register("GPN", GPNConfig)
-AutoModel.register(GPNConfig, GPNModel)
-AutoModelForMaskedLM.register(GPNConfig, GPNForMaskedLM)
-AutoModelForSequenceClassification.register(GPNConfig, GPNForSequenceClassification)
-AutoModelForTokenClassification.register(GPNConfig, GPNForTokenClassification)
-
 from .legacy import (
     ConvNetConfig,
     ConvNetModel,
@@ -513,15 +502,4 @@ from .legacy import (
     ConvNetForSequenceClassification,
 )
 
-AutoConfig.register("ConvNet", ConvNetConfig)
-AutoModel.register(ConvNetConfig, ConvNetModel)
-AutoModelForMaskedLM.register(ConvNetConfig, ConvNetForMaskedLM)
-AutoModelForSequenceClassification.register(
-    ConvNetConfig, ConvNetForSequenceClassification
-)
-
 from .legacy import GPNRoFormerConfig, GPNRoFormerModel, GPNRoFormerForMaskedLM
-
-AutoConfig.register("GPNRoFormer", GPNRoFormerConfig)
-AutoModel.register(GPNRoFormerConfig, GPNRoFormerModel)
-AutoModelForMaskedLM.register(GPNRoFormerConfig, GPNRoFormerForMaskedLM)

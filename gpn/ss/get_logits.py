@@ -10,8 +10,10 @@ import tempfile
 import torch
 from transformers import AutoTokenizer, AutoModelForMaskedLM, Trainer, TrainingArguments
 
-import gpn.model
+from gpn import register_auto_classes
 from gpn.data import Genome, load_dataset_from_file_or_dir, token_input_id
+
+register_auto_classes("gpn")
 
 
 class MLMforLogitsModel(torch.nn.Module):

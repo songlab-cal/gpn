@@ -3,8 +3,10 @@ import pandas as pd
 import torch
 from transformers import AutoModel
 
-import gpn.star.model
+from gpn import register_auto_classes
 from gpn.data import Tokenizer, ReverseComplementer
+
+register_auto_classes("star")
 
 
 class VEPEmbedding(torch.nn.Module):

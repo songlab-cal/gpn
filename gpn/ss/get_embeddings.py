@@ -10,8 +10,10 @@ import tempfile
 import torch
 from transformers import AutoTokenizer, AutoModel, Trainer, TrainingArguments
 
-import gpn.model
+from gpn import register_auto_classes
 from gpn.data import Genome, load_dataset_from_file_or_dir
+
+register_auto_classes("gpn")
 
 
 class ModelCenterEmbedding(torch.nn.Module):
