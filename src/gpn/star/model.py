@@ -1,31 +1,26 @@
+import math
 import os
 import shutil
+from dataclasses import dataclass
+from typing import Optional, Tuple
 
+import networkx as nx
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss
-import numpy as np
-from dataclasses import dataclass
-
-from transformers import PreTrainedModel
+from transformers import PreTrainedModel, RoFormerConfig, apply_chunking_to_forward
 from transformers.modeling_outputs import (
     MaskedLMOutput,
 )
-
-from transformers import RoFormerConfig, apply_chunking_to_forward
 from transformers.models.roformer.modeling_roformer import (
     RoFormerEncoder,
+    RoFormerLayer,
     RoFormerOnlyMLMHead,
     RoFormerSinusoidalPositionalEmbedding,
-    RoFormerLayer,
 )
-
 from transformers.utils import ModelOutput
-
-from typing import Optional, Tuple
-import math
-import networkx as nx
 
 
 class GPNStarConfig(RoFormerConfig):

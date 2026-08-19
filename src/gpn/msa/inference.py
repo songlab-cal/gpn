@@ -1,22 +1,21 @@
 import argparse
-from datasets import load_dataset, disable_caching
 import os
 import tempfile
-from transformers import Trainer, TrainingArguments
-
-from gpn.data import load_dataset_from_file_or_dir
-from gpn.data import GenomeMSA
-from gpn.msa.vep import VEPInference
-from gpn.msa.logits import LogitsInference
-from gpn.msa.embedding import EmbeddingInference
-from gpn.msa.vep_embedding import VEPEmbeddingInference
-from gpn.msa.vep_influence import VEPInfluenceInference
-from gpn.msa.vep_ref_embed import VEPRefEmbedInference
-from gpn.msa.vep_delta_embed import VEPDeltaEmbedInference
-from gpn.msa.vep_euclidean_dist import VEPEuclideanDistInference
-from gpn.msa.vep_embeddings import VEPEmbeddingsInference
 
 import torch._dynamo
+from datasets import disable_caching
+from transformers import Trainer, TrainingArguments
+
+from gpn.data import GenomeMSA, load_dataset_from_file_or_dir
+from gpn.msa.embedding import EmbeddingInference
+from gpn.msa.logits import LogitsInference
+from gpn.msa.vep import VEPInference
+from gpn.msa.vep_delta_embed import VEPDeltaEmbedInference
+from gpn.msa.vep_embedding import VEPEmbeddingInference
+from gpn.msa.vep_embeddings import VEPEmbeddingsInference
+from gpn.msa.vep_euclidean_dist import VEPEuclideanDistInference
+from gpn.msa.vep_influence import VEPInfluenceInference
+from gpn.msa.vep_ref_embed import VEPRefEmbedInference
 
 torch._dynamo.config.suppress_errors = True
 
