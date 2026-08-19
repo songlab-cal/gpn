@@ -1,16 +1,20 @@
 import numpy as np
 import pandas as pd
 import torch
-import os
+from transformers import AutoModelForMaskedLM
 
-from gpn.star.model import load_model
+from gpn import register_auto_classes
 from gpn.data import Tokenizer
 
 
 class MLMforLogitsModel(torch.nn.Module):
     def __init__(self, model_path, phylo_dist_path=None):
         super().__init__()
-        self.model = load_model(model_path, phylo_dist_path=phylo_dist_path)
+        register_auto_classes("star")
+        self.model = AutoModelForMaskedLM.from_pretrained(
+            model_path,
+            phylo_dist_path=phylo_dist_path,
+        )
         self.model.eval()
         tokenizer = Tokenizer()
         self.id_a = tokenizer.vocab.index("A")

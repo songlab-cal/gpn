@@ -52,10 +52,12 @@ from transformers.trainer_utils import get_last_checkpoint
 from transformers.utils import check_min_version, send_example_telemetry
 from transformers.utils.versions import require_version
 
-import gpn.star.model
+from gpn import register_auto_classes
 from gpn.star.utils import *
 from gpn.star.data import GenomeMSA, Tokenizer
 import numpy as np
+
+register_auto_classes("star")
 
 disable_caching()
 

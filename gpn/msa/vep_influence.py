@@ -4,8 +4,10 @@ import torch
 import torch.nn.functional as F
 from transformers import AutoModelForMaskedLM
 
-import gpn.model
+from gpn import register_auto_classes
 from gpn.data import Tokenizer, ReverseComplementer
+
+register_auto_classes("gpn")
 
 
 class VEPInfluence(torch.nn.Module):

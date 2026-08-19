@@ -3,17 +3,11 @@ import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn import CrossEntropyLoss, MSELoss, BCEWithLogitsLoss
+from torch.nn import CrossEntropyLoss
 import numpy as np
 from dataclasses import dataclass
 
-from transformers import (
-    AutoConfig,
-    AutoModel,
-    AutoModelForMaskedLM,
-    PreTrainedModel,
-)
-from transformers.activations import ACT2FN
+from transformers import PreTrainedModel
 from transformers.modeling_outputs import (
     MaskedLMOutput,
 )
@@ -28,7 +22,7 @@ from transformers.models.roformer.modeling_roformer import (
 
 from transformers.utils import ModelOutput
 
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 import math
 import networkx as nx
 
@@ -50,6 +44,83 @@ class GPNStarConfig(RoFormerConfig):
         self.max_evol_dist = None
         self.phylo_dist_path = phylo_dist_path
         self.clade_thres = clade_thres
+
+
+_PHYLO_DIST_FILENAMES = ("pairwise.npy", "in_clade.npy")
+
+
+def _contains_phylo_dist_files(path):
+    return path is not None and all(
+        os.path.isfile(os.path.join(path, filename))
+        for filename in _PHYLO_DIST_FILENAMES
+    )
+
+
+def _resolve_phylo_dist_path(
+    pretrained_model_name_or_path,
+    config,
+    *,
+    explicit_path=None,
+    hub_kwargs=None,
+):
+    """Resolve local or Hub-hosted phylogenetic-distance model assets."""
+    if explicit_path is not None:
+        explicit_path = os.fsdecode(os.fspath(explicit_path))
+        if not _contains_phylo_dist_files(explicit_path):
+            raise FileNotFoundError(
+                "Phylogenetic-distance directory must contain pairwise.npy and "
+                f"in_clade.npy: '{explicit_path}'"
+            )
+        return explicit_path
+
+    configured_path = getattr(config, "phylo_dist_path", None)
+    if configured_path is not None:
+        configured_path = os.fsdecode(os.fspath(configured_path))
+    if _contains_phylo_dist_files(configured_path):
+        return configured_path
+
+    model_path = os.fsdecode(os.fspath(pretrained_model_name_or_path))
+    subfolder = ((hub_kwargs or {}).get("subfolder") or "").strip("/")
+    local_fallback = os.path.join(model_path, subfolder, "phylo_dist")
+    if _contains_phylo_dist_files(local_fallback):
+        return local_fallback
+    if os.path.exists(model_path):
+        raise FileNotFoundError(
+            "No valid phylogenetic-distance assets found. Expected pairwise.npy "
+            f"and in_clade.npy in '{local_fallback}'."
+        )
+
+    from huggingface_hub import snapshot_download
+
+    asset_dir = "/".join(part for part in (subfolder, "phylo_dist") if part)
+    download_kwargs = {
+        key: (hub_kwargs or {})[key]
+        for key in (
+            "cache_dir",
+            "force_download",
+            "local_files_only",
+            "token",
+        )
+        if key in (hub_kwargs or {})
+    }
+    revision = (hub_kwargs or {}).get("_commit_hash") or (hub_kwargs or {}).get(
+        "revision"
+    )
+    revision = revision or getattr(config, "_commit_hash", None)
+    if revision is not None:
+        download_kwargs["revision"] = revision
+    snapshot_path = snapshot_download(
+        repo_id=model_path,
+        allow_patterns=[f"{asset_dir}/*.npy"],
+        **download_kwargs,
+    )
+    hub_fallback = os.path.join(snapshot_path, asset_dir)
+    if not _contains_phylo_dist_files(hub_fallback):
+        raise FileNotFoundError(
+            f"Hugging Face model '{model_path}' does not bundle both required "
+            f"files under '{asset_dir}'."
+        )
+    return hub_fallback
 
 
 class FIRETimeBias(nn.Module):
@@ -758,6 +829,62 @@ class GPNStarPreTrainedModel(PreTrainedModel):
     config_class = GPNStarConfig
     base_model_prefix = "model"
 
+    @classmethod
+    def from_pretrained(
+        cls,
+        pretrained_model_name_or_path,
+        *model_args,
+        config=None,
+        **kwargs,
+    ):
+        """Load a checkpoint and its bundled phylogenetic-distance assets."""
+        explicit_path = kwargs.pop("phylo_dist_path", None)
+        if config is None:
+            hub_kwargs = {
+                key: kwargs[key]
+                for key in (
+                    "cache_dir",
+                    "force_download",
+                    "local_files_only",
+                    "proxies",
+                    "revision",
+                    "subfolder",
+                    "token",
+                )
+                if key in kwargs
+            }
+            config_kwargs = kwargs.copy()
+            for key in ("torch_dtype", "dtype"):
+                if config_kwargs.get(key) == "auto":
+                    config_kwargs.pop(key)
+            if config_kwargs.get("quantization_config") is not None:
+                config_kwargs.pop("quantization_config")
+            config, unused_kwargs = cls.config_class.from_pretrained(
+                pretrained_model_name_or_path,
+                return_unused_kwargs=True,
+                **config_kwargs,
+            )
+            for key in ("torch_dtype", "dtype", "quantization_config"):
+                if kwargs.get(key) is not None:
+                    unused_kwargs[key] = kwargs[key]
+            kwargs = {**hub_kwargs, **unused_kwargs}
+            commit_hash = getattr(config, "_commit_hash", None)
+            if commit_hash is not None:
+                kwargs["_commit_hash"] = commit_hash
+
+        config.phylo_dist_path = _resolve_phylo_dist_path(
+            pretrained_model_name_or_path,
+            config,
+            explicit_path=explicit_path,
+            hub_kwargs=kwargs,
+        )
+        return super().from_pretrained(
+            pretrained_model_name_or_path,
+            *model_args,
+            config=config,
+            **kwargs,
+        )
+
     def _init_weights(self, module):
         """Initialize the weights"""
         if isinstance(module, nn.Linear):
@@ -791,10 +918,12 @@ class GPNStarPhyloInfo:
 
         # Read
         self.phylo_dist_pairwise = torch.tensor(
-            np.load(config.phylo_dist_path + "/pairwise.npy")
+            np.load(config.phylo_dist_path + "/pairwise.npy"),
+            device="cpu",
         )
         self.in_clade_phylo_dist = torch.tensor(
-            np.load(config.phylo_dist_path + "/in_clade.npy")
+            np.load(config.phylo_dist_path + "/in_clade.npy"),
+            device="cpu",
         )
 
         self.clade_dict = self.cluster_clades(
@@ -802,7 +931,9 @@ class GPNStarPhyloInfo:
         )
 
         self.clade_labels = torch.zeros(
-            self.phylo_dist_pairwise.shape[0], dtype=torch.int64
+            self.phylo_dist_pairwise.shape[0],
+            dtype=torch.int64,
+            device="cpu",
         )
         for clade_id, species in self.clade_dict.items():
             for s in species:
@@ -936,10 +1067,12 @@ def compute_loss(logits, labels, output_probs, loss_weight, vocab_size):
 
 
 class GPNStarForMaskedLM(GPNStarPreTrainedModel):
-    _tied_weights_keys = [
-        "cls.predictions.decoder.bias",
-        "cls.predictions.decoder.weight",
-    ]
+    # The decoder bias aliases ``cls.predictions.bias``. The decoder weight is
+    # deliberately independent of the target embedding (and has a different
+    # width in the published model), so it must not be tied here.
+    _tied_weights_keys = {
+        "cls.predictions.decoder.bias": "cls.predictions.bias",
+    }
 
     def __init__(self, config):
         super().__init__(config)
@@ -960,49 +1093,3 @@ class GPNStarForMaskedLM(GPNStarPreTrainedModel):
             loss=loss,
             logits=logits,
         )
-
-
-def load_model(model_path, phylo_dist_path=None):
-    """Load model with validated phylo_dist_path.
-
-    An explicit ``phylo_dist_path`` takes precedence over the path stored in
-    the model config. Without an override, an invalid configured path falls
-    back to ``model_path/phylo_dist``.
-    """
-    config = AutoConfig.from_pretrained(model_path)
-    configured_path = None
-
-    if phylo_dist_path is not None:
-        phylo_dist_path = os.fsdecode(os.fspath(phylo_dist_path))
-        if not os.path.isdir(phylo_dist_path):
-            raise FileNotFoundError(
-                f"Phylogenetic-distance directory does not exist: "
-                f"'{phylo_dist_path}'"
-            )
-        config.phylo_dist_path = phylo_dist_path
-    else:
-        configured_path = getattr(config, "phylo_dist_path", None)
-        if configured_path is not None:
-            configured_path = os.fsdecode(os.fspath(configured_path))
-
-    if phylo_dist_path is None and (
-        configured_path is None or not os.path.isdir(configured_path)
-    ):
-        fallback_path = os.path.join(os.fsdecode(os.fspath(model_path)), "phylo_dist")
-        if os.path.isdir(fallback_path):
-            config.phylo_dist_path = fallback_path
-        else:
-            raise FileNotFoundError(
-                f"Configured phylogenetic-distance directory "
-                f"'{configured_path}' does not exist "
-                f"and fallback directory '{fallback_path}' does not exist"
-            )
-    elif phylo_dist_path is None:
-        config.phylo_dist_path = configured_path
-
-    return AutoModelForMaskedLM.from_pretrained(model_path, config=config)
-
-
-AutoConfig.register("GPNStar", GPNStarConfig)
-AutoModel.register(GPNStarConfig, GPNStarModel)
-AutoModelForMaskedLM.register(GPNStarConfig, GPNStarForMaskedLM)

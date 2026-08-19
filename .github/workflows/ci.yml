@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.13"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.28"
+          enable-cache: true
+
+      - name: Install locked environment
+        run: uv sync --locked --python ${{ matrix.python-version }} --extra inference --group dev
+
+      - name: Check focused bootstrap code
+        run: |
+          uv run ruff format --check gpn/__init__.py gpn/_registration.py tests/test_registration.py
+          uv run ruff check gpn/__init__.py gpn/_registration.py tests/test_registration.py
+
+      - name: Run offline tests
+        env:
+          HF_HUB_OFFLINE: "1"
+          TRANSFORMERS_OFFLINE: "1"
+        run: uv run pytest
+
+      - name: Build distributions
+        if: matrix.python-version == '3.13'
+        run: uv build
+
+      - name: Check distributions
+        if: matrix.python-version == '3.13'
+        run: |
+          uv run twine check dist/*
+          uv run check-wheel-contents dist/*.whl

@@ -3,7 +3,9 @@ import pandas as pd
 import torch
 from transformers import AutoModel
 
-import gpn.model
+from gpn import register_auto_classes
+
+register_auto_classes("gpn")
 
 
 class ModelCenterEmbedding(torch.nn.Module):
