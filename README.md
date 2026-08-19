@@ -15,10 +15,22 @@ Code and resources for genomic language models [GPN](https://doi.org/10.1073/pna
 
 ## Installation
 
-Install the alpha release from PyPI:
+Install the alpha release from PyPI for the model APIs:
 
 ```bash
 pip install "gpn==0.9.0a1"
+```
+
+Install the dependencies used by the inference CLIs and examples with:
+
+```bash
+pip install "gpn[inference]==0.9.0a1"
+```
+
+For GPN and GPN-Star training, use the `train` extra:
+
+```bash
+pip install "gpn[train]==0.9.0a1"
 ```
 
 For development, use the locked uv environment:
@@ -50,8 +62,8 @@ register_auto_classes("gpn")
 model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-brassicales")
 ```
 
-* Play with the model: [examples/ss/basic_example.ipynb](examples/ss/basic_example.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/songlab-cal/gpn/blob/main/examples/ss/basic_example.ipynb)
-* Model implementation: [gpn/model.py](gpn/model.py), [gpn/ss](gpn/ss)
+* Play with the model: [examples/ss/basic_example.ipynb](https://github.com/songlab-cal/gpn/blob/main/examples/ss/basic_example.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/songlab-cal/gpn/blob/main/examples/ss/basic_example.ipynb)
+* Model implementation: [gpn/model.py](https://github.com/songlab-cal/gpn/blob/main/gpn/model.py), [gpn/ss](https://github.com/songlab-cal/gpn/tree/main/gpn/ss)
 
 ### Papers
 
@@ -62,7 +74,7 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-brassicales")
 - **Models:**
   - [gpn-brassicales](https://huggingface.co/songlab/gpn-brassicales)
 - **Analysis code:**
-  - [analysis/gpn_arabidopsis](analysis/gpn_arabidopsis)
+  - [analysis/gpn_arabidopsis](https://github.com/songlab-cal/gpn/tree/main/analysis/gpn_arabidopsis)
 - **Additional resources:**
   - [processed-data-arabidopsis](https://huggingface.co/datasets/gonzalobenegas/processed-data-arabidopsis)
 
@@ -75,7 +87,7 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-brassicales")
 - **Benchmark datasets:**
   - [TraitGym](https://huggingface.co/datasets/songlab/TraitGym)
 - **Analysis code:**
-  - [analysis/gpn_animal_promoter](analysis/gpn_animal_promoter)
+  - [analysis/gpn_animal_promoter](https://github.com/songlab-cal/gpn/tree/main/analysis/gpn_animal_promoter)
 - **Additional resources:**
   - [Checkpoints](https://huggingface.co/datasets/songlab/gpn-animal-promoter-checkpoints)
   - [TraitGym Leaderboard](https://huggingface.co/spaces/songlab/TraitGym-leaderboard)
@@ -87,14 +99,14 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-brassicales")
 - **Models:**
   - [gpn-brassicales-gxa-sorghum-v1](https://huggingface.co/songlab/gpn-brassicales-gxa-sorghum-v1) (fine-tuned from gpn-brassicales)
 - **Analysis code:**
-  - [analysis/gpn_sorghum_expression](analysis/gpn_sorghum_expression)
+  - [analysis/gpn_sorghum_expression](https://github.com/songlab-cal/gpn/tree/main/analysis/gpn_sorghum_expression)
 
 ### Training on your own data
 
 <details>
 <summary><strong>1. Create a dataset</strong></summary>
 
-Use the [Snakemake workflow](workflow/make_dataset) to create a dataset:
+Use the [Snakemake workflow](https://github.com/songlab-cal/gpn/tree/main/workflow/make_dataset) to create a dataset:
 - Can automatically download data from NCBI given a list of accessions, or use your own fasta files
 - Navigate to `workflow/make_dataset/`, configure `config/config.yaml` and `config/assemblies.tsv`, then run:
   ```bash
@@ -174,10 +186,10 @@ register_auto_classes("gpn")
 model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-msa-sapiens")
 ```
 
-* Play with the model: [examples/msa/basic_example.ipynb](examples/msa/basic_example.ipynb)
-* Variant effect prediction: [examples/msa/vep.ipynb](examples/msa/vep.ipynb)
-* Training (human): [examples/msa/training.ipynb](examples/msa/training.ipynb)
-* Model implementation: [gpn/model.py](gpn/model.py), [gpn/msa](gpn/msa)
+* Play with the model: [examples/msa/basic_example.ipynb](https://github.com/songlab-cal/gpn/blob/main/examples/msa/basic_example.ipynb)
+* Variant effect prediction: [examples/msa/vep.ipynb](https://github.com/songlab-cal/gpn/blob/main/examples/msa/vep.ipynb)
+* Training (human): [examples/msa/training.ipynb](https://github.com/songlab-cal/gpn/blob/main/examples/msa/training.ipynb)
+* Model implementation: [gpn/model.py](https://github.com/songlab-cal/gpn/blob/main/gpn/model.py), [gpn/msa](https://github.com/songlab-cal/gpn/tree/main/gpn/msa)
 
 ### Papers
 
@@ -195,7 +207,7 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-msa-sapiens")
   - [OMIM](https://huggingface.co/datasets/songlab/omim) - Regulatory variants implicated in Mendelian disorders
   - [gnomAD](https://huggingface.co/datasets/songlab/gnomad) - Genome-wide variants with allele frequency information
 - **Analysis code:**
-  - [analysis/gpn-msa_human](analysis/gpn-msa_human)
+  - [analysis/gpn-msa_human](https://github.com/songlab-cal/gpn/tree/main/analysis/gpn-msa_human)
 - **Additional resources:**
   - [hg38 genome-wide scores](https://huggingface.co/datasets/songlab/gpn-msa-hg38-scores)
   - [Gene essentiality predictions](https://huggingface.co/datasets/songlab/gpn-msa-hg38-gene-essentiality-scores)
@@ -215,8 +227,8 @@ from transformers import AutoModel
 model = AutoModel.from_pretrained("songlab/PhyloGPN", trust_remote_code=True)
 ```
 
-* Play with the model: [examples/phylogpn/basic_example.ipynb](examples/phylogpn/basic_example.ipynb)
-* Model implementation: [gpn/phylogpn.py](gpn/phylogpn.py)
+* Play with the model: [examples/phylogpn/basic_example.ipynb](https://github.com/songlab-cal/gpn/blob/main/examples/phylogpn/basic_example.ipynb)
+* Model implementation: [gpn/phylogpn.py](https://github.com/songlab-cal/gpn/blob/main/gpn/phylogpn.py)
 
 ### Papers
 
@@ -238,8 +250,8 @@ register_auto_classes("star")
 model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-star-hg38-p243-200m")
 ```
 
-* Play with the model: [examples/star/demo.ipynb](examples/star/demo.ipynb)
-* Model implementation: [gpn/model.py](gpn/model.py), [gpn/star](gpn/star)
+* Play with the model: [examples/star/demo.ipynb](https://github.com/songlab-cal/gpn/blob/main/examples/star/demo.ipynb)
+* Model implementation: [gpn/model.py](https://github.com/songlab-cal/gpn/blob/main/gpn/model.py), [gpn/star](https://github.com/songlab-cal/gpn/tree/main/gpn/star)
 
 ### Papers
 
@@ -285,10 +297,10 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-star-hg38-p243-200m")
   - **Arabidopsis thaliana:**
     - [1001gp](https://huggingface.co/datasets/songlab/1001gp) - Population allele frequencies from 1001 Genome Project
 - **Analysis code:**
-  - Model training and main results on variant effect prediction: [analysis/gpn-star/train_and_eval](analysis/gpn-star/train_and_eval)
-  - Complex trait heritability analysis (S-LDSC): [analysis/gpn-star/s-ldsc](analysis/gpn-star/s-ldsc)
-  - Whole-genome alignment processing: [analysis/gpn-star/wga_processing](analysis/gpn-star/wga_processing)
-  - Model interpretation: [analysis/gpn-star/interpretation](analysis/gpn-star/interpretation)
+  - Model training and main results on variant effect prediction: [analysis/gpn-star/train_and_eval](https://github.com/songlab-cal/gpn/tree/main/analysis/gpn-star/train_and_eval)
+  - Complex trait heritability analysis (S-LDSC): [analysis/gpn-star/s-ldsc](https://github.com/songlab-cal/gpn/tree/main/analysis/gpn-star/s-ldsc)
+  - Whole-genome alignment processing: [analysis/gpn-star/wga_processing](https://github.com/songlab-cal/gpn/tree/main/analysis/gpn-star/wga_processing)
+  - Model interpretation: [analysis/gpn-star/interpretation](https://github.com/songlab-cal/gpn/tree/main/analysis/gpn-star/interpretation)
 
 ## Getting help
 

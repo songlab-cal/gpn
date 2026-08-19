@@ -102,6 +102,37 @@ def test_tiny_gpn_model_round_trip(tmp_path: Path):
     torch.testing.assert_close(actual, expected)
 
 
+def test_published_gpn_architectures_construct_and_run_with_auto_classes():
+    register_auto_classes("gpn")
+
+    convnet_config = AutoConfig.for_model(
+        "ConvNet",
+        vocab_size=7,
+        hidden_size=8,
+        n_layers=1,
+        kernel_size=3,
+    )
+    convnet = AutoModelForMaskedLM.from_config(convnet_config).eval()
+    input_ids = torch.tensor([[0, 1, 2, 3, 4, 5, 6, 0]])
+    with torch.no_grad():
+        convnet_logits = convnet(input_ids=input_ids).logits
+    assert convnet_logits.shape == (1, 8, 7)
+
+    roformer_config = AutoConfig.for_model(
+        "GPNRoFormer",
+        vocab_size=6,
+        hidden_size=8,
+        intermediate_size=16,
+        num_attention_heads=2,
+        num_hidden_layers=1,
+        max_position_embeddings=16,
+    )
+    roformer = AutoModelForMaskedLM.from_config(roformer_config).eval()
+    with torch.no_grad():
+        roformer_logits = roformer(input_ids=input_ids[:, :6]).logits
+    assert roformer_logits.shape == (1, 6, 6)
+
+
 def test_unknown_registration_family_is_rejected():
     try:
         register_auto_classes("unknown")  # type: ignore[arg-type]

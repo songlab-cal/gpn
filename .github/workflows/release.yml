@@ -21,6 +21,7 @@ jobs:
       - name: Check out release tag
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Install uv
@@ -30,7 +31,14 @@ jobs:
           enable-cache: false
 
       - name: Verify tag matches package version
-        run: test "v$(uv version --short)" = "${{ github.event.release.tag_name }}"
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: test "v$(uv version --short)" = "${RELEASE_TAG}"
+
+      - name: Verify release commit is on main
+        run: |
+          git fetch origin main --no-tags
+          git merge-base --is-ancestor "${GITHUB_SHA}" origin/main
 
       - name: Build distributions
         run: uv build

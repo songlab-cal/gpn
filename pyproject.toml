@@ -33,6 +33,7 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
+  "huggingface-hub>=0.26",
   "jaxtyping>=0.3.2",
   "networkx>=3.2",
   "numpy>=1.26",
