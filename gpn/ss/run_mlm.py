@@ -27,12 +27,11 @@ import numpy as np
 import os
 import sys
 from dataclasses import dataclass, field
-from itertools import chain
 import torch
-from typing import Any, Callable, Dict, List, NewType, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Union
 
 import datasets
-from datasets import load_dataset, DatasetDict, concatenate_datasets
+from datasets import load_dataset
 
 # import evaluate
 import transformers
@@ -45,7 +44,6 @@ from transformers import (
     DataCollatorForLanguageModeling,
     HfArgumentParser,
     Trainer,
-    TrainingArguments,
     set_seed,
 )
 from transformers.trainer_utils import get_last_checkpoint
@@ -53,8 +51,7 @@ from transformers.utils.versions import require_version
 
 from Bio.Seq import Seq
 from gpn import register_auto_classes
-import numpy as np
-from torch.utils.data import DataLoader, IterableDataset, get_worker_info
+from gpn.training import GPNTrainingArguments, hf_token_kwargs
 
 register_auto_classes("gpn")
 
@@ -296,7 +293,7 @@ def main():
     # We now keep distinct sets of args, for a cleaner separation of concerns.
 
     parser = HfArgumentParser(
-        (ModelArguments, DataTrainingArguments, TrainingArguments)
+        (ModelArguments, DataTrainingArguments, GPNTrainingArguments)
     )
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
         # If we pass only one argument to the script and it's the path to a json file,
@@ -363,11 +360,12 @@ def main():
 
     # Downloading and loading a dataset from the hub.
     # Also works for local dataset
+    auth_kwargs = hf_token_kwargs(model_args.use_auth_token)
     raw_datasets = load_dataset(
         data_args.dataset_name,
         data_args.dataset_config_name,
         cache_dir=model_args.cache_dir,
-        use_auth_token=True if model_args.use_auth_token else None,
+        **auth_kwargs,
         streaming=True,
     )
     print(raw_datasets)
@@ -380,7 +378,7 @@ def main():
     config_kwargs = {
         "cache_dir": model_args.cache_dir,
         "revision": model_args.model_revision,
-        "use_auth_token": True if model_args.use_auth_token else None,
+        **auth_kwargs,
     }
     if model_args.config_name:
         config = AutoConfig.from_pretrained(model_args.config_name, **config_kwargs)
@@ -400,7 +398,7 @@ def main():
         "cache_dir": model_args.cache_dir,
         "use_fast": model_args.use_fast_tokenizer,
         "revision": model_args.model_revision,
-        "use_auth_token": True if model_args.use_auth_token else None,
+        **auth_kwargs,
     }
     if model_args.tokenizer_name:
         tokenizer = AutoTokenizer.from_pretrained(
@@ -423,7 +421,7 @@ def main():
             config=config,
             cache_dir=model_args.cache_dir,
             revision=model_args.model_revision,
-            use_auth_token=True if model_args.use_auth_token else None,
+            **auth_kwargs,
         )
     else:
         logger.info("Training new model from scratch")
@@ -450,11 +448,6 @@ def main():
         res["loss_weight"] = np.ones_like(res["input_ids"], dtype=float)
         res["loss_weight"][np.char.islower([list(x) for x in seq])] = soft_masked_weight
         return res
-
-    soft_masked_weight = {
-        "train": data_args.soft_masked_loss_weight_train,
-        "validation": data_args.soft_masked_loss_weight_evaluation,
-    }
 
     remove_columns = list(list(raw_datasets["train"].take(1))[0].keys())
 
@@ -505,7 +498,7 @@ def main():
         args=training_args,
         train_dataset=train_dataset if training_args.do_train else None,
         eval_dataset=eval_dataset if training_args.do_eval else None,
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
         data_collator=data_collator,
     )
 

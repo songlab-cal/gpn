@@ -28,10 +28,10 @@ import os
 import sys
 from dataclasses import dataclass, field
 import torch
-from typing import Any, Callable, Dict, List, NewType, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import datasets
-from datasets import load_dataset, DatasetDict, concatenate_datasets, disable_caching
+from datasets import disable_caching, load_dataset
 
 # import evaluate
 import transformers
@@ -44,18 +44,19 @@ from transformers import (
     DataCollatorForLanguageModeling,
     HfArgumentParser,
     Trainer,
-    TrainingArguments,
-    is_torch_tpu_available,
     set_seed,
 )
 from transformers.trainer_utils import get_last_checkpoint
-from transformers.utils import check_min_version, send_example_telemetry
 from transformers.utils.versions import require_version
 
 from gpn import register_auto_classes
-from gpn.star.utils import *
 from gpn.star.data import GenomeMSA, Tokenizer
-import numpy as np
+from gpn.star.utils import (
+    find_directory_sum_paths,
+    get_all_species_mask,
+    max_smooth,
+)
+from gpn.training import GPNTrainingArguments, hf_token_kwargs
 
 register_auto_classes("star")
 
@@ -65,7 +66,11 @@ disable_caching()
 class DataCollatorForLanguageModelingSimplified(DataCollatorForLanguageModeling):
     # gbenegas: Simplified to skip padding since we'll assume all sequences have the same length
     def __init__(self, tokenizer, clades, mlm=True, mlm_probability=0.15):
-        super().__init__(tokenizer, mlm, mlm_probability)
+        super().__init__(
+            tokenizer=tokenizer,
+            mlm=mlm,
+            mlm_probability=mlm_probability,
+        )
         self.clades = clades
 
     def torch_call(
@@ -77,9 +82,6 @@ class DataCollatorForLanguageModelingSimplified(DataCollatorForLanguageModeling)
             )
             for key in examples[0].keys()
         }
-
-        # For calculating col-wise MSA dropout rates
-        L = batch["input_ids"].size(-1)
 
         flip_p = batch.pop("flip_p", None)
         if self.mlm:
@@ -170,9 +172,6 @@ class DataCollatorForLanguageModelingSimplified(DataCollatorForLanguageModeling)
 
         return inputs, labels, source_ids
 
-
-# Will error if the minimal version of Transformers is not installed. Remove at your own risks.
-# check_min_version("4.26.0.dev0")
 
 require_version(
     "datasets>=1.8.0",
@@ -292,7 +291,7 @@ def main():
     # We now keep distinct sets of args, for a cleaner separation of concerns.
 
     parser = HfArgumentParser(
-        (ModelArguments, DataTrainingArguments, TrainingArguments)
+        (ModelArguments, DataTrainingArguments, GPNTrainingArguments)
     )
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
         # If we pass only one argument to the script and it's the path to a json file,
@@ -302,10 +301,6 @@ def main():
         )
     else:
         model_args, data_args, training_args = parser.parse_args_into_dataclasses()
-
-    # Sending telemetry. Tracking the example usage helps us better allocate resources to maintain them. The
-    # information sent is the one passed as arguments along with your Python/PyTorch versions.
-    send_example_telemetry("run_mlm", model_args, data_args)
 
     # Setup logging
     logging.basicConfig(
@@ -355,11 +350,12 @@ def main():
 
     # Downloading and loading a dataset from the hub.
     # Also works for local dataset
+    auth_kwargs = hf_token_kwargs(model_args.use_auth_token)
     raw_datasets = load_dataset(
         data_args.dataset_name,
         data_args.dataset_config_name,
         cache_dir=model_args.cache_dir,
-        use_auth_token=True if model_args.use_auth_token else None,
+        **auth_kwargs,
     )
     print(raw_datasets)
 
@@ -371,7 +367,7 @@ def main():
     config_kwargs = {
         "cache_dir": model_args.cache_dir,
         "revision": model_args.model_revision,
-        "use_auth_token": True if model_args.use_auth_token else None,
+        **auth_kwargs,
     }
     if model_args.config_name:
         config = AutoConfig.from_pretrained(model_args.config_name, **config_kwargs)
@@ -397,7 +393,7 @@ def main():
             config=config,
             cache_dir=model_args.cache_dir,
             revision=model_args.model_revision,
-            use_auth_token=True if model_args.use_auth_token else None,
+            **auth_kwargs,
         )
     else:
         logger.info("Training new model from scratch")
