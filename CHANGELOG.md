@@ -13,12 +13,17 @@ Hugging Face model revisions.
 - Explicit AutoClass registration, a stable `gpn` CLI, uv-managed development,
   Ruff, incremental mypy and jaxtyping, offline CI, and built-wheel checks.
 - Sphinx/MyST documentation prepared for Read the Docs.
+- A maintainer release runbook, reviewable GitHub ruleset proposal, external-
+  mutation manifest, and pull-request checklist.
 
 ### Changed
 
 - The maintained package now uses the `src/gpn` layout and explicit dependency
   extras.
 - GPN-MSA is deprecated and supported for inference only.
+- The minimum Transformers version is 5.5, the first release that resolves all
+  known 2026 Transformers code-execution advisories affecting older supported
+  versions.
 
 ### Removed
 

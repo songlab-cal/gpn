@@ -58,6 +58,8 @@ refresh on a login node or download a whole-genome MSA for it.
 - Optional experiment tracking lives in the `tracking` extra.
 - Tests and quality tools belong to the `dev` group; documentation tools belong
   to the `docs` group.
+- Artifact build and inspection tools used by the publishing workflow belong to
+  the `release` group.
 - Paper-specific and exploratory dependencies do not belong in the root
   project.
 
@@ -75,7 +77,7 @@ code. Contributing reusable pieces back to `main` is encouraged but optional.
 
 ## Maintainer releases
 
-Update the package version, merge through review, and publish a GitHub Release
-tagged `v<version>`. The release workflow verifies that the tag matches the
-package version and points to `main`, builds immutable artifacts, and publishes
-to PyPI through trusted publishing. Do not upload distributions manually.
+Follow the [maintainer release runbook](docs/release.md). Releases are built from a
+reviewed commit on `main` and published by a GitHub Release tagged `v<version>`.
+The workflow verifies the version and ancestry, builds with locked tools, and uses
+PyPI Trusted Publishing with attestations. Do not upload distributions manually.

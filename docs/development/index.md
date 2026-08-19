@@ -20,6 +20,10 @@ and [`AGENTS.md`](https://github.com/songlab-cal/gpn/blob/main/AGENTS.md) for
 dependency placement, scientific-fixture approval, jaxtyping conventions, and the
 off-main research lifecycle.
 
+The `release` dependency group is intentionally separate from ordinary
+development and documentation. It contains only the locked build and distribution
+inspection tools used by the release workflow; see the [release runbook](release.md).
+
 ## Documentation policy
 
 - Markdown under `docs/` is the conceptual source; docstrings feed only the curated

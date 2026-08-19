@@ -1,0 +1,219 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/songlab-cal/gpn/raw/main/release/external-mutations.schema.json",
+  "title": "GPN external mutation ledger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema_version",
+    "recorded_at",
+    "repository",
+    "applied",
+    "pending"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "recorded_at": {
+      "type": "string",
+      "format": "date"
+    },
+    "repository": {
+      "const": "songlab-cal/gpn"
+    },
+    "applied": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/appliedAction"
+      }
+    },
+    "pending": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/pendingAction"
+      }
+    }
+  },
+  "$defs": {
+    "system": {
+      "enum": [
+        "github",
+        "huggingface",
+        "pypi",
+        "readthedocs"
+      ]
+    },
+    "nonEmptyStrings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "appliedAction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "system",
+        "operation",
+        "targets",
+        "evidence"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "system": {
+          "$ref": "#/$defs/system"
+        },
+        "operation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "targets": {
+          "$ref": "#/$defs/nonEmptyStrings"
+        },
+        "evidence": {
+          "$ref": "#/$defs/nonEmptyStrings"
+        }
+      }
+    },
+    "pendingAction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "system",
+        "authorization",
+        "disposition",
+        "operation",
+        "targets",
+        "preconditions",
+        "verification",
+        "failure_response"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "system": {
+          "$ref": "#/$defs/system"
+        },
+        "authorization": {
+          "enum": [
+            "explicit_final_maintainer_approval",
+            "separate_future_maintainer_approval"
+          ]
+        },
+        "disposition": {
+          "enum": [
+            "approval_ready",
+            "deferred"
+          ]
+        },
+        "operation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "targets": {
+          "$ref": "#/$defs/nonEmptyStrings"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "blocked_by": {
+          "$ref": "#/$defs/nonEmptyStrings"
+        },
+        "depends_on": {
+          "$ref": "#/$defs/nonEmptyStrings"
+        },
+        "payloads": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/targetPayload"
+          }
+        },
+        "preconditions": {
+          "$ref": "#/$defs/nonEmptyStrings"
+        },
+        "verification": {
+          "$ref": "#/$defs/nonEmptyStrings"
+        },
+        "failure_response": {
+          "$ref": "#/$defs/nonEmptyStrings"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "disposition": {
+                "const": "approval_ready"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "authorization": {
+                "const": "explicit_final_maintainer_approval"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "disposition": {
+                "const": "deferred"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "blocked_by"
+            ],
+            "properties": {
+              "authorization": {
+                "const": "separate_future_maintainer_approval"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "targetPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target",
+        "source",
+        "current_head"
+      ],
+      "properties": {
+        "target": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "current_head": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        }
+      }
+    }
+  }
+}

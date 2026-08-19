@@ -70,9 +70,9 @@ for constructs that still require it. Add `from __future__ import
 annotations` only when forward references, import cycles, or deliberate runtime
 annotation behavior make it necessary.
 
-Place dependencies in base runtime, a feature extra, `dev`, or `docs` according
-to their actual consumers. Research-only dependencies never belong in the root
-project.
+Place dependencies in base runtime, a feature extra, `dev`, `docs`, or `release`
+according to their actual consumers. Research-only dependencies never belong in
+the root project.
 
 Keep the three canonical model demos and the lightweight GPN-Star precomputed-score
 workflow under `colabs/`. Documentation renders them without execution. Do not add
@@ -92,6 +92,8 @@ optional; duplicated non-core analysis code is acceptable.
 
 ## Protected operations
 
-Releases, tags, PyPI publication, model-card writes, and merges require explicit
-maintainer authorization. More specific `AGENTS.md` files may refine guidance
-for a subtree without expanding maintained scope.
+Releases, tags, merges, repository rules/security settings, documentation
+deployment, PyPI publication, and Hugging Face writes require explicit maintainer
+authorization. Keep proposed external actions in `release/external-mutations.json`.
+More specific `AGENTS.md` files may refine guidance for a subtree without
+expanding maintained scope.

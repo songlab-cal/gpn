@@ -119,20 +119,23 @@ jobs:
           enable-cache: true
 
       - name: Install locked build tools
-        run: uv sync --locked --python 3.13 --group dev
+        run: >-
+          uv sync --locked --python 3.13
+          --only-group release --no-install-project
 
       - name: Build and check distributions
         run: |
-          uv build
-          uv run twine check dist/*
-          uv run check-wheel-contents dist/*.whl
+          uv build --no-build-isolation
+          uv run --no-sync twine check dist/*
+          uv run --no-sync check-wheel-contents dist/*.whl
 
       - name: Rebuild wheel from source distribution
         run: |
           mkdir -p /tmp/gpn-wheel-from-sdist
-          uv build dist/gpn-*.tar.gz --wheel --out-dir /tmp/gpn-wheel-from-sdist
-          uv run twine check /tmp/gpn-wheel-from-sdist/*.whl
-          uv run check-wheel-contents /tmp/gpn-wheel-from-sdist/*.whl
+          uv build --no-build-isolation \
+            dist/gpn-*.tar.gz --wheel --out-dir /tmp/gpn-wheel-from-sdist
+          uv run --no-sync twine check /tmp/gpn-wheel-from-sdist/*.whl
+          uv run --no-sync check-wheel-contents /tmp/gpn-wheel-from-sdist/*.whl
 
       - name: Smoke-test installed wheel outside the checkout
         run: |

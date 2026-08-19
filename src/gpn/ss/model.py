@@ -245,19 +245,28 @@ class GPNPreTrainedModel(PreTrainedModel):
         if isinstance(module, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
-            if module.bias is not None:
+            if not getattr(module.weight, "_is_hf_initialized", False):
+                module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None and not getattr(
+                module.bias, "_is_hf_initialized", False
+            ):
                 module.bias.data.zero_()
         elif isinstance(module, RoFormerSinusoidalPositionalEmbedding):
             pass
         elif isinstance(module, nn.Embedding):
-            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
-            if module.padding_idx is not None:
+            if not getattr(module.weight, "_is_hf_initialized", False):
+                module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            if module.padding_idx is not None and not getattr(
+                module.weight, "_is_hf_initialized", False
+            ):
                 module.weight.data[module.padding_idx].zero_()
         elif isinstance(module, nn.LayerNorm):
-            if module.bias is not None:
+            if module.bias is not None and not getattr(
+                module.bias, "_is_hf_initialized", False
+            ):
                 module.bias.data.zero_()
-            module.weight.data.fill_(1.0)
+            if not getattr(module.weight, "_is_hf_initialized", False):
+                module.weight.data.fill_(1.0)
 
     def _set_gradient_checkpointing(self, module, value=False):
         if isinstance(module, RoFormerEncoder):
