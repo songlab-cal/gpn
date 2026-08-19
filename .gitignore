@@ -1,5 +1,4 @@
 .julia
-analysis/arabidopsis/bedGraphToBigWig
 *.pdf
 *.vcf.gz
 *.vcf

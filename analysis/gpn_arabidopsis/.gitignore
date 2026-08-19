@@ -1,6 +1,0 @@
-output
-.snakemake
-wandb
-.ipynb_checkpoints
-.julia
-__pycache__
