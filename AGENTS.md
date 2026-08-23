@@ -50,6 +50,11 @@ Register Hugging Face Auto classes through the explicit
 `gpn.register_auto_classes()` API. Do not rely on imports for side effects and do
 not add a custom model-loading abstraction.
 
+Use Python 3.11+ syntax such as `list[str]` and `X | None`; import from `typing`
+only for constructs that still require it. Add `from __future__ import
+annotations` only when forward references, import cycles, or deliberate runtime
+annotation behavior make it necessary.
+
 Place dependencies in base runtime, a feature extra, `dev`, or `docs` according
 to their actual consumers. Research-only dependencies never belong in the root
 project.
