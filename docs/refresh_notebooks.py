@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import json
 import os
 import re
 from pathlib import Path
@@ -23,6 +24,69 @@ _EXPECTED_STDERR = re.compile(
     r".*can be ignored when loading from different task/architecture",
     flags=re.DOTALL,
 )
+_PROVENANCE_CELL_ID = "gpn-refresh-provenance"
+_PROVENANCE_PREFIX = "__GPN_REFRESH_PROVENANCE__="
+
+
+def _provenance_cell() -> nbformat.NotebookNode:
+    """Create a temporary cell that observes the executing kernel."""
+
+    source = f'''\
+import json as _gpn_json
+import platform as _gpn_platform
+from datetime import date as _gpn_date
+from importlib.metadata import version as _gpn_version
+
+_gpn_model = globals().get("model_for_mlm", globals().get("model"))
+if _gpn_model is None:
+    raise RuntimeError("Quick start did not define model_for_mlm or model")
+_gpn_parameter = next(_gpn_model.parameters())
+print(
+    "{_PROVENANCE_PREFIX}"
+    + _gpn_json.dumps(
+        {{
+            "last_scientific_validation": _gpn_date.today().isoformat(),
+            "output_environment": {{
+                "device": str(_gpn_parameter.device),
+                "dtype": str(_gpn_parameter.dtype),
+                "gpn": _gpn_version("gpn"),
+                "python": _gpn_platform.python_version(),
+                "torch": _gpn_version("torch"),
+                "transformers": _gpn_version("transformers"),
+            }},
+        }},
+        sort_keys=True,
+    )
+)
+'''
+    return nbformat.v4.new_code_cell(source=source, id=_PROVENANCE_CELL_ID)
+
+
+def _consume_provenance(notebook: nbformat.NotebookNode) -> dict[str, object]:
+    """Remove the temporary cell and parse its kernel-generated payload."""
+
+    cell = notebook.cells.pop()
+    if cell.get("id") != _PROVENANCE_CELL_ID:
+        raise RuntimeError("Notebook refresh provenance cell was not executed last")
+
+    for output in cell.get("outputs", []):
+        if output.get("output_type") != "stream" or output.get("name") != "stdout":
+            continue
+        text = "".join(output.get("text", ""))
+        for line in text.splitlines():
+            if line.startswith(_PROVENANCE_PREFIX):
+                return dict(json.loads(line.removeprefix(_PROVENANCE_PREFIX)))
+    raise RuntimeError("Executing kernel did not emit notebook provenance")
+
+
+def _update_provenance(
+    notebook: nbformat.NotebookNode, provenance: dict[str, object]
+) -> None:
+    gpn_metadata = notebook.metadata.setdefault("gpn", {})
+    gpn_metadata["last_scientific_validation"] = provenance[
+        "last_scientific_validation"
+    ]
+    gpn_metadata["output_environment"] = provenance["output_environment"]
 
 
 def _parse_args() -> argparse.Namespace:
@@ -68,6 +132,7 @@ def _execute(path: Path) -> nbformat.NotebookNode:
         ):
             ast.parse(cell.source, filename=f"{path}:{cell.get('id', 'cell')}")
 
+    notebook.cells.append(_provenance_cell())
     client = NotebookClient(
         notebook,
         timeout=30 * 60,
@@ -75,6 +140,7 @@ def _execute(path: Path) -> nbformat.NotebookNode:
         resources={"metadata": {"path": str(REPOSITORY_ROOT / "tests" / "fixtures")}},
     )
     executed = client.execute()
+    _update_provenance(executed, _consume_provenance(executed))
     for cell in executed.cells:
         cell.metadata.pop("execution", None)
         stderr = [
