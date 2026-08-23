@@ -9,7 +9,7 @@ import pytest
 import torch
 from transformers import HfArgumentParser
 
-from gpn.model import GPNConfig, GPNForMaskedLM
+from gpn.ss.model import GPNConfig, GPNForMaskedLM
 from gpn.ss.run_mlm import (
     DataTrainingArguments as GPNDataTrainingArguments,
 )
