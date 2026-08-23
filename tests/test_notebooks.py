@@ -6,6 +6,7 @@ import re
 from datetime import date
 from pathlib import Path
 
+import nbformat
 import pytest
 
 ROOT = Path(__file__).parents[1]
@@ -244,3 +245,52 @@ def test_sphinx_notebook_copy_is_deterministic(tmp_path, monkeypatch):
 
     for name in NOTEBOOKS:
         assert (tmp_path / name).read_bytes() == (COLABS / name).read_bytes()
+
+
+def test_refresh_consumes_kernel_provenance_without_committing_helper_cell(
+    monkeypatch,
+):
+    monkeypatch.syspath_prepend(ROOT)
+    spec = importlib.util.spec_from_file_location(
+        "gpn_refresh_notebooks", ROOT / "docs" / "refresh_notebooks.py"
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    refresh_notebooks = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(refresh_notebooks)
+
+    notebook = nbformat.v4.new_notebook(
+        cells=[
+            nbformat.v4.new_markdown_cell("Quick start"),
+            refresh_notebooks._provenance_cell(),
+        ],
+        metadata={"gpn": {}},
+    )
+    payload = {
+        "last_scientific_validation": "2026-08-23",
+        "output_environment": {
+            "device": "cuda:0",
+            "dtype": "torch.float32",
+            "gpn": "0.9.0",
+            "python": "3.13.2",
+            "torch": "2.13.0+cu130",
+            "transformers": "5.15.0",
+        },
+    }
+    notebook.cells[-1]["outputs"] = [
+        nbformat.v4.new_output(
+            output_type="stream",
+            name="stdout",
+            text=(
+                refresh_notebooks._PROVENANCE_PREFIX
+                + json.dumps(payload, sort_keys=True)
+                + "\n"
+            ),
+        )
+    ]
+
+    observed = refresh_notebooks._consume_provenance(notebook)
+    refresh_notebooks._update_provenance(notebook, observed)
+
+    assert [cell["cell_type"] for cell in notebook.cells] == ["markdown"]
+    assert notebook.metadata["gpn"] == payload
