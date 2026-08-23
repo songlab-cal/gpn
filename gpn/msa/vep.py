@@ -6,7 +6,7 @@ from transformers import AutoModelForMaskedLM
 from gpn import register_auto_classes
 from gpn.data import Tokenizer, ReverseComplementer
 
-register_auto_classes("gpn")
+register_auto_classes("msa")
 
 
 class MLMforVEPModel(torch.nn.Module):

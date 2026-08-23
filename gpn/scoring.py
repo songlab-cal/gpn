@@ -1,7 +1,5 @@
 """Small, model-agnostic helpers for nucleotide likelihood scores."""
 
-from __future__ import annotations
-
 import operator
 
 import torch

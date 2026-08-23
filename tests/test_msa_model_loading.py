@@ -2,11 +2,11 @@ from pathlib import Path
 
 import torch
 
-from gpn.legacy import GPNRoFormerConfig, GPNRoFormerForMaskedLM
+from gpn.msa.model import GPNMSAConfig, GPNMSAForMaskedLM
 
 
-def tiny_config() -> GPNRoFormerConfig:
-    return GPNRoFormerConfig(
+def tiny_config() -> GPNMSAConfig:
+    return GPNMSAConfig(
         vocab_size=6,
         hidden_size=16,
         embedding_size=16,
@@ -18,9 +18,9 @@ def tiny_config() -> GPNRoFormerConfig:
     )
 
 
-def test_gpn_roformer_ties_only_the_decoder_bias():
+def test_gpn_msa_ties_only_the_decoder_bias():
     config = tiny_config()
-    model = GPNRoFormerForMaskedLM(config)
+    model = GPNMSAForMaskedLM(config)
     predictions = model.cls.predictions
 
     assert model._tied_weights_keys == {
@@ -34,7 +34,7 @@ def test_published_style_checkpoint_restores_decoder_bias(tmp_path: Path):
     """Exercise the Transformers 5 alias-aware checkpoint loading path."""
 
     config = tiny_config()
-    model = GPNRoFormerForMaskedLM(config)
+    model = GPNMSAForMaskedLM(config)
     learned_bias = torch.tensor([-0.05, 0.01, 0.02, 0.03, 0.04, -0.06])
     state_dict = model.state_dict()
     state_dict["cls.predictions.bias"] = learned_bias
@@ -44,7 +44,7 @@ def test_published_style_checkpoint_restores_decoder_bias(tmp_path: Path):
     config.save_pretrained(tmp_path)
     torch.save(state_dict, tmp_path / "pytorch_model.bin")
 
-    restored = GPNRoFormerForMaskedLM.from_pretrained(
+    restored = GPNMSAForMaskedLM.from_pretrained(
         tmp_path,
         use_safetensors=False,
     )

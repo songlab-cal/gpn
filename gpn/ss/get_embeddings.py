@@ -13,7 +13,7 @@ from transformers import AutoTokenizer, AutoModel, Trainer, TrainingArguments
 from gpn import register_auto_classes
 from gpn.data import Genome, load_dataset_from_file_or_dir
 
-register_auto_classes("gpn")
+register_auto_classes("ss")
 
 
 class ModelCenterEmbedding(torch.nn.Module):

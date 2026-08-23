@@ -7,7 +7,7 @@ from transformers import AutoModel
 from gpn import register_auto_classes
 from gpn.data import Tokenizer, ReverseComplementer
 
-register_auto_classes("gpn")
+register_auto_classes("msa")
 
 
 class VEPEuclideanDist(torch.nn.Module):

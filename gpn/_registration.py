@@ -1,13 +1,11 @@
 """Explicit registration of GPN model families with Transformers AutoClasses."""
 
-from __future__ import annotations
-
 from threading import Lock
 from typing import Literal
 
-ModelFamily = Literal["gpn", "phylogpn", "star"]
+ModelFamily = Literal["ss", "msa", "star", "phylo"]
 
-_FAMILIES: tuple[ModelFamily, ...] = ("gpn", "phylogpn", "star")
+_FAMILIES: tuple[ModelFamily, ...] = ("ss", "msa", "star", "phylo")
 _registered_families: set[ModelFamily] = set()
 _registration_lock = Lock()
 
@@ -35,16 +33,18 @@ def register_auto_classes(*families: ModelFamily) -> None:
         for family in requested:
             if family in _registered_families:
                 continue
-            if family == "gpn":
-                _register_gpn()
-            elif family == "phylogpn":
-                _register_phylogpn()
-            else:
+            if family == "ss":
+                _register_ss()
+            elif family == "msa":
+                _register_msa()
+            elif family == "star":
                 _register_star()
+            else:
+                _register_phylo()
             _registered_families.add(family)
 
 
-def _register_gpn() -> None:
+def _register_ss() -> None:
     from transformers import (
         AutoConfig,
         AutoModel,
@@ -53,16 +53,11 @@ def _register_gpn() -> None:
         AutoModelForTokenClassification,
     )
 
-    from .legacy import (
+    from .ss.model import (
         ConvNetConfig,
         ConvNetForMaskedLM,
         ConvNetForSequenceClassification,
         ConvNetModel,
-        GPNRoFormerConfig,
-        GPNRoFormerForMaskedLM,
-        GPNRoFormerModel,
-    )
-    from .model import (
         GPNConfig,
         GPNForMaskedLM,
         GPNForSequenceClassification,
@@ -83,9 +78,18 @@ def _register_gpn() -> None:
         ConvNetConfig, ConvNetForSequenceClassification
     )
 
-    AutoConfig.register("GPNRoFormer", GPNRoFormerConfig)
-    AutoModel.register(GPNRoFormerConfig, GPNRoFormerModel)
-    AutoModelForMaskedLM.register(GPNRoFormerConfig, GPNRoFormerForMaskedLM)
+
+
+def _register_msa() -> None:
+    from transformers import AutoConfig, AutoModel, AutoModelForMaskedLM
+
+    from .msa.model import GPNMSAConfig, GPNMSAForMaskedLM, GPNMSAModel
+
+    # Keep the published checkpoint identifier even though the Python API uses
+    # the clearer GPN-MSA family name.
+    AutoConfig.register("GPNRoFormer", GPNMSAConfig)
+    AutoModel.register(GPNMSAConfig, GPNMSAModel)
+    AutoModelForMaskedLM.register(GPNMSAConfig, GPNMSAForMaskedLM)
 
 
 def _register_star() -> None:
@@ -98,10 +102,10 @@ def _register_star() -> None:
     AutoModelForMaskedLM.register(GPNStarConfig, GPNStarForMaskedLM)
 
 
-def _register_phylogpn() -> None:
+def _register_phylo() -> None:
     from transformers import AutoConfig, AutoModel, AutoTokenizer
 
-    from .phylogpn import PhyloGPNConfig, PhyloGPNModel, PhyloGPNTokenizer
+    from .phylo.model import PhyloGPNConfig, PhyloGPNModel, PhyloGPNTokenizer
 
     AutoConfig.register("phylogpn", PhyloGPNConfig)
     AutoModel.register(PhyloGPNConfig, PhyloGPNModel)

@@ -28,7 +28,7 @@ NUCLEOTIDE_INDICES = [DNA_VOCAB.index(nucleotide) for nucleotide in "ACGT"]
 
 @pytest.fixture(scope="module", autouse=True)
 def register_models() -> None:
-    register_auto_classes("gpn", "phylogpn", "star")
+    register_auto_classes("ss", "msa", "star", "phylo")
 
 
 def load_kwargs(record: dict) -> dict:
