@@ -124,7 +124,7 @@ def test_gpn_vep_loads_installed_model_without_remote_code(
     wrapped = gpn_vep.MLMforVEPModel("songlab/gpn-brassicales")
 
     assert isinstance(wrapped.model, FakeModel)
-    assert registrations == ["gpn"]
+    assert registrations == ["ss"]
     assert loads == [(("songlab/gpn-brassicales",), {})]
 
 
