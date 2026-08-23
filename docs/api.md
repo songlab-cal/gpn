@@ -20,13 +20,13 @@ Transformers AutoClasses after explicit registration.
 ## PhyloGPN classes
 
 ```{eval-rst}
-.. autoclass:: gpn.phylogpn.PhyloGPNConfig
+.. autoclass:: gpn.phylo.model.PhyloGPNConfig
    :members:
 
-.. autoclass:: gpn.phylogpn.PhyloGPNTokenizer
+.. autoclass:: gpn.phylo.model.PhyloGPNTokenizer
    :members: build_inputs_with_special_tokens, get_vocab
 
-.. autoclass:: gpn.phylogpn.PhyloGPNModel
+.. autoclass:: gpn.phylo.model.PhyloGPNModel
    :members: get_embeddings, forward
 ```
 
