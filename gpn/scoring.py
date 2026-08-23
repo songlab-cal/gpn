@@ -35,7 +35,7 @@ def log_likelihood_ratio(
     logits: Float[Tensor, "... nucleotide"],
     reference_index: int,
     alternate_index: int,
-) -> Float[Tensor, ...]:
+) -> Float[Tensor, "..."]:
     """Return the alternate-minus-reference log-likelihood ratio.
 
     The score sign is deliberate: negative values mean the alternate nucleotide is
