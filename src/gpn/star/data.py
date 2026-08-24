@@ -1,14 +1,14 @@
-from Bio import SeqIO
-from Bio.Seq import Seq
-from datasets import load_dataset, Dataset
 import gzip
-from joblib import Parallel, delayed
 import multiprocessing as mp
+
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
-
 import zarr
+from Bio import SeqIO
+from Bio.Seq import Seq
+from datasets import Dataset, load_dataset
+from joblib import Parallel, delayed
+from tqdm import tqdm
 
 
 def load_fasta(path, subset_chroms=None):
@@ -208,7 +208,7 @@ class GenomeMSA(object):
             ]
         try:
             msa_batch = np.array(msa_batch)
-        except:
+        except ValueError:
             print("MSA incomplete in a block")
             B = len(chroms)
             L = ends[0] - starts[0]
@@ -245,7 +245,7 @@ class GenomeMSA(object):
         try:
             msa_batch_fwd = np.array(msa_batch_fwd)
             msa_batch_rev = np.array(msa_batch_rev)
-        except:
+        except ValueError:
             print("MSA incomplete in a block")
             B = len(chroms)
             L = ends[0] - starts[0]

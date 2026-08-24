@@ -4,7 +4,7 @@ import torch
 from transformers import AutoModelForMaskedLM
 
 from gpn import register_auto_classes
-from gpn.data import Tokenizer, ReverseComplementer
+from gpn.data import ReverseComplementer, Tokenizer
 
 register_auto_classes("star")
 

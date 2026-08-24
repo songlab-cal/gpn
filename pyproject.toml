@@ -98,6 +98,21 @@ markers = [
 
 [tool.ruff]
 target-version = "py311"
+line-length = 88
+src = ["src"]
+force-exclude = true
+extend-exclude = ["*.ipynb"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+# Legacy checkpoint classes are intentionally re-exported after their replacements.
+"src/gpn/model.py" = ["E402"]
+# Pyflakes parses jaxtyping's runtime shape strings as forward annotations.
+"src/gpn/phylo/model.py" = ["F722"]
+"src/gpn/scoring.py" = ["F722"]
+"src/gpn/star/train.py" = ["F722"]
 
 [[tool.uv.index]]
 name = "pytorch-cpu"

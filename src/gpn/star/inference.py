@@ -3,12 +3,12 @@ import hashlib
 import importlib.metadata
 import json
 import os
-from pathlib import Path
 import tempfile
+from pathlib import Path
 
-from accelerate.utils import broadcast_object_list
-from datasets import disable_caching, Dataset
 import pandas as pd
+from accelerate.utils import broadcast_object_list
+from datasets import Dataset, disable_caching
 from transformers import Trainer, TrainingArguments
 
 from gpn.star.checkpoint import (
@@ -17,13 +17,12 @@ from gpn.star.checkpoint import (
     CheckpointStore,
     write_dataframe_atomic,
 )
-from gpn.star.data import load_dataset_from_file_or_dir
-from gpn.star.data import GenomeMSA
-from gpn.star.vep import VEPInference
-from gpn.star.logits import LogitsInference
+from gpn.star.data import GenomeMSA, load_dataset_from_file_or_dir
 from gpn.star.embedding import EmbeddingInference
-from gpn.star.vep_embedding import VEPEmbeddingInference
+from gpn.star.logits import LogitsInference
 from gpn.star.utils import find_directory_sum_paths
+from gpn.star.vep import VEPInference
+from gpn.star.vep_embedding import VEPEmbeddingInference
 
 disable_caching()
 
@@ -585,8 +584,7 @@ def _build_parser():
         type=int,
         default=None,
         help=(
-            "Rows per durable checkpoint batch. Enables resumable inference "
-            "when set."
+            "Rows per durable checkpoint batch. Enables resumable inference when set."
         ),
     )
     parser.add_argument(

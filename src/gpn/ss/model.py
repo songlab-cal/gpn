@@ -1,11 +1,14 @@
+from typing import Optional, Tuple, Union
+
 import torch
-from torch import Tensor
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn import CrossEntropyLoss, MSELoss, BCEWithLogitsLoss
+from torch import Tensor
+from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from transformers import (
     PretrainedConfig,
     PreTrainedModel,
+    RoFormerConfig,
 )
 from transformers.activations import ACT2FN
 from transformers.modeling_outputs import (
@@ -14,17 +17,14 @@ from transformers.modeling_outputs import (
     SequenceClassifierOutput,
     TokenClassifierOutput,
 )
-from typing import Optional, Tuple, Union
-
-from ..embeddings import OneHotAuxEmbedding
-from ..losses import masked_lm_loss
-from .modules import ByteNetEncoder, ConvNetEncoder, MLP, CNN
-from transformers import RoFormerConfig
 from transformers.models.roformer.modeling_roformer import (
     RoFormerEncoder,
     RoFormerSinusoidalPositionalEmbedding,
 )
 
+from ..embeddings import OneHotAuxEmbedding
+from ..losses import masked_lm_loss
+from .modules import CNN, MLP, ByteNetEncoder, ConvNetEncoder
 
 ENCODER_CLASS = {
     "bytenet": ByteNetEncoder,

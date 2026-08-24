@@ -1,9 +1,10 @@
+import os
+
 import numpy as np
 import pandas as pd
-from numpy.lib.stride_tricks import sliding_window_view
 import torch
 import torch.nn.functional as F
-import os
+from numpy.lib.stride_tricks import sliding_window_view
 
 
 def max_smooth(arr, window_size):

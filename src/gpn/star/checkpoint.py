@@ -8,20 +8,19 @@ filesystem-mutating methods on :class:`CheckpointStore`.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from functools import cached_property
 import hashlib
 import json
 import os
-from pathlib import Path
 import stat
 import tempfile
+from dataclasses import dataclass
+from functools import cached_property
+from pathlib import Path
 from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
-
 
 CHECKPOINT_FORMAT_VERSION = 1
 MANIFEST_FILENAME = "manifest.json"

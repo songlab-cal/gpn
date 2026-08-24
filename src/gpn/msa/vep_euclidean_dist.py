@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from transformers import AutoModel
 
 from gpn import register_auto_classes
-from gpn.data import Tokenizer, ReverseComplementer
+from gpn.data import ReverseComplementer, Tokenizer
 
 register_auto_classes("msa")
 

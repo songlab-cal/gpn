@@ -1,18 +1,16 @@
 import argparse
-from Bio import SeqIO, bgzf
-from Bio.Seq import Seq
-from datasets import load_dataset
-import gzip
-import numpy as np
 import os
-import pandas as pd
 import tempfile
+
+import numpy as np
+import pandas as pd
 import torch
 import torch.nn.functional as F
-from transformers import AutoTokenizer, AutoModelForMaskedLM, Trainer, TrainingArguments
+from Bio.Seq import Seq
+from transformers import AutoModelForMaskedLM, AutoTokenizer, Trainer, TrainingArguments
 
 from gpn import register_auto_classes
-from gpn.data import Genome, load_dataset_from_file_or_dir, token_input_id
+from gpn.data import Genome, load_dataset_from_file_or_dir
 
 register_auto_classes("ss")
 

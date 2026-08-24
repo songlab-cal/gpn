@@ -15,9 +15,7 @@ class OneHotAuxEmbedding(nn.Module):
 
     def forward(self, input_ids=None, input_probs=None, aux_features=None):
         if input_ids is not None:
-            result = F.one_hot(
-                input_ids, num_classes=self.config.hidden_size
-            ).float()
+            result = F.one_hot(input_ids, num_classes=self.config.hidden_size).float()
         elif input_probs is not None:
             result = F.pad(
                 input_probs, (0, self.config.hidden_size - self.config.vocab_size)
