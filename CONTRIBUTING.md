@@ -10,7 +10,7 @@ inference only. Dataset-building workflows are not maintained.
 
 ## Local setup
 
-Install Python 3.11 or newer and [uv](https://docs.astral.sh/uv/), then run:
+Install Python 3.13 and [uv](https://docs.astral.sh/uv/), then run:
 
 ```bash
 uv sync --extra train --group dev
