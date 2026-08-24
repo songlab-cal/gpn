@@ -38,15 +38,30 @@ gpn ss train recipes/gpn_training/cpu-smoke.yaml
 Score variants whose `pos` column uses one-based VCF coordinates:
 
 ```bash
-gpn ss vep variants.parquet genome.fa.gz 512 songlab/gpn-brassicales scores.parquet \
-  --is-file --per-device-eval-batch-size 64
+gpn ss vep \
+  --input-path variants.parquet \
+  --genome-path genome.fa.gz \
+  --window-size 512 \
+  --model-path songlab/gpn-brassicales \
+  --output-path scores.parquet \
+  --per-device-eval-batch-size 64
 ```
 
 The same family group exposes masked-nucleotide logits and sequence embeddings:
 
 ```bash
-gpn ss logits POSITIONS_PATH GENOME_PATH WINDOW_SIZE MODEL_PATH OUTPUT_PATH
-gpn ss embedding WINDOWS_PATH GENOME_PATH CENTER_WINDOW_SIZE MODEL_PATH OUTPUT_PATH
+gpn ss logits \
+  --input-path POSITIONS_PATH \
+  --genome-path GENOME_PATH \
+  --window-size WINDOW_SIZE \
+  --model-path MODEL_PATH \
+  --output-path OUTPUT_PATH
+gpn ss embedding \
+  --input-path WINDOWS_PATH \
+  --genome-path GENOME_PATH \
+  --center-window-size CENTER_WINDOW_SIZE \
+  --model-path MODEL_PATH \
+  --output-path OUTPUT_PATH
 ```
 
 Embedding averages exactly `CENTER_WINDOW_SIZE` positions, for both odd and even
@@ -67,16 +82,31 @@ GPN-MSA is deprecated and supports inference only. Its public commands cover
 variant scoring, masked-nucleotide logits, and embeddings:
 
 ```bash
-gpn msa vep INPUT_PATH LOCAL_MSA_PATH WINDOW_SIZE MODEL_PATH OUTPUT_PATH
-gpn msa logits INPUT_PATH LOCAL_MSA_PATH WINDOW_SIZE MODEL_PATH OUTPUT_PATH
-gpn msa embedding INPUT_PATH LOCAL_MSA_PATH WINDOW_SIZE MODEL_PATH OUTPUT_PATH
+gpn msa vep \
+  --input-path INPUT_PATH \
+  --msa-path LOCAL_MSA_PATH \
+  --window-size WINDOW_SIZE \
+  --model-path MODEL_PATH \
+  --output-path OUTPUT_PATH
+gpn msa logits \
+  --input-path INPUT_PATH \
+  --msa-path LOCAL_MSA_PATH \
+  --window-size WINDOW_SIZE \
+  --model-path MODEL_PATH \
+  --output-path OUTPUT_PATH
+gpn msa embedding \
+  --input-path INPUT_PATH \
+  --msa-path LOCAL_MSA_PATH \
+  --window-size WINDOW_SIZE \
+  --model-path MODEL_PATH \
+  --output-path OUTPUT_PATH
 ```
 
 `LOCAL_MSA_PATH` must point directly to an existing GPN-MSA Zarr store. Its target
 genome, species count, species order, and preprocessing must match the selected
-checkpoint. The CLI never downloads a whole-genome alignment. Use `--is-file` for
-Parquet, CSV/TSV, or VCF input; otherwise `INPUT_PATH` is passed to Hugging Face
-Datasets.
+checkpoint. The CLI never downloads a whole-genome alignment. Parquet, CSV/TSV,
+VCF, GTF, and GFF inputs are detected from existing local paths; otherwise
+`INPUT_PATH` is passed to Hugging Face Datasets as a dataset identifier.
 
 VEP and logits use one-based `pos` coordinates and require an even `WINDOW_SIZE`.
 Embedding inputs instead use zero-based, half-open `start` and `end` coordinates.
@@ -96,9 +126,24 @@ gpn star train recipes/gpn_star_training/cpu-smoke.yaml
 The three core inference operations share this shape:
 
 ```bash
-gpn star vep INPUT_PATH LOCAL_MSA_PATH WINDOW_SIZE MODEL_PATH OUTPUT_PATH
-gpn star logits INPUT_PATH LOCAL_MSA_PATH WINDOW_SIZE MODEL_PATH OUTPUT_PATH
-gpn star embedding INPUT_PATH LOCAL_MSA_PATH WINDOW_SIZE MODEL_PATH OUTPUT_PATH
+gpn star vep \
+  --input-path INPUT_PATH \
+  --msa-path LOCAL_MSA_PATH \
+  --window-size WINDOW_SIZE \
+  --model-path MODEL_PATH \
+  --output-path OUTPUT_PATH
+gpn star logits \
+  --input-path INPUT_PATH \
+  --msa-path LOCAL_MSA_PATH \
+  --window-size WINDOW_SIZE \
+  --model-path MODEL_PATH \
+  --output-path OUTPUT_PATH
+gpn star embedding \
+  --input-path INPUT_PATH \
+  --msa-path LOCAL_MSA_PATH \
+  --window-size WINDOW_SIZE \
+  --model-path MODEL_PATH \
+  --output-path OUTPUT_PATH
 ```
 
 All three inference families support the same durable, process-count-independent
@@ -139,7 +184,27 @@ produced exactly one output row per input row. `OUTPUT_PATH` is always the
 scientific Parquet result; Transformers' `--output-dir` is only Trainer working
 state and defaults to a temporary directory when omitted.
 
-For distributed training, launch the public module entry point:
+For multi-GPU inference, launch that same CLI through `torchrun`. Every process
+participates in prediction, while rank zero alone commits checkpoint batches and
+the final Parquet output:
+
+```bash
+torchrun --standalone --nproc-per-node=4 --module gpn.cli \
+  ss vep \
+  --input-path variants.parquet \
+  --genome-path genome.fa.gz \
+  --window-size 512 \
+  --model-path songlab/gpn-brassicales \
+  --output-path scores.parquet \
+  --per-device-eval-batch-size 64 \
+  --bf16-full-eval
+```
+
+`--per-device-eval-batch-size` is per process, so multiply it by the number of
+processes for the nominal global batch size. Durable checkpoints use the same
+process-count-independent row ranges in single- and multi-GPU runs.
+
+Distributed training uses the public module entry point as well:
 
 ```bash
 torchrun --standalone --nproc-per-node=4 --module gpn.cli \

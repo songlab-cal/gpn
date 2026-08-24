@@ -132,10 +132,21 @@ Input requires `chrom`, one-based `pos`, and distinct uppercase canonical SNV
 
 Example command:
 ```bash
-gpn ss vep variants.parquet genome.fa.gz 512 songlab/gpn-brassicales results.parquet \
-    --per-device-eval-batch-size 64 --is-file --dataloader-num-workers 8 \
-    --bf16-full-eval --torch-compile
+gpn ss vep \
+    --input-path variants.parquet \
+    --genome-path genome.fa.gz \
+    --window-size 512 \
+    --model-path songlab/gpn-brassicales \
+    --output-path results.parquet \
+    --per-device-eval-batch-size 64 \
+    --dataloader-num-workers 8 \
+    --bf16-full-eval \
+    --torch-compile
 ```
+
+Local table inputs are detected automatically. This quick start uses one GPU;
+the [CLI guide](docs/cli.md#devices-and-distributed-execution) also shows
+multi-GPU inference with `torchrun`.
 
 </details>
 

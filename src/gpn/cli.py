@@ -23,6 +23,19 @@ type CheckpointOptions = Annotated[
 ]
 
 _DEFAULT_CHECKPOINT_OPTIONS = CheckpointArguments()
+_LOCAL_TABLE_SUFFIXES = (
+    ".parquet",
+    ".csv",
+    ".csv.gz",
+    ".tsv",
+    ".tsv.gz",
+    ".vcf",
+    ".vcf.gz",
+    ".gtf",
+    ".gtf.gz",
+    ".gff",
+    ".gff.gz",
+)
 
 
 def _version() -> str:
@@ -33,6 +46,15 @@ def _prediction_arguments(
     arguments: TrainingArguments | None,
 ) -> TrainingArguments:
     return arguments if arguments is not None else TrainingArguments()
+
+
+def _input_is_file(input_path: str) -> bool:
+    path = Path(input_path)
+    if path.is_file():
+        return True
+    if input_path.lower().endswith(_LOCAL_TABLE_SUFFIXES):
+        raise ValueError(f"Local input file does not exist: {input_path}")
+    return False
 
 
 app = App(
@@ -68,16 +90,15 @@ def ss_train(profile: Path) -> None:
 
 @ss_app.command(name="vep")
 def ss_vep(
+    *,
     input_path: str,
     genome_path: str,
     window_size: int,
     model_path: str,
     output_path: Path,
-    *,
     tokenizer_path: str | None = None,
     n_prefix: int = 0,
     split: str = "test",
-    is_file: bool = False,
     checkpoint: CheckpointOptions = _DEFAULT_CHECKPOINT_OPTIONS,
     trainer: PredictionArguments | None = None,
 ) -> None:
@@ -108,7 +129,7 @@ def ss_vep(
         tokenizer_path=tokenizer_path,
         n_prefix=n_prefix,
         split=split,
-        is_file=is_file,
+        is_file=_input_is_file(input_path),
         training_arguments=_prediction_arguments(trainer),
         checkpoint_arguments=checkpoint,
     )
@@ -116,16 +137,15 @@ def ss_vep(
 
 @ss_app.command(name="logits")
 def ss_logits(
+    *,
     input_path: str,
     genome_path: str,
     window_size: int,
     model_path: str,
     output_path: Path,
-    *,
     tokenizer_path: str | None = None,
     n_prefix: int = 0,
     split: str = "test",
-    is_file: bool = False,
     checkpoint: CheckpointOptions = _DEFAULT_CHECKPOINT_OPTIONS,
     trainer: PredictionArguments | None = None,
 ) -> None:
@@ -142,7 +162,7 @@ def ss_logits(
         tokenizer_path=tokenizer_path,
         n_prefix=n_prefix,
         split=split,
-        is_file=is_file,
+        is_file=_input_is_file(input_path),
         training_arguments=_prediction_arguments(trainer),
         checkpoint_arguments=checkpoint,
     )
@@ -150,15 +170,14 @@ def ss_logits(
 
 @ss_app.command(name="embedding")
 def ss_embedding(
+    *,
     input_path: str,
     genome_path: str,
     center_window_size: int,
     model_path: str,
     output_path: Path,
-    *,
     tokenizer_path: str | None = None,
     split: str = "test",
-    is_file: bool = False,
     checkpoint: CheckpointOptions = _DEFAULT_CHECKPOINT_OPTIONS,
     trainer: PredictionArguments | None = None,
 ) -> None:
@@ -174,7 +193,7 @@ def ss_embedding(
         output_path,
         tokenizer_path=tokenizer_path,
         split=split,
-        is_file=is_file,
+        is_file=_input_is_file(input_path),
         training_arguments=_prediction_arguments(trainer),
         checkpoint_arguments=checkpoint,
     )
@@ -182,14 +201,13 @@ def ss_embedding(
 
 @msa_app.command(name="vep")
 def msa_vep(
+    *,
     input_path: str,
     msa_path: str,
     window_size: int,
     model_path: str,
     output_path: Path,
-    *,
     split: str = "test",
-    is_file: bool = False,
     checkpoint: CheckpointOptions = _DEFAULT_CHECKPOINT_OPTIONS,
     trainer: PredictionArguments | None = None,
 ) -> None:
@@ -204,7 +222,7 @@ def msa_vep(
         model_path,
         output_path,
         split=split,
-        is_file=is_file,
+        is_file=_input_is_file(input_path),
         training_arguments=_prediction_arguments(trainer),
         checkpoint_arguments=checkpoint,
     )
@@ -212,14 +230,13 @@ def msa_vep(
 
 @msa_app.command(name="logits")
 def msa_logits(
+    *,
     input_path: str,
     msa_path: str,
     window_size: int,
     model_path: str,
     output_path: Path,
-    *,
     split: str = "test",
-    is_file: bool = False,
     checkpoint: CheckpointOptions = _DEFAULT_CHECKPOINT_OPTIONS,
     trainer: PredictionArguments | None = None,
 ) -> None:
@@ -234,7 +251,7 @@ def msa_logits(
         model_path,
         output_path,
         split=split,
-        is_file=is_file,
+        is_file=_input_is_file(input_path),
         training_arguments=_prediction_arguments(trainer),
         checkpoint_arguments=checkpoint,
     )
@@ -242,15 +259,14 @@ def msa_logits(
 
 @msa_app.command(name="embedding")
 def msa_embedding(
+    *,
     input_path: str,
     msa_path: str,
     window_size: int,
     model_path: str,
     output_path: Path,
-    *,
     center_window_size: int = 100,
     split: str = "test",
-    is_file: bool = False,
     checkpoint: CheckpointOptions = _DEFAULT_CHECKPOINT_OPTIONS,
     trainer: PredictionArguments | None = None,
 ) -> None:
@@ -266,7 +282,7 @@ def msa_embedding(
         output_path,
         center_window_size=center_window_size,
         split=split,
-        is_file=is_file,
+        is_file=_input_is_file(input_path),
         training_arguments=_prediction_arguments(trainer),
         checkpoint_arguments=checkpoint,
     )
@@ -283,14 +299,13 @@ def star_train(profile: Path) -> None:
 
 @star_app.command(name="vep")
 def star_vep(
+    *,
     input_path: str,
     msa_path: str,
     window_size: int,
     model_path: str,
     output_path: Path,
-    *,
     split: str = "test",
-    is_file: bool = False,
     checkpoint: CheckpointOptions = _DEFAULT_CHECKPOINT_OPTIONS,
     trainer: PredictionArguments | None = None,
 ) -> None:
@@ -305,7 +320,7 @@ def star_vep(
         model_path,
         output_path,
         split=split,
-        is_file=is_file,
+        is_file=_input_is_file(input_path),
         training_arguments=_prediction_arguments(trainer),
         checkpoint_arguments=checkpoint,
     )
@@ -313,15 +328,14 @@ def star_vep(
 
 @star_app.command(name="logits")
 def star_logits(
+    *,
     input_path: str,
     msa_path: str,
     window_size: int,
     model_path: str,
     output_path: Path,
-    *,
     phylo_dist_path: str | None = None,
     split: str = "test",
-    is_file: bool = False,
     checkpoint: CheckpointOptions = _DEFAULT_CHECKPOINT_OPTIONS,
     trainer: PredictionArguments | None = None,
 ) -> None:
@@ -337,7 +351,7 @@ def star_logits(
         output_path,
         phylo_dist_path=phylo_dist_path,
         split=split,
-        is_file=is_file,
+        is_file=_input_is_file(input_path),
         training_arguments=_prediction_arguments(trainer),
         checkpoint_arguments=checkpoint,
     )
@@ -345,15 +359,14 @@ def star_logits(
 
 @star_app.command(name="embedding")
 def star_embedding(
+    *,
     input_path: str,
     msa_path: str,
     window_size: int,
     model_path: str,
     output_path: Path,
-    *,
     center_window_size: int = 100,
     split: str = "test",
-    is_file: bool = False,
     checkpoint: CheckpointOptions = _DEFAULT_CHECKPOINT_OPTIONS,
     trainer: PredictionArguments | None = None,
 ) -> None:
@@ -369,7 +382,7 @@ def star_embedding(
         output_path,
         center_window_size=center_window_size,
         split=split,
-        is_file=is_file,
+        is_file=_input_is_file(input_path),
         training_arguments=_prediction_arguments(trainer),
         checkpoint_arguments=checkpoint,
     )

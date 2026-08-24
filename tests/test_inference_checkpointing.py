@@ -573,6 +573,25 @@ def test_direct_inference_reuses_main_process_semantics(monkeypatch):
     assert result["score"].tolist() == [2.0, 4.0]
 
 
+def test_direct_inference_worker_does_not_return_predictions(monkeypatch):
+    trainer = FakeTrainer(is_main_process=False, num_processes=2)
+    monkeypatch.setattr(
+        inference_module,
+        "create_inference_runner",
+        lambda *args, **kwargs: InferenceRunner(trainer),
+    )
+
+    result = inference_module.run_inference(
+        FakeDataset([2, 4]),
+        FakeInference(),
+        TrainingArguments(use_cpu=True),
+        output_prefix="test-direct-",
+    )
+
+    assert trainer.calls == [[2, 4]]
+    assert result is None
+
+
 def test_atomic_direct_write_preserves_existing_output_on_failure(
     monkeypatch,
     tmp_path,

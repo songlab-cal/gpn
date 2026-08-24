@@ -66,10 +66,10 @@ def test_msa_training_is_not_a_command(
     ("arguments", "expected_help"),
     (
         (("ss", "train", "--help"), "PROFILE"),
-        (("ss", "vep", "--help"), "INPUT-PATH"),
-        (("ss", "logits", "--help"), "GENOME-PATH"),
-        (("ss", "embedding", "--help"), "CENTER-WINDOW-SIZE"),
-        (("msa", "vep", "--help"), "MSA-PATH"),
+        (("ss", "vep", "--help"), "--input-path"),
+        (("ss", "logits", "--help"), "--genome-path"),
+        (("ss", "embedding", "--help"), "--center-window-size"),
+        (("msa", "vep", "--help"), "--msa-path"),
         (("star", "train", "--help"), "PROFILE"),
         (("star", "vep", "--help"), "--checkpoint-batch-size"),
     ),
@@ -86,6 +86,7 @@ def test_leaf_help_is_generated_from_typed_signatures(
         assert "--bf16-full-eval" in output
         assert "--torch-compile" in output
         assert "--trainer" not in output
+        assert "--is-file" not in output
 
 
 def test_inference_dispatch_builds_flat_transformers_and_checkpoint_arguments(
@@ -102,6 +103,8 @@ def test_inference_dispatch_builds_flat_transformers_and_checkpoint_arguments(
         "gpn.ss.inference",
         SimpleNamespace(vep=fake_vep),
     )
+    input_path = tmp_path / "variants.parquet"
+    input_path.touch()
     output_path = tmp_path / "scores.parquet"
 
     assert (
@@ -109,12 +112,16 @@ def test_inference_dispatch_builds_flat_transformers_and_checkpoint_arguments(
             (
                 "ss",
                 "vep",
-                "variants.parquet",
+                "--input-path",
+                str(input_path),
+                "--genome-path",
                 "genome.fa",
+                "--window-size",
                 "512",
+                "--model-path",
                 "songlab/model",
+                "--output-path",
                 str(output_path),
-                "--is-file",
                 "--per-device-eval-batch-size",
                 "16",
                 "--checkpoint-batch-size",
@@ -128,7 +135,7 @@ def test_inference_dispatch_builds_flat_transformers_and_checkpoint_arguments(
 
     positional, keyword = calls[0]
     assert positional == (
-        "variants.parquet",
+        str(input_path),
         "genome.fa",
         512,
         "songlab/model",
@@ -142,6 +149,16 @@ def test_inference_dispatch_builds_flat_transformers_and_checkpoint_arguments(
     assert keyword["checkpoint_arguments"].checkpoint_revision == "inputs-v1"
 
 
+def test_inference_input_kind_is_inferred_from_the_path(tmp_path: Path) -> None:
+    local_input = tmp_path / "variants.vcf.gz"
+    local_input.touch()
+
+    assert cli._input_is_file(str(local_input)) is True
+    assert cli._input_is_file("songlab/variants") is False
+    with pytest.raises(ValueError, match="Local input file does not exist"):
+        cli._input_is_file(str(tmp_path / "missing.parquet"))
+
+
 def test_invalid_inference_option_combination_has_concise_cli_error(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -149,10 +166,15 @@ def test_invalid_inference_option_combination_has_concise_cli_error(
         (
             "ss",
             "vep",
+            "--input-path",
             "input",
+            "--genome-path",
             "genome",
+            "--window-size",
             "512",
+            "--model-path",
             "model",
+            "--output-path",
             "output",
             "--checkpoint-dir",
             "checkpoints",
