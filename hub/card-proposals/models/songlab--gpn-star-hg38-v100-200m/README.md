@@ -17,7 +17,7 @@ This is the 200M-parameter GPN-Star checkpoint for hg38 with the vertebrate
 supports masked likelihoods, embeddings, and variant-effect prediction. See the
 [preprint](https://doi.org/10.1101/2025.09.21.677619),
 [package documentation](https://github.com/songlab-cal/gpn#readme), and
-[fixture-sized quick start](https://github.com/songlab-cal/gpn/blob/main/colabs/gpn_star_quick_start.ipynb).
+[fixture-sized demo](https://github.com/songlab-cal/gpn/blob/main/colabs/gpn_star_demo.ipynb).
 
 ## Install and load
 

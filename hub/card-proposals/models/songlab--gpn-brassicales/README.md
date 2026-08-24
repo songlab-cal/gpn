@@ -20,7 +20,7 @@ thaliana* and seven other Brassicales genomes. It can produce sequence embedding
 masked-nucleotide logits, and variant scores. See the
 [GPN paper](https://doi.org/10.1073/pnas.2311219120),
 [package documentation](https://github.com/songlab-cal/gpn#readme), and
-[quick start](https://github.com/songlab-cal/gpn/blob/main/colabs/gpn_quick_start.ipynb).
+[demo](https://github.com/songlab-cal/gpn/blob/main/colabs/gpn_demo.ipynb).
 
 ## Install and load
 

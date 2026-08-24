@@ -17,7 +17,7 @@ parameters from DNA sequence using a mammalian phylogeny. Its stationary
 distribution can be used to compare the relative viability of alleles at a locus,
 and its hidden states can be used as sequence embeddings. See the
 [paper](https://doi.org/10.1007/978-3-031-90252-9_7) and
-[quick start](https://github.com/songlab-cal/gpn/blob/main/colabs/phylogpn_quick_start.ipynb).
+[demo](https://github.com/songlab-cal/gpn/blob/main/colabs/phylogpn_demo.ipynb).
 
 ## Preferred installed-package path
 
