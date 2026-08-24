@@ -307,7 +307,14 @@ def test_refresh_provenance_cell_records_loaded_model_identity(monkeypatch, caps
     refresh_notebooks = _load_refresh_notebooks(monkeypatch)
 
     class FakeModel:
-        config = type("Config", (), {"_commit_hash": "0123456789abcdef"})()
+        config = type(
+            "Config",
+            (),
+            {
+                "_commit_hash": "0123456789abcdef",
+                "_name_or_path": "songlab/example-model",
+            },
+        )()
 
         @staticmethod
         def parameters():
@@ -333,7 +340,14 @@ def test_refresh_provenance_cell_rejects_revision_mismatch(monkeypatch):
     refresh_notebooks = _load_refresh_notebooks(monkeypatch)
 
     class FakeModel:
-        config = type("Config", (), {"_commit_hash": "resolved-revision"})()
+        config = type(
+            "Config",
+            (),
+            {
+                "_commit_hash": "resolved-revision",
+                "_name_or_path": "songlab/example-model",
+            },
+        )()
 
         @staticmethod
         def parameters():
@@ -345,6 +359,57 @@ def test_refresh_provenance_cell_rejects_revision_mismatch(monkeypatch):
         "model": FakeModel(),
     }
     with pytest.raises(RuntimeError, match="resolved-revision != requested-revision"):
+        exec(refresh_notebooks._provenance_cell().source, namespace)
+
+
+def test_refresh_provenance_cell_rejects_model_identity_mismatch(monkeypatch):
+    refresh_notebooks = _load_refresh_notebooks(monkeypatch)
+
+    class FakeModel:
+        config = type(
+            "Config",
+            (),
+            {
+                "_commit_hash": "0123456789abcdef",
+                "_name_or_path": "songlab/loaded-model",
+            },
+        )()
+
+        @staticmethod
+        def parameters():
+            return iter(())
+
+    namespace = {
+        "MODEL_ID": "songlab/declared-model",
+        "MODEL_REVISION": "0123456789abcdef",
+        "model": FakeModel(),
+    }
+    with pytest.raises(
+        RuntimeError, match="songlab/loaded-model != songlab/declared-model"
+    ):
+        exec(refresh_notebooks._provenance_cell().source, namespace)
+
+
+def test_refresh_provenance_cell_requires_resolved_revision(monkeypatch):
+    refresh_notebooks = _load_refresh_notebooks(monkeypatch)
+
+    class FakeModel:
+        config = type(
+            "Config",
+            (),
+            {"_commit_hash": None, "_name_or_path": "songlab/example-model"},
+        )()
+
+        @staticmethod
+        def parameters():
+            return iter(())
+
+    namespace = {
+        "MODEL_ID": "songlab/example-model",
+        "MODEL_REVISION": "0123456789abcdef",
+        "model": FakeModel(),
+    }
+    with pytest.raises(RuntimeError, match="resolved commit hash"):
         exec(refresh_notebooks._provenance_cell().source, namespace)
 
 
