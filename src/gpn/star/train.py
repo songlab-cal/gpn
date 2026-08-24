@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -26,7 +27,8 @@ from jaxtyping import Int
 from torch import Tensor
 from transformers import Trainer, set_seed
 
-from gpn.star.data import GenomeMSA, Tokenizer
+from gpn.data import Tokenizer
+from gpn.star.data import GenomeMSA
 from gpn.star.model import GPNStarConfig, GPNStarForMaskedLM
 from gpn.star.utils import find_directory_sum_paths, get_all_species_mask, max_smooth
 from gpn.training import (
@@ -175,9 +177,9 @@ class DataTrainingArguments:
     soft_masked_loss_weight_evaluation: float = field(default=1.0)
 
 
-def main(argv: list[str] | None = None) -> None:
+def main(profile: Path) -> None:
     model_args, data_args, training_args = parse_training_arguments(
-        ModelArguments, DataTrainingArguments, argv
+        ModelArguments, DataTrainingArguments, profile
     )
     configure_training_logging(training_args, logger)
     checkpoint = find_training_checkpoint(training_args)
@@ -293,7 +295,3 @@ def main(argv: list[str] | None = None) -> None:
     )
     train_and_save(trainer, training_args, checkpoint)
     evaluate_and_save(trainer, training_args)
-
-
-if __name__ == "__main__":
-    main()

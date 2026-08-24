@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 import torch
 
-from gpn.star import logits as logits_module
+from gpn.star import inference as inference_module
 from gpn.star import model as model_module
 
 
@@ -269,7 +269,7 @@ def test_direct_model_load_preserves_config_override_semantics(monkeypatch, tmp_
 def test_mlm_for_logits_uses_auto_model_with_phylo_override(monkeypatch):
     calls = {}
 
-    class FakeModel(logits_module.torch.nn.Module):
+    class FakeModel(inference_module.torch.nn.Module):
         def eval(self):
             calls["eval"] = True
             return self
@@ -282,13 +282,13 @@ def test_mlm_for_logits_uses_auto_model_with_phylo_override(monkeypatch):
         return FakeModel()
 
     monkeypatch.setattr(
-        logits_module.AutoModelForMaskedLM,
+        inference_module.AutoModelForMaskedLM,
         "from_pretrained",
         fake_load_model,
     )
-    monkeypatch.setattr(logits_module, "Tokenizer", FakeTokenizer)
+    monkeypatch.setattr(inference_module, "Tokenizer", FakeTokenizer)
 
-    wrapped_model = logits_module.MLMforLogitsModel(
+    wrapped_model = inference_module.MLMforLogitsModel(
         "model",
         phylo_dist_path="override",
     )
@@ -298,9 +298,4 @@ def test_mlm_for_logits_uses_auto_model_with_phylo_override(monkeypatch):
         "eval": True,
     }
     assert isinstance(wrapped_model.model, FakeModel)
-    assert (
-        wrapped_model.id_a,
-        wrapped_model.id_c,
-        wrapped_model.id_g,
-        wrapped_model.id_t,
-    ) == (0, 1, 2, 3)
+    assert wrapped_model.nucleotide_ids == [0, 1, 2, 3]

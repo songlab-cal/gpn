@@ -31,6 +31,7 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
+  "cyclopts>=4.22.5,<5",
   "huggingface-hub>=0.26",
   "jaxtyping>=0.3.2",
   "networkx>=3.2",
@@ -47,21 +48,18 @@ inference = [
   "accelerate>=1",
   "biopython>=1.83",
   "datasets>=3",
-  "joblib>=1.3",
   "pandas>=2.1",
   "pyarrow>=15",
-  "tqdm>=4.66",
   "zarr>=2.17,<4",
 ]
 train = [
   "accelerate>=1",
   "biopython>=1.83",
   "datasets>=3",
-  "joblib>=1.3",
   "pandas>=2.1",
   "pyarrow>=15",
-  "tqdm>=4.66",
   "zarr>=2.17,<4",
+  "pyyaml>=6.0.2",
   "zstandard>=0.22",
 ]
 tracking = ["wandb>=0.18"]
@@ -78,6 +76,7 @@ dev = [
   "pre-commit>=4.2",
   "pytest>=8.3",
   "ruff>=0.16.3",
+  "types-pyyaml>=6.0.12.20250915",
   "twine>=6",
 ]
 
@@ -108,9 +107,17 @@ python_version = "3.13"
 files = [
   "src/gpn/cli.py",
   "src/gpn/_registration.py",
+  "src/gpn/arguments.py",
+  "src/gpn/checkpoint.py",
+  "src/gpn/inference.py",
+  "src/gpn/ss/data.py",
+  "src/gpn/ss/inference.py",
+  "src/gpn/msa/data.py",
+  "src/gpn/msa/inference.py",
+  "src/gpn/star/data.py",
+  "src/gpn/star/inference.py",
   "src/gpn/scoring.py",
   "src/gpn/training.py",
-  "src/gpn/star/checkpoint.py",
 ]
 follow_imports = "skip"
 check_untyped_defs = true
@@ -125,7 +132,13 @@ show_error_codes = true
 pretty = true
 
 [[tool.mypy.overrides]]
-module = ["datasets", "datasets.*", "pandas", "pyarrow", "pyarrow.*"]
+module = [
+  "accelerate.*",
+  "datasets",
+  "pandas",
+  "pyarrow",
+  "pyarrow.*",
+]
 ignore_missing_imports = true
 
 [tool.deptry]

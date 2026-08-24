@@ -133,7 +133,8 @@ Input requires `chrom`, one-based `pos`, and distinct uppercase canonical SNV
 Example command:
 ```bash
 gpn ss vep variants.parquet genome.fa.gz 512 songlab/gpn-brassicales results.parquet \
-    --per-device-batch-size 64 --is-file --dataloader-num-workers 8
+    --per-device-eval-batch-size 64 --is-file --dataloader-num-workers 8 \
+    --bf16-full-eval --torch-compile
 ```
 
 </details>

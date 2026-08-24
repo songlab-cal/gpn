@@ -1,5 +1,3 @@
-from typing import Optional, Tuple, Union
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -344,10 +342,10 @@ class GPNForSequenceClassification(GPNPreTrainedModel):
 
     def forward(
         self,
-        input_ids: Optional[torch.LongTensor] = None,
+        input_ids: torch.LongTensor | None = None,
         aux_features=None,
-        labels: Optional[torch.LongTensor] = None,
-    ) -> Union[SequenceClassifierOutput, Tuple[torch.Tensor]]:
+        labels: torch.LongTensor | None = None,
+    ) -> SequenceClassifierOutput | tuple[torch.Tensor]:
         r"""
         labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
             Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
@@ -414,9 +412,9 @@ class GPNForTokenClassification(GPNPreTrainedModel):
 
     def forward(
         self,
-        input_ids: Optional[torch.LongTensor] = None,
+        input_ids: torch.LongTensor | None = None,
         aux_features=None,
-        labels: Optional[torch.LongTensor] = None,
+        labels: torch.LongTensor | None = None,
     ) -> TokenClassifierOutput:
         x = self.model(input_ids=input_ids, aux_features=aux_features).last_hidden_state
         x = self.dropout(x)
@@ -622,10 +620,10 @@ class ConvNetForSequenceClassification(ConvNetPreTrainedModel):
 
     def forward(
         self,
-        input_ids: Optional[torch.LongTensor] = None,
-        labels: Optional[torch.LongTensor] = None,
+        input_ids: torch.LongTensor | None = None,
+        labels: torch.LongTensor | None = None,
         **kwargs,
-    ) -> Union[SequenceClassifierOutput, Tuple[torch.Tensor]]:
+    ) -> SequenceClassifierOutput | tuple[torch.Tensor]:
         hidden_state = self.model(input_ids=input_ids).last_hidden_state
         logits = self.classifier(hidden_state)
         if self.regression_softplus:

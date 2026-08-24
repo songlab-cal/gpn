@@ -11,6 +11,40 @@ from torch import Tensor
 _CANONICAL_NUCLEOTIDES = frozenset("ACGT")
 
 
+def validate_positions_batch(
+    chromosomes: Sequence[object],
+    positions: Sequence[object],
+) -> tuple[list[str], list[int]]:
+    """Validate chromosome names and positive one-based integer positions."""
+
+    if len(chromosomes) != len(positions):
+        raise ValueError("Position columns chrom and pos must have equal length")
+    normalized_chromosomes: list[str] = []
+    normalized_positions: list[int] = []
+    for row, (chromosome, position) in enumerate(
+        zip(chromosomes, positions, strict=True)
+    ):
+        if not isinstance(chromosome, str) or not chromosome:
+            raise ValueError(
+                f"Position row {row} has an empty or non-string chromosome"
+            )
+        if isinstance(position, bool):
+            raise ValueError(f"Position row {row} must be a positive integer")
+        try:
+            normalized_position = operator.index(cast(SupportsIndex, position))
+        except TypeError as error:
+            raise ValueError(
+                f"Position row {row} must be a positive integer"
+            ) from error
+        if normalized_position <= 0:
+            raise ValueError(
+                f"Position row {row} must be a positive one-based coordinate"
+            )
+        normalized_chromosomes.append(chromosome)
+        normalized_positions.append(normalized_position)
+    return normalized_chromosomes, normalized_positions
+
+
 def validate_snv_batch(
     chromosomes: Sequence[object],
     positions: Sequence[object],
@@ -35,27 +69,20 @@ def validate_snv_batch(
             "Variant columns chrom, pos, ref, and alt must have equal length"
         )
 
-    normalized_chromosomes: list[str] = []
-    normalized_positions: list[int] = []
+    normalized_chromosomes, normalized_positions = validate_positions_batch(
+        chromosomes, positions
+    )
     normalized_references: list[str] = []
     normalized_alternates: list[str] = []
-    for row, (chromosome, position, reference, alternate) in enumerate(
-        zip(chromosomes, positions, references, alternates, strict=True)
+    for row, (chromosome, normalized_position, reference, alternate) in enumerate(
+        zip(
+            normalized_chromosomes,
+            normalized_positions,
+            references,
+            alternates,
+            strict=True,
+        )
     ):
-        if not isinstance(chromosome, str) or not chromosome:
-            raise ValueError(f"Variant row {row} has an empty or non-string chromosome")
-        if isinstance(position, bool):
-            raise ValueError(f"Variant row {row} position must be a positive integer")
-        try:
-            normalized_position = operator.index(cast(SupportsIndex, position))
-        except TypeError as error:
-            raise ValueError(
-                f"Variant row {row} position must be a positive integer"
-            ) from error
-        if normalized_position <= 0:
-            raise ValueError(
-                f"Variant row {row} position must be a positive one-based coordinate"
-            )
         if not isinstance(reference, str) or reference not in _CANONICAL_NUCLEOTIDES:
             raise ValueError(
                 f"Variant row {row} reference allele must be one of A, C, G, T"
@@ -70,8 +97,6 @@ def validate_snv_batch(
                 "identical reference and alternate alleles"
             )
 
-        normalized_chromosomes.append(chromosome)
-        normalized_positions.append(normalized_position)
         normalized_references.append(reference)
         normalized_alternates.append(alternate)
 

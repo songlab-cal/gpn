@@ -16,6 +16,7 @@
 
 import logging
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -109,10 +110,10 @@ class DataTrainingArguments:
     )
 
 
-def main(argv: list[str] | None = None) -> None:
+def main(profile: Path) -> None:
     register_auto_classes("ss")
     model_args, data_args, training_args = parse_training_arguments(
-        ModelArguments, DataTrainingArguments, argv
+        ModelArguments, DataTrainingArguments, profile
     )
     configure_training_logging(training_args, logger)
     checkpoint = find_training_checkpoint(training_args)
@@ -217,7 +218,3 @@ def main(argv: list[str] | None = None) -> None:
     )
     train_and_save(trainer, training_args, checkpoint)
     evaluate_and_save(trainer, training_args)
-
-
-if __name__ == "__main__":
-    main()

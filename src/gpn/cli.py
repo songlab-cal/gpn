@@ -1,176 +1,383 @@
-"""Public command-line interface for maintained GPN workflows."""
+"""Typed public command-line interface for maintained GPN workflows."""
 
 from __future__ import annotations
 
-import argparse
-import importlib
 import importlib.metadata
 import sys
 from collections.abc import Sequence
-from dataclasses import dataclass
-from types import ModuleType
+from pathlib import Path
+from typing import Annotated
 
-_OPTIONAL_IMPORTS = {
-    "Bio",
-    "accelerate",
-    "datasets",
-    "joblib",
-    "pandas",
-    "pyarrow",
-    "tqdm",
-    "zarr",
-}
+from cyclopts import App, Parameter
+from transformers import TrainingArguments
 
+from gpn.arguments import CheckpointArguments
 
-@dataclass(frozen=True)
-class _Command:
-    module: str
-    extra: str
-    prog: str
-    fixed_command: str | None = None
+type PredictionArguments = Annotated[
+    TrainingArguments,
+    Parameter(name="*", group="Transformers prediction options"),
+]
+type CheckpointOptions = Annotated[
+    CheckpointArguments,
+    Parameter(name="*", group="Checkpoint options"),
+]
+
+_DEFAULT_PREDICTION_ARGUMENTS = TrainingArguments()
+_DEFAULT_CHECKPOINT_OPTIONS = CheckpointArguments()
 
 
 def _version() -> str:
     return importlib.metadata.version("gpn")
 
 
-def _add_leaf(
-    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
-    name: str,
+app = App(
+    name="gpn",
+    help="Train and run inference with maintained GPN model families.",
+    version=_version,
+)
+ss_app = App(
+    name="ss",
+    help="Train or run inference with single-species GPN.",
+)
+msa_app = App(
+    name="msa",
+    help="Run inference with deprecated GPN-MSA checkpoints.",
+)
+star_app = App(
+    name="star",
+    help="Train or run inference with GPN-Star.",
+)
+app.command(ss_app)
+app.command(msa_app)
+app.command(star_app)
+
+
+@ss_app.command(name="train")
+def ss_train(profile: Path) -> None:
+    """Train GPN from a human-readable YAML profile."""
+
+    from gpn.ss.train import main
+
+    main(profile)
+
+
+@ss_app.command(name="vep")
+def ss_vep(
+    input_path: str,
+    genome_path: str,
+    window_size: int,
+    model_path: str,
+    output_path: Path,
     *,
-    command: _Command,
-    help: str,
+    tokenizer_path: str | None = None,
+    n_prefix: int = 0,
+    split: str = "test",
+    is_file: bool = False,
+    checkpoint: CheckpointOptions = _DEFAULT_CHECKPOINT_OPTIONS,
+    trainer: PredictionArguments = _DEFAULT_PREDICTION_ARGUMENTS,
 ) -> None:
-    # Leaf help belongs to the existing workflow parser. The top-level parser uses
-    # parse_known_args so every remaining positional and option is forwarded exactly.
-    parser = subparsers.add_parser(name, add_help=False, help=help)
-    parser.set_defaults(command=command)
+    """Score variants with single-species GPN.
+
+    Parameters
+    ----------
+    input_path
+        Dataset or local file with chrom, one-based pos, ref, and alt columns.
+    genome_path
+        Reference-genome FASTA path.
+    window_size
+        Number of genomic bases supplied to the model.
+    model_path
+        Local or Hugging Face model identifier.
+    output_path
+        Destination Parquet file.
+    """
+
+    from gpn.ss.inference import vep
+
+    vep(
+        input_path,
+        genome_path,
+        window_size,
+        model_path,
+        output_path,
+        tokenizer_path=tokenizer_path,
+        n_prefix=n_prefix,
+        split=split,
+        is_file=is_file,
+        training_arguments=trainer,
+        checkpoint_arguments=checkpoint,
+    )
 
 
-def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        prog="gpn",
-        description="Train and run inference with maintained GPN model families.",
-    )
-    parser.add_argument(
-        "--version",
-        action="version",
-        version=f"%(prog)s {_version()}",
-    )
-    commands = parser.add_subparsers(dest="group", required=True)
+@ss_app.command(name="logits")
+def ss_logits(
+    input_path: str,
+    genome_path: str,
+    window_size: int,
+    model_path: str,
+    output_path: Path,
+    *,
+    tokenizer_path: str | None = None,
+    n_prefix: int = 0,
+    split: str = "test",
+    is_file: bool = False,
+    checkpoint: CheckpointOptions = _DEFAULT_CHECKPOINT_OPTIONS,
+    trainer: PredictionArguments = _DEFAULT_PREDICTION_ARGUMENTS,
+) -> None:
+    """Compute strand-averaged masked-nucleotide logits with GPN."""
 
-    ss = commands.add_parser(
-        "ss",
-        help="train or run inference with GPN",
-        description="Train or run core inference operations with single-species GPN.",
-    )
-    ss_commands = ss.add_subparsers(dest="ss_command", required=True)
-    _add_leaf(
-        ss_commands,
-        "train",
-        command=_Command("gpn.ss.train", "train", "gpn ss train"),
-        help="train GPN on an already prepared sequence dataset",
-    )
-    for name, module, help_text in (
-        ("vep", "gpn.ss.run_vep", "score variants with GPN"),
-        ("logits", "gpn.ss.get_logits", "compute masked-nucleotide logits with GPN"),
-        ("embedding", "gpn.ss.get_embeddings", "extract GPN embeddings"),
-    ):
-        _add_leaf(
-            ss_commands,
-            name,
-            command=_Command(module, "inference", f"gpn ss {name}"),
-            help=help_text,
-        )
+    from gpn.ss.inference import logits
 
-    msa = commands.add_parser(
-        "msa",
-        help="run deprecated GPN-MSA inference",
-        description=(
-            "Run inference with the deprecated GPN-MSA family. Training is not "
-            "supported; use GPN-Star for new alignment-based training."
-        ),
+    logits(
+        input_path,
+        genome_path,
+        window_size,
+        model_path,
+        output_path,
+        tokenizer_path=tokenizer_path,
+        n_prefix=n_prefix,
+        split=split,
+        is_file=is_file,
+        training_arguments=trainer,
+        checkpoint_arguments=checkpoint,
     )
-    msa_commands = msa.add_subparsers(dest="msa_command", required=True)
-    for name, help_text in (
-        ("vep", "score variants with GPN-MSA"),
-        ("logits", "compute masked-nucleotide logits with GPN-MSA"),
-        ("embedding", "extract GPN-MSA embeddings"),
-    ):
-        _add_leaf(
-            msa_commands,
-            name,
-            command=_Command(
-                "gpn.msa.inference",
-                "inference",
-                f"gpn msa {name}",
-                fixed_command=name,
-            ),
-            help=help_text,
-        )
-
-    star = commands.add_parser(
-        "star",
-        help="train or run inference with GPN-Star",
-        description="Train or run core inference operations with GPN-Star.",
-    )
-    star_commands = star.add_subparsers(dest="star_command", required=True)
-    _add_leaf(
-        star_commands,
-        "train",
-        command=_Command("gpn.star.train", "train", "gpn star train"),
-        help="train GPN-Star on prepared intervals and local MSAs",
-    )
-    for name, help_text in (
-        ("vep", "score variants with GPN-Star"),
-        ("logits", "compute masked-nucleotide logits with GPN-Star"),
-        ("embedding", "extract GPN-Star embeddings"),
-    ):
-        _add_leaf(
-            star_commands,
-            name,
-            command=_Command(
-                "gpn.star.inference",
-                "inference",
-                f"gpn star {name}",
-                fixed_command=name,
-            ),
-            help=help_text,
-        )
-    return parser
 
 
-def _load_module(command: _Command, parser: argparse.ArgumentParser) -> ModuleType:
-    try:
-        return importlib.import_module(command.module)
-    except ModuleNotFoundError as error:
-        missing = error.name or "an optional dependency"
-        if missing.split(".", maxsplit=1)[0] not in _OPTIONAL_IMPORTS:
-            raise
-        parser.exit(
-            2,
-            f"gpn: {missing!r} is required for this command; "
-            f"install gpn[{command.extra}]\n",
-        )
+@ss_app.command(name="embedding")
+def ss_embedding(
+    input_path: str,
+    genome_path: str,
+    center_window_size: int,
+    model_path: str,
+    output_path: Path,
+    *,
+    tokenizer_path: str | None = None,
+    split: str = "test",
+    is_file: bool = False,
+    checkpoint: CheckpointOptions = _DEFAULT_CHECKPOINT_OPTIONS,
+    trainer: PredictionArguments = _DEFAULT_PREDICTION_ARGUMENTS,
+) -> None:
+    """Extract strand-averaged GPN embeddings over interval centers."""
+
+    from gpn.ss.inference import embedding
+
+    embedding(
+        input_path,
+        genome_path,
+        center_window_size,
+        model_path,
+        output_path,
+        tokenizer_path=tokenizer_path,
+        split=split,
+        is_file=is_file,
+        training_arguments=trainer,
+        checkpoint_arguments=checkpoint,
+    )
+
+
+@msa_app.command(name="vep")
+def msa_vep(
+    input_path: str,
+    msa_path: str,
+    window_size: int,
+    model_path: str,
+    output_path: Path,
+    *,
+    split: str = "test",
+    is_file: bool = False,
+    checkpoint: CheckpointOptions = _DEFAULT_CHECKPOINT_OPTIONS,
+    trainer: PredictionArguments = _DEFAULT_PREDICTION_ARGUMENTS,
+) -> None:
+    """Score variants with a deprecated GPN-MSA checkpoint."""
+
+    from gpn.msa.inference import vep
+
+    vep(
+        input_path,
+        msa_path,
+        window_size,
+        model_path,
+        output_path,
+        split=split,
+        is_file=is_file,
+        training_arguments=trainer,
+        checkpoint_arguments=checkpoint,
+    )
+
+
+@msa_app.command(name="logits")
+def msa_logits(
+    input_path: str,
+    msa_path: str,
+    window_size: int,
+    model_path: str,
+    output_path: Path,
+    *,
+    split: str = "test",
+    is_file: bool = False,
+    checkpoint: CheckpointOptions = _DEFAULT_CHECKPOINT_OPTIONS,
+    trainer: PredictionArguments = _DEFAULT_PREDICTION_ARGUMENTS,
+) -> None:
+    """Compute masked-nucleotide logits with a deprecated GPN-MSA checkpoint."""
+
+    from gpn.msa.inference import logits
+
+    logits(
+        input_path,
+        msa_path,
+        window_size,
+        model_path,
+        output_path,
+        split=split,
+        is_file=is_file,
+        training_arguments=trainer,
+        checkpoint_arguments=checkpoint,
+    )
+
+
+@msa_app.command(name="embedding")
+def msa_embedding(
+    input_path: str,
+    msa_path: str,
+    window_size: int,
+    model_path: str,
+    output_path: Path,
+    *,
+    center_window_size: int = 100,
+    split: str = "test",
+    is_file: bool = False,
+    checkpoint: CheckpointOptions = _DEFAULT_CHECKPOINT_OPTIONS,
+    trainer: PredictionArguments = _DEFAULT_PREDICTION_ARGUMENTS,
+) -> None:
+    """Extract embeddings with a deprecated GPN-MSA checkpoint."""
+
+    from gpn.msa.inference import embedding
+
+    embedding(
+        input_path,
+        msa_path,
+        window_size,
+        model_path,
+        output_path,
+        center_window_size=center_window_size,
+        split=split,
+        is_file=is_file,
+        training_arguments=trainer,
+        checkpoint_arguments=checkpoint,
+    )
+
+
+@star_app.command(name="train")
+def star_train(profile: Path) -> None:
+    """Train GPN-Star from a human-readable YAML profile."""
+
+    from gpn.star.train import main
+
+    main(profile)
+
+
+@star_app.command(name="vep")
+def star_vep(
+    input_path: str,
+    msa_path: str,
+    window_size: int,
+    model_path: str,
+    output_path: Path,
+    *,
+    split: str = "test",
+    is_file: bool = False,
+    checkpoint: CheckpointOptions = _DEFAULT_CHECKPOINT_OPTIONS,
+    trainer: PredictionArguments = _DEFAULT_PREDICTION_ARGUMENTS,
+) -> None:
+    """Score variants with GPN-Star."""
+
+    from gpn.star.inference import vep
+
+    vep(
+        input_path,
+        msa_path,
+        window_size,
+        model_path,
+        output_path,
+        split=split,
+        is_file=is_file,
+        training_arguments=trainer,
+        checkpoint_arguments=checkpoint,
+    )
+
+
+@star_app.command(name="logits")
+def star_logits(
+    input_path: str,
+    msa_path: str,
+    window_size: int,
+    model_path: str,
+    output_path: Path,
+    *,
+    phylo_dist_path: str | None = None,
+    split: str = "test",
+    is_file: bool = False,
+    checkpoint: CheckpointOptions = _DEFAULT_CHECKPOINT_OPTIONS,
+    trainer: PredictionArguments = _DEFAULT_PREDICTION_ARGUMENTS,
+) -> None:
+    """Compute masked-nucleotide logits with GPN-Star."""
+
+    from gpn.star.inference import logits
+
+    logits(
+        input_path,
+        msa_path,
+        window_size,
+        model_path,
+        output_path,
+        phylo_dist_path=phylo_dist_path,
+        split=split,
+        is_file=is_file,
+        training_arguments=trainer,
+        checkpoint_arguments=checkpoint,
+    )
+
+
+@star_app.command(name="embedding")
+def star_embedding(
+    input_path: str,
+    msa_path: str,
+    window_size: int,
+    model_path: str,
+    output_path: Path,
+    *,
+    center_window_size: int = 100,
+    split: str = "test",
+    is_file: bool = False,
+    checkpoint: CheckpointOptions = _DEFAULT_CHECKPOINT_OPTIONS,
+    trainer: PredictionArguments = _DEFAULT_PREDICTION_ARGUMENTS,
+) -> None:
+    """Extract GPN-Star embeddings over interval centers."""
+
+    from gpn.star.inference import embedding
+
+    embedding(
+        input_path,
+        msa_path,
+        window_size,
+        model_path,
+        output_path,
+        center_window_size=center_window_size,
+        split=split,
+        is_file=is_file,
+        training_arguments=trainer,
+        checkpoint_arguments=checkpoint,
+    )
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the public CLI and return its process exit status."""
 
-    parser = _build_parser()
-    namespace, remaining = parser.parse_known_args(argv)
-    command: _Command = namespace.command
-    module = _load_module(command, parser)
-    target = getattr(module, "main")
-    original_prog = sys.argv[0]
     try:
-        sys.argv[0] = command.prog
-        if command.fixed_command is None:
-            result = target(remaining)
-        else:
-            result = target(remaining, command=command.fixed_command)
-    finally:
-        sys.argv[0] = original_prog
+        result = app(argv, result_action="return_value")
+    except ValueError as error:
+        print(f"Error: {error}", file=sys.stderr)
+        return 2
     return result if isinstance(result, int) else 0
 
 

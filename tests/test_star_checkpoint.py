@@ -6,8 +6,8 @@ import pandas as pd
 import pyarrow.parquet as pq
 import pytest
 
-import gpn.star.checkpoint as checkpoint
-from gpn.star.checkpoint import (
+import gpn.checkpoint as checkpoint
+from gpn.checkpoint import (
     BatchRange,
     CheckpointManifest,
     CheckpointStore,

@@ -7,14 +7,13 @@ import numpy as np
 import pandas as pd
 import pytest
 import torch
+from transformers import TrainingArguments
 
+import gpn.inference as shared_inference
+import gpn.msa.data as msa_data
 import gpn.msa.inference as msa_inference
-import gpn.msa.logits as msa_logits
-import gpn.msa.vep as msa_vep
-import gpn.ss.run_vep as gpn_vep
+import gpn.ss.inference as ss_inference
 import gpn.star.inference as star_inference
-import gpn.star.logits as star_logits
-import gpn.star.vep as star_vep
 from gpn.data import ReverseComplementer, Tokenizer
 
 BASELINE = json.loads(
@@ -23,11 +22,12 @@ BASELINE = json.loads(
 
 
 class FakeDataset:
-    def __init__(self) -> None:
+    def __init__(self, n_rows: int = 1) -> None:
         self.transform = None
+        self.n_rows = n_rows
 
     def __len__(self) -> int:
-        return 1
+        return self.n_rows
 
     def set_transform(self, transform) -> None:
         self.transform = transform
@@ -49,55 +49,135 @@ class FakeTrainer:
     def __init__(self, model, args, *, is_main_process=True) -> None:
         self.model = model
         self.args = args
-        self.accelerator = SimpleNamespace(is_main_process=is_main_process)
+        self.accelerator = SimpleNamespace(
+            is_main_process=is_main_process,
+            num_processes=1,
+        )
 
     @staticmethod
     def predict(test_dataset):
         return SimpleNamespace(predictions=np.array([[1.25]]))
 
 
-@pytest.mark.parametrize("module", (gpn_vep, msa_inference, star_inference))
-def test_inference_cpu_defaults_disable_gpu_only_acceleration(
+def test_inference_defaults_are_explicit_fp32_without_compilation(
     monkeypatch: pytest.MonkeyPatch,
-    module,
 ) -> None:
-    captured = {}
-
-    def fake_training_arguments(**kwargs):
-        captured.update(kwargs)
-        return SimpleNamespace(**kwargs)
-
-    trainer = None
+    trainers = []
 
     def fake_trainer(model, args):
-        nonlocal trainer
         trainer = FakeTrainer(model, args)
+        trainers.append(trainer)
         return trainer
 
-    monkeypatch.setattr(module.torch.cuda, "is_available", lambda: False)
-    monkeypatch.setattr(module, "TrainingArguments", fake_training_arguments)
-    monkeypatch.setattr(module, "Trainer", fake_trainer)
+    monkeypatch.setattr(shared_inference, "Trainer", fake_trainer)
 
-    dataset = FakeDataset()
-    if module is gpn_vep:
-        result = module.run_vep(
-            dataset,
-            genome=object(),
-            window_size=16,
-            tokenizer=object(),
-            model=object(),
+    result = shared_inference.run_inference(
+        FakeDataset(),
+        FakeInference(),
+        TrainingArguments(use_cpu=True),
+        output_prefix="test-gpn-inference-",
+    )
+
+    assert result["score"].tolist() == [1.25]
+    arguments = trainers[0].args
+    assert arguments.fp16_full_eval is False
+    assert arguments.bf16_full_eval is False
+    assert arguments.torch_compile is False
+    assert arguments.remove_unused_columns is False
+    assert arguments.prediction_loss_only is False
+    assert arguments.dataloader_drop_last is False
+    assert arguments.dataloader_in_order is True
+    assert arguments.do_train is False
+    assert arguments.do_predict is True
+    assert trainers[0].args.output_dir
+
+
+def test_inference_preserves_explicit_transformers_prediction_options(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    trainers = []
+    monkeypatch.setattr(
+        shared_inference,
+        "Trainer",
+        lambda model, args: trainers.append(FakeTrainer(model, args)) or trainers[-1],
+    )
+    arguments = TrainingArguments(
+        output_dir=str(tmp_path / "trainer"),
+        use_cpu=True,
+        per_device_eval_batch_size=17,
+        dataloader_num_workers=2,
+        full_determinism=True,
+        do_train=True,
+        prediction_loss_only=True,
+        remove_unused_columns=True,
+        dataloader_drop_last=True,
+        dataloader_in_order=False,
+    )
+
+    shared_inference.run_inference(
+        FakeDataset(),
+        FakeInference(),
+        arguments,
+        output_prefix="unused-",
+    )
+
+    actual = trainers[0].args
+    assert actual.output_dir == str(tmp_path / "trainer")
+    assert actual.per_device_eval_batch_size == 17
+    assert actual.dataloader_num_workers == 2
+    assert actual.full_determinism is True
+    assert actual.do_train is False
+    assert actual.prediction_loss_only is False
+    assert actual.remove_unused_columns is False
+    assert actual.dataloader_drop_last is False
+    assert actual.dataloader_in_order is True
+
+
+def test_direct_inference_rejects_missing_prediction_rows(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(shared_inference, "Trainer", FakeTrainer)
+
+    with pytest.raises(
+        ValueError,
+        match="1 predictions for 2 rows",
+    ):
+        shared_inference.run_inference(
+            FakeDataset(n_rows=2),
+            FakeInference(),
+            TrainingArguments(use_cpu=True),
+            output_prefix="test-gpn-inference-",
         )
-        assert result.tolist() == [[1.25]]
-    else:
-        result = module.run_inference(dataset, FakeInference())
-        assert result["score"].tolist() == [1.25]
 
-    assert captured["fp16"] is False
-    assert captured["torch_compile"] is False
-    assert captured["report_to"] == "none"
-    assert trainer is not None
-    temporary_directory = trainer._gpn_temporary_output_dir
-    assert Path(temporary_directory.name).is_dir()
+
+def test_inference_rejects_hub_publication() -> None:
+    with pytest.raises(ValueError, match="push_to_hub is not supported"):
+        shared_inference.inference_training_arguments(
+            TrainingArguments(output_dir="output", push_to_hub=True)
+        )
+
+
+def test_compile_errors_are_not_suppressed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FailingTrainer(FakeTrainer):
+        @staticmethod
+        def predict(test_dataset):
+            raise RuntimeError("compile failed")
+
+    monkeypatch.setattr(shared_inference, "Trainer", FailingTrainer)
+    monkeypatch.setattr(torch._dynamo.config, "suppress_errors", False)
+
+    with pytest.raises(RuntimeError, match="compile failed"):
+        shared_inference.run_inference(
+            FakeDataset(),
+            FakeInference(),
+            TrainingArguments(use_cpu=True, torch_compile=True),
+            output_prefix="test-gpn-compile-",
+        )
+
+    assert torch._dynamo.config.suppress_errors is False
 
 
 def test_gpn_vep_loads_installed_model_without_remote_code(
@@ -114,14 +194,14 @@ def test_gpn_vep_loads_installed_model_without_remote_code(
         loads.append((args, kwargs))
         return FakeModel()
 
-    monkeypatch.setattr(gpn_vep, "register_auto_classes", registrations.append)
+    monkeypatch.setattr(ss_inference, "register_auto_classes", registrations.append)
     monkeypatch.setattr(
-        gpn_vep.AutoModelForMaskedLM,
+        ss_inference.AutoModelForMaskedLM,
         "from_pretrained",
         fake_from_pretrained,
     )
 
-    wrapped = gpn_vep.MLMforVEPModel("songlab/gpn-brassicales")
+    wrapped = ss_inference.MLMforVEPModel("songlab/gpn-brassicales")
 
     assert isinstance(wrapped.model, FakeModel)
     assert registrations == ["ss"]
@@ -174,7 +254,7 @@ class FakeAlignment:
 def test_gpn_vep_tokenization_preserves_vcf_coordinate_and_orientation_contract():
     genome = FakeGenome()
 
-    actual = gpn_vep._tokenize_variant_batch(
+    actual = ss_inference._tokenize_variant_batch(
         {"chrom": ["chr1"], "pos": [100], "ref": ["A"], "alt": ["C"]},
         genome,
         window_size=6,
@@ -190,15 +270,14 @@ def test_gpn_vep_tokenization_preserves_vcf_coordinate_and_orientation_contract(
     assert actual["alt_rev"] == [2]
 
 
-@pytest.mark.parametrize("module", (msa_vep, star_vep))
+@pytest.mark.parametrize("module", (msa_inference, star_inference))
 def test_msa_vep_tokenization_preserves_coordinate_and_orientation_contract(module):
     alignment = FakeAlignment()
     inference = object.__new__(module.VEPInference)
     inference.window_size = 6
-    inference.disable_aux_features = False
     inference.reverse_complementer = ReverseComplementer()
     inference.tokenizer = Tokenizer()
-    if module is msa_vep:
+    if module is msa_inference:
         inference.genome_msa = alignment
     else:
         inference.genome_msa_list = [alignment]
@@ -216,15 +295,14 @@ def test_msa_vep_tokenization_preserves_coordinate_and_orientation_contract(modu
     assert actual["alt_rev"].tolist() == [3]
 
 
-@pytest.mark.parametrize("module", (msa_vep, star_vep))
+@pytest.mark.parametrize("module", (msa_inference, star_inference))
 def test_msa_vep_reference_mismatch_fails_with_variant_coordinate(module):
     alignment = FakeAlignment(reference="GGGCCG")
     inference = object.__new__(module.VEPInference)
     inference.window_size = 6
-    inference.disable_aux_features = False
     inference.reverse_complementer = ReverseComplementer()
     inference.tokenizer = Tokenizer()
-    if module is msa_vep:
+    if module is msa_inference:
         inference.genome_msa = alignment
     else:
         inference.genome_msa_list = [alignment]
@@ -238,10 +316,98 @@ def test_msa_vep_reference_mismatch_fails_with_variant_coordinate(module):
 @pytest.mark.parametrize(
     "inference_class",
     (
-        msa_vep.VEPInference,
-        msa_logits.LogitsInference,
-        star_vep.VEPInference,
-        star_logits.LogitsInference,
+        ss_inference.LogitsInference,
+        msa_inference.LogitsInference,
+        star_inference.LogitsInference,
+    ),
+)
+@pytest.mark.parametrize("position", (0, -1, 1.5, True))
+def test_logits_reject_nonpositive_or_noninteger_one_based_positions(
+    inference_class,
+    position,
+):
+    inference = object.__new__(inference_class)
+
+    with pytest.raises(ValueError, match="positive"):
+        inference.tokenize_function({"chrom": ["chr1"], "pos": [position]})
+
+
+def test_msa_boundary_windows_are_gap_padded_on_both_strands():
+    genome_msa = object.__new__(msa_data.GenomeMSA)
+    genome_msa.data = {
+        "chr1": np.array(
+            [list("AA"), list("CC"), list("GG"), list("TT")],
+            dtype="S1",
+        )
+    }
+    genome_msa.reverse_complementer = ReverseComplementer()
+    genome_msa.tokenizer = Tokenizer()
+
+    forward, reverse = genome_msa.get_msa_batch_fwd_rev(
+        np.array(["chr1", "chr1"]),
+        np.array([-2, 2]),
+        np.array([4, 8]),
+    )
+
+    assert forward[:, :, 0].astype(str).tolist() == [
+        ["-", "-", "A", "C", "G", "T"],
+        ["G", "T", "-", "-", "-", "-"],
+    ]
+    assert reverse[:, :, 0].astype(str).tolist() == [
+        ["A", "C", "G", "T", "-", "-"],
+        ["-", "-", "-", "-", "A", "C"],
+    ]
+
+
+class FixedEmbeddingModel:
+    def __call__(self, **kwargs):
+        return SimpleNamespace(
+            last_hidden_state=torch.tensor([[[0.0], [1.0], [4.0], [9.0], [16.0]]])
+        )
+
+
+@pytest.mark.parametrize(
+    ("wrapper", "extra_arguments"),
+    (
+        (ss_inference.ModelCenterEmbedding, ()),
+        (msa_inference.ModelCenterEmbedding, (torch.zeros((1, 5, 1)),)),
+        (
+            star_inference.ModelCenterEmbedding,
+            (torch.zeros((1, 5, 1)), torch.zeros((1, 1))),
+        ),
+    ),
+)
+@pytest.mark.parametrize(
+    ("center_window_size", "expected"),
+    ((2, 2.5), (3, 14.0 / 3.0)),
+)
+def test_embedding_center_window_uses_exact_odd_and_even_size(
+    wrapper,
+    extra_arguments,
+    center_window_size,
+    expected,
+):
+    instance = SimpleNamespace(
+        model=FixedEmbeddingModel(),
+        center_window_size=center_window_size,
+    )
+
+    actual = wrapper.get_center_embedding(
+        instance,
+        torch.zeros((1, 5), dtype=torch.long),
+        *extra_arguments,
+    )
+
+    torch.testing.assert_close(actual, torch.tensor([[expected]]))
+
+
+@pytest.mark.parametrize(
+    "inference_class",
+    (
+        msa_inference.VEPInference,
+        msa_inference.LogitsInference,
+        star_inference.VEPInference,
+        star_inference.LogitsInference,
     ),
 )
 def test_centered_msa_inference_rejects_odd_windows_before_loading_model(
@@ -255,7 +421,7 @@ class FixedLogitModel:
     def __init__(self, logits) -> None:
         self.logits = logits
 
-    def forward(self, **kwargs):
+    def __call__(self, **kwargs):
         return SimpleNamespace(logits=self.logits)
 
 
@@ -264,7 +430,7 @@ class FixedLogitModel:
     (
         (
             "gpn",
-            gpn_vep.MLMforVEPModel,
+            ss_inference.MLMforVEPModel,
             (1, 1, 4),
             0,
             1,
@@ -272,7 +438,7 @@ class FixedLogitModel:
         ),
         (
             "gpn_msa",
-            msa_vep.MLMforVEPModel,
+            msa_inference.MLMforVEPModel,
             (1, 1, 6),
             1,
             2,
@@ -280,11 +446,14 @@ class FixedLogitModel:
         ),
         (
             "gpn_star",
-            star_vep.MLMforVEPModel,
+            star_inference.MLMforVEPModel,
             (1, 1, 1, 6),
             1,
             2,
-            {"source_ids": np.zeros((1, 1, 1)), "target_species": np.zeros((1, 1))},
+            {
+                "source_ids": np.zeros((1, 1, 1)),
+                "target_species": np.zeros((1, 1)),
+            },
         ),
     ),
 )
@@ -321,7 +490,11 @@ def test_vep_wrappers_compute_published_alt_minus_ref_likelihood_direction(
 
 @pytest.mark.parametrize(
     "wrapper",
-    (gpn_vep.MLMforVEPModel, msa_vep.MLMforVEPModel, star_vep.MLMforVEPModel),
+    (
+        ss_inference.MLMforVEPModel,
+        msa_inference.MLMforVEPModel,
+        star_inference.MLMforVEPModel,
+    ),
 )
 def test_vep_wrappers_average_forward_and_reverse_scores(wrapper):
     instance = SimpleNamespace(
@@ -332,41 +505,3 @@ def test_vep_wrappers_average_forward_and_reverse_scores(wrapper):
 
     torch.testing.assert_close(actual, torch.tensor([-3.0]))
     assert instance.get_llr.call_count == 2
-
-
-def test_msa_compile_errors_are_suppressed_only_during_compiled_prediction(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    observed = []
-
-    def fake_training_arguments(**kwargs):
-        return SimpleNamespace(**kwargs)
-
-    class CompileAwareTrainer(FakeTrainer):
-        @staticmethod
-        def predict(test_dataset):
-            observed.append(msa_inference.torch._dynamo.config.suppress_errors)
-            return SimpleNamespace(predictions=np.array([[1.25]]))
-
-    monkeypatch.setattr(msa_inference.torch.cuda, "is_available", lambda: True)
-    monkeypatch.setattr(msa_inference, "TrainingArguments", fake_training_arguments)
-    monkeypatch.setattr(msa_inference, "Trainer", CompileAwareTrainer)
-    monkeypatch.setattr(msa_inference.torch._dynamo.config, "suppress_errors", False)
-
-    result = msa_inference.run_inference(FakeDataset(), FakeInference())
-
-    assert result["score"].tolist() == [1.25]
-    assert observed == [True]
-    assert msa_inference.torch._dynamo.config.suppress_errors is False
-
-
-def test_msa_embedding_cli_preserves_default_center_window_size():
-    args = SimpleNamespace(command="embedding", center_window_size=None)
-
-    assert msa_inference._command_kwargs(args) == {}
-
-
-def test_msa_embedding_cli_forwards_explicit_center_window_size():
-    args = SimpleNamespace(command="embedding", center_window_size=32)
-
-    assert msa_inference._command_kwargs(args) == {"center_window_size": 32}

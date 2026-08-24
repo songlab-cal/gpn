@@ -1,4 +1,4 @@
-"""Durable, resumable storage for batched inference predictions.
+"""Durable, resumable storage shared by maintained inference families.
 
 This module deliberately does not know about models, datasets, or distributed
 execution. The inference runner is responsible for making the same batch
@@ -13,10 +13,11 @@ import json
 import os
 import stat
 import tempfile
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
-from typing import Any, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any
 
 import pandas as pd
 import pyarrow as pa
@@ -148,7 +149,7 @@ def _atomic_write_table(table: pa.Table, target: Path) -> None:
 
 def write_dataframe_atomic(
     frame: pd.DataFrame,
-    output_path: Union[os.PathLike[str], str],
+    output_path: os.PathLike[str] | str,
 ) -> Path:
     """Write a DataFrame atomically with normal creation permissions."""
 
@@ -221,7 +222,7 @@ class BatchRange:
 def expected_batch_ranges(
     total_rows: int,
     batch_size: int,
-) -> Tuple[BatchRange, ...]:
+) -> tuple[BatchRange, ...]:
     """Return stable, ordered ranges without depending on process count."""
 
     if not _is_int(total_rows) or total_rows <= 0:
@@ -266,7 +267,7 @@ class CheckpointManifest:
         object.__setattr__(self, "run_signature", normalized_signature)
 
     @cached_property
-    def batches(self) -> Tuple[BatchRange, ...]:
+    def batches(self) -> tuple[BatchRange, ...]:
         return expected_batch_ranges(self.total_rows, self.batch_size)
 
     @cached_property
@@ -339,8 +340,8 @@ class CheckpointManifest:
     @classmethod
     def read(
         cls,
-        path: Union[os.PathLike[str], str],
-    ) -> "CheckpointManifest":
+        path: os.PathLike[str] | str,
+    ) -> CheckpointManifest:
         try:
             with Path(path).open(encoding="utf-8") as handle:
                 value = json.load(handle)
@@ -367,19 +368,19 @@ class CheckpointStore:
 
     def __init__(
         self,
-        directory: Union[os.PathLike[str], str],
+        directory: os.PathLike[str] | str,
         manifest: CheckpointManifest,
     ) -> None:
         self.directory = Path(directory)
         self.manifest = manifest
-        self._known_schema: Optional[pa.Schema] = None
+        self._known_schema: pa.Schema | None = None
 
     @property
     def manifest_path(self) -> Path:
         return self.directory / MANIFEST_FILENAME
 
     @property
-    def batches(self) -> Tuple[BatchRange, ...]:
+    def batches(self) -> tuple[BatchRange, ...]:
         return self.manifest.batches
 
     def batch_path(self, batch: BatchRange | int) -> Path:
@@ -407,7 +408,7 @@ class CheckpointStore:
             )
         _atomic_write_json(self.manifest.to_dict(), self.manifest_path)
 
-    def completed_batch_indices(self) -> Tuple[int, ...]:
+    def completed_batch_indices(self) -> tuple[int, ...]:
         """Validate present batches and return their indices in row order."""
 
         self._require_compatible_manifest()
@@ -442,8 +443,8 @@ class CheckpointStore:
     def validate_batch(
         self,
         batch: BatchRange | int,
-        expected_schema: Optional[pa.Schema] = None,
-    ) -> Optional[pa.Schema]:
+        expected_schema: pa.Schema | None = None,
+    ) -> pa.Schema | None:
         """Return a committed batch's data schema, or ``None`` if absent."""
 
         expected_batch = self._expected_batch(batch)
@@ -549,7 +550,7 @@ class CheckpointStore:
             self._known_schema = committed_schema
         return path
 
-    def combine_to(self, output_path: Union[os.PathLike[str], str]) -> Path:
+    def combine_to(self, output_path: os.PathLike[str] | str) -> Path:
         """Stream all batches in numeric order into one atomic final output."""
 
         self._require_compatible_manifest()
@@ -598,7 +599,7 @@ class CheckpointStore:
 
     def validate_final(
         self,
-        output_path: Union[os.PathLike[str], str],
+        output_path: os.PathLike[str] | str,
     ) -> pa.Schema:
         """Validate that a final file was assembled from this exact manifest."""
 
@@ -612,7 +613,7 @@ class CheckpointStore:
 
     def cleanup(
         self,
-        final_output_path: Union[os.PathLike[str], str],
+        final_output_path: os.PathLike[str] | str,
     ) -> bool:
         """Remove only managed files after validating the committed final output.
 
@@ -675,7 +676,7 @@ class CheckpointStore:
     def _known_or_first_committed_schema(
         self,
         excluding: BatchRange,
-    ) -> Optional[pa.Schema]:
+    ) -> pa.Schema | None:
         if self._known_schema is not None:
             return self._known_schema
         for batch in self.batches:

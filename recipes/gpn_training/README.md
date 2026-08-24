@@ -4,6 +4,8 @@ This is the maintained example for training GPN from scratch on the public,
 already-prepared Brassicales sequence dataset. It is intentionally not an exact
 executable profile of every published run and does not include raw-data or
 dataset construction.
+The trainer accepts one YAML profile per run so the complete configuration is
+reviewable and version-controlled.
 
 ## Prepared input contract
 
@@ -45,14 +47,14 @@ The GPN trainer streams this Hub dataset, so the one-step smoke run does not
 materialize the complete dataset locally:
 
 ```bash
-uv run gpn ss train recipes/gpn_training/cpu-smoke.json
+uv run gpn ss train recipes/gpn_training/cpu-smoke.yaml
 ```
 
-For a realistic four-GPU starting point, edit `gpu.json` and run:
+For a realistic four-GPU starting point, edit `gpu.yaml` and run:
 
 ```bash
 uv run --no-sync torchrun --standalone --nproc-per-node=4 --module gpn.cli \
-  ss train recipes/gpn_training/gpu.json
+  ss train recipes/gpn_training/gpu.yaml
 ```
 
 The GPU config has effective global batch size

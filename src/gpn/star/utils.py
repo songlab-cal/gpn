@@ -78,12 +78,13 @@ def get_all_species_mask(clade_mask, clade_indices, species_clade_indices):
 
 
 def find_directory_sum_paths(path_str):
+    path_str = os.path.normpath(path_str)
     dirs = os.listdir(path_str)
     _, final_dirname = os.path.split(path_str)
     if "all.zarr" in dirs:
         return {int(final_dirname): os.path.join(path_str, "all.zarr")}
     else:
-        dirs = sorted(dirs, reverse=True)
+        dirs = sorted(dirs, key=int, reverse=True)
         return {int(name): os.path.join(path_str, name, "all.zarr") for name in dirs}
 
 
