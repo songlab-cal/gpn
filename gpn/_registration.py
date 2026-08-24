@@ -79,7 +79,6 @@ def _register_ss() -> None:
     )
 
 
-
 def _register_msa() -> None:
     from transformers import AutoConfig, AutoModel, AutoModelForMaskedLM
 
