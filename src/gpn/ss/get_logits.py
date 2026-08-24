@@ -1,6 +1,7 @@
 import argparse
 import os
 import tempfile
+from collections.abc import Sequence
 
 import numpy as np
 import pandas as pd
@@ -10,12 +11,11 @@ from transformers import AutoModelForMaskedLM, AutoTokenizer, Trainer, TrainingA
 from gpn import register_auto_classes
 from gpn.data import Genome, load_dataset_from_file_or_dir, token_input_id
 
-register_auto_classes("ss")
-
 
 class MLMforLogitsModel(torch.nn.Module):
     def __init__(self, model_path, id_a, id_c, id_g, id_t):
         super().__init__()
+        register_auto_classes("ss")
         self.model = AutoModelForMaskedLM.from_pretrained(
             model_path,
             trust_remote_code=True,
@@ -113,7 +113,7 @@ def get_logits(
     return trainer.predict(test_dataset=positions).predictions
 
 
-if __name__ == "__main__":
+def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Get logits with AutoModelForMaskedLM")
     parser.add_argument(
         "positions_path",
@@ -156,7 +156,11 @@ if __name__ == "__main__":
         action="store_true",
         help="positions_PATH is a file, not directory",
     )
-    args = parser.parse_args()
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = _build_parser().parse_args(argv)
 
     positions = load_dataset_from_file_or_dir(
         args.positions_path,
@@ -185,3 +189,8 @@ if __name__ == "__main__":
     if directory != "" and not os.path.exists(directory):
         os.makedirs(directory)
     pd.DataFrame(pred, columns=list("ACGT")).to_parquet(args.output_path, index=False)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

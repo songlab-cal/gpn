@@ -1,6 +1,7 @@
 import argparse
 import os
 import tempfile
+from collections.abc import Sequence
 
 import pandas as pd
 import torch
@@ -9,12 +10,11 @@ from transformers import AutoModel, AutoTokenizer, Trainer, TrainingArguments
 from gpn import register_auto_classes
 from gpn.data import Genome, load_dataset_from_file_or_dir
 
-register_auto_classes("ss")
-
 
 class ModelCenterEmbedding(torch.nn.Module):
     def __init__(self, model_path, center_window_size):
         super().__init__()
+        register_auto_classes("ss")
         self.model = AutoModel.from_pretrained(model_path, trust_remote_code=True)
         self.center_window_size = center_window_size
 
@@ -76,7 +76,7 @@ def get_embeddings(
     return trainer.predict(test_dataset=windows).predictions
 
 
-if __name__ == "__main__":
+def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Get logits with AutoModelForMaskedLM")
     parser.add_argument(
         "windows_path",
@@ -120,7 +120,11 @@ if __name__ == "__main__":
         action="store_true",
         help="windows_PATH is a file, not directory",
     )
-    args = parser.parse_args()
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = _build_parser().parse_args(argv)
 
     windows = load_dataset_from_file_or_dir(
         args.windows_path,
@@ -145,3 +149,8 @@ if __name__ == "__main__":
         os.makedirs(directory)
     columns = [f"embedding_{i}" for i in range(pred.shape[1])]
     pd.DataFrame(pred, columns=columns).to_parquet(args.output_path, index=False)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

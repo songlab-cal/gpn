@@ -194,7 +194,7 @@ def test_dispatch_does_not_hide_unexpected_import_errors(
     monkeypatch.setattr(cli.importlib, "import_module", fail_import)
 
     with pytest.raises(ModuleNotFoundError) as raised:
-        cli.main(("vep", "--help"))
+        cli.main(("ss", "vep", "--help"))
 
     assert raised.value is error
 
