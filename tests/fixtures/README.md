@@ -22,7 +22,7 @@ pass its local path explicitly. The utility checks the raw slice and final file
 hashes and never downloads or builds an MSA:
 
 ```bash
-uv run --extra data python tests/fixtures/regenerate_alignment_fixture.py \
+uv run --extra inference python tests/fixtures/regenerate_alignment_fixture.py \
   /path/to/100-way.zarr \
   --output /tmp/hg38_chr6_31575665_31575793_multiz100way.npz
 ```
