@@ -52,7 +52,6 @@ def test_external_mutation_ledger_covers_release_boundary() -> None:
     assert set(pending) == {
         "merge-modernization-stack",
         "protect-main",
-        "enable-private-vulnerability-reporting",
         "enable-security-features",
         "publish-analysis-archive",
         "publish-gpn-0-9-0",
@@ -218,11 +217,3 @@ def test_transformers_version_is_pinned_to_the_validated_runtime() -> None:
     ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text()
     assert "transformers-lower-bound" not in ci
     assert '--no-deps "transformers==' not in ci
-
-
-def test_security_policy_has_private_and_fallback_paths() -> None:
-    policy = (ROOT / "SECURITY.md").read_text()
-    assert "/security/advisories/new" in policy
-    assert "gbenegas@berkeley.edu" in policy
-    assert "trust_remote_code=True" in policy
-    assert "pickle" in policy

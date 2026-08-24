@@ -121,29 +121,6 @@
       ]
     },
     {
-      "id": "enable-private-vulnerability-reporting",
-      "system": "github",
-      "authorization": "explicit_final_maintainer_approval",
-      "disposition": "approval_ready",
-      "operation": "enable private vulnerability reporting",
-      "targets": [
-        "songlab-cal/gpn:private-vulnerability-reporting"
-      ],
-      "source": "SECURITY.md",
-      "depends_on": [
-        "merge-modernization-stack"
-      ],
-      "preconditions": [
-        "SECURITY.md points to the repository's private advisory form and includes an email fallback"
-      ],
-      "verification": [
-        "the repository API reports enabled and the private-reporting form is available"
-      ],
-      "failure_response": [
-        "retain the security email fallback and do not direct reports to a broken form"
-      ]
-    },
-    {
       "id": "enable-security-features",
       "system": "github",
       "authorization": "explicit_final_maintainer_approval",
@@ -165,7 +142,7 @@
         "the three historical Transformers alerts close without manual dismissal"
       ],
       "failure_response": [
-        "leave unavailable features documented and keep SECURITY.md reporting paths active"
+        "leave unavailable features documented and do not assume partial enablement"
       ]
     },
     {
@@ -291,7 +268,7 @@
         "the exact public project slug is added to this ledger and reviewed"
       ],
       "verification": [
-        "the public site renders the model, tutorial, API, research, security, and release pages",
+        "the public site renders the model, demo, API, research, citation, and release pages",
         "Read the Docs does not execute notebooks or download model/MSA assets"
       ],
       "failure_response": [

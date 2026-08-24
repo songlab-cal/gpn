@@ -40,9 +40,9 @@ alerts should close naturally when the historical manifest is removed from
 
 ## Approval-gated rollout
 
-After final review and merge, create the proposed ruleset, enable private
-vulnerability reporting, Dependabot security updates, secret scanning, and push
-protection, then verify their public/API state. Every required status context in
+After final review and merge, create the proposed ruleset, enable Dependabot
+security updates, secret scanning, and push protection, then verify their
+public/API state. Every required status context in
 the ruleset is bound to the GitHub Actions app. Do not require a PR approval or
 `pypi` environment reviewer while there is only one active maintainer; either
 would create a recovery deadlock. Keep research branches outside the `main`
