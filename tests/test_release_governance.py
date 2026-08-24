@@ -55,13 +55,7 @@ def test_external_mutation_ledger_covers_release_boundary() -> None:
         "enable-security-features",
         "publish-analysis-archive",
         "publish-gpn-0-9-0",
-        "update-ready-supported-hub-cards",
         "publish-read-the-docs",
-        "update-deferred-supported-hub-cards",
-        "update-research-hub-card",
-        "update-star-hub-cards",
-        "update-hub-datasets",
-        "update-hub-collections",
     }
     assert "pypi-trusted-publisher-binding" in applied
     assert pending["protect-main"]["source"] == "release/main-ruleset.json"
@@ -85,47 +79,11 @@ def test_external_mutation_dependencies_are_complete_and_ordered() -> None:
         prior_ids.add(action["id"])
 
 
-def test_hub_mutations_are_exact_or_explicitly_deferred() -> None:
+def test_hub_audit_is_outside_this_release() -> None:
     ledger = _json("external-mutations.json")
-    pending = {action["id"]: action for action in ledger["pending"]}
-    audit = json.loads((ROOT / "hub" / "audits" / "2026-08-19.json").read_text())
-    model_heads = {
-        model["repo_id"]: model["sha"] for model in audit["inventory"]["models"]
-    }
-    audited_heads = model_heads | {
-        dataset["repo_id"]: dataset["sha"] for dataset in audit["inventory"]["datasets"]
-    }
-
-    ready = pending["update-ready-supported-hub-cards"]
-    expected_targets = set()
-    for payload in ready["payloads"]:
-        assert model_heads[payload["target"]] == payload["current_head"]
-        assert (ROOT / payload["source"]).is_file()
-        expected_targets.add(f"{payload['target']}@{payload['current_head']}")
-    assert set(ready["targets"]) == expected_targets
-
-    supported_star = "songlab/gpn-star-hg38-v100-200m"
-    expected_research_star_targets = {
-        f"{repo_id}@{sha}"
-        for repo_id, sha in model_heads.items()
-        if repo_id.startswith("songlab/gpn-star-") and repo_id != supported_star
-    }
-    star = pending["update-star-hub-cards"]
-    assert star["disposition"] == "deferred"
-    assert len(expected_research_star_targets) == 18
-    assert set(star["targets"]) == expected_research_star_targets
-
-    pinned_hub_targets = {
-        target
-        for action in ledger["pending"]
-        if action["system"] == "huggingface"
-        for target in action["targets"]
-        if "@" in target
-    }
-    assert len(pinned_hub_targets) == 26
-    for target in pinned_hub_targets:
-        repo_id, revision = target.rsplit("@", 1)
-        assert audited_heads[repo_id] == revision
+    assert all(action["system"] != "huggingface" for action in ledger["pending"])
+    assert not (ROOT / "hub").exists()
+    assert "issue #81" in (ROOT / "docs" / "release.md").read_text()
 
 
 def test_archive_mutation_identifies_tag_object_and_peeled_commit() -> None:

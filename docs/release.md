@@ -19,12 +19,12 @@ distribution from a workstation.
 ## Before final approval
 
 1. Freeze scope and assemble the cumulative review PR against `main`.
-2. Resolve every factual `TODO(maintainer)` that will be published. It is valid to
-   leave an unapproved Hub proposal unapplied; record that as deferred.
+2. Keep Hugging Face asset auditing and card changes outside this release; that
+   work remains tracked separately in issue #81.
 3. Set the final package version and update `CHANGELOG.md`.
-4. Confirm that `hub/manifest.json` and the published-model fixture baseline use
-   the intended immutable revisions. Rerun the networked Hub audit only if a
-   compatibility input or public asset changed.
+4. Confirm that the published-model fixture baseline uses the intended immutable
+   revisions. Run the opt-in published-model tests deliberately if a compatibility
+   input changed.
 5. Complete the review packet and external-mutation manifest under `release/`.
    Record the exact cumulative head and tree plus the ordered component PR heads.
    A squash merge creates new commit IDs, so approval binds to the reviewed tree;
