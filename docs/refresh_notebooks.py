@@ -44,11 +44,18 @@ _gpn_model_id = globals().get("MODEL_ID")
 _gpn_model_revision = globals().get("MODEL_REVISION")
 if not isinstance(_gpn_model_id, str) or not isinstance(_gpn_model_revision, str):
     raise RuntimeError("Quick start did not define string MODEL_ID and MODEL_REVISION")
+_gpn_resolved_model_id = getattr(_gpn_model.config, "_name_or_path", None)
 _gpn_resolved_revision = getattr(_gpn_model.config, "_commit_hash", None)
-if (
-    _gpn_resolved_revision is not None
-    and _gpn_resolved_revision != _gpn_model_revision
-):
+if not isinstance(_gpn_resolved_model_id, str) or not _gpn_resolved_model_id:
+    raise RuntimeError("Loaded model config does not expose a model name or path")
+if _gpn_resolved_model_id != _gpn_model_id:
+    raise RuntimeError(
+        "Loaded model identity does not match MODEL_ID: "
+        f"{{_gpn_resolved_model_id}} != {{_gpn_model_id}}"
+    )
+if not isinstance(_gpn_resolved_revision, str) or not _gpn_resolved_revision:
+    raise RuntimeError("Loaded model config does not expose a resolved commit hash")
+if _gpn_resolved_revision != _gpn_model_revision:
     raise RuntimeError(
         "Loaded model revision does not match MODEL_REVISION: "
         f"{{_gpn_resolved_revision}} != {{_gpn_model_revision}}"
@@ -59,8 +66,8 @@ print(
     + _gpn_json.dumps(
         {{
             "last_scientific_validation": _gpn_date.today().isoformat(),
-            "model_id": _gpn_model_id,
-            "model_revision": _gpn_model_revision,
+            "model_id": _gpn_resolved_model_id,
+            "model_revision": _gpn_resolved_revision,
             "output_environment": {{
                 "device": str(_gpn_parameter.device),
                 "dtype": str(_gpn_parameter.dtype),
