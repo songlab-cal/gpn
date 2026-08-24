@@ -41,5 +41,6 @@ Rate parameters, nucleotide probabilities, and a zero-shot substitution score.
 
 ::::
 
-Read the committed code and plots here without a kernel, or use the explicit
-“Open in Colab” link at the top of a notebook when you want to execute it.
+Read the committed code and plots here without a kernel. Deliberate output
+refreshes use the pinned Python 3.13 environment and guarded process documented in
+{doc}`../development`.
