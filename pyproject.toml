@@ -121,7 +121,7 @@ show_error_codes = true
 pretty = true
 
 [[tool.mypy.overrides]]
-module = ["pandas", "pyarrow", "pyarrow.*"]
+module = ["datasets", "datasets.*", "pandas", "pyarrow", "pyarrow.*"]
 ignore_missing_imports = true
 
 [tool.deptry]
