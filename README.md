@@ -111,8 +111,8 @@ half-open, while VEP positions are one-based.
 
 ## Development and help
 
-Development uses Python 3.13 by default while the package supports Python 3.11 and
-newer:
+GPN supports one reproducible runtime: Python 3.13 with the exact Transformers
+version declared by the package and the complete environment pinned in `uv.lock`:
 
 ```bash
 git clone https://github.com/songlab-cal/gpn.git

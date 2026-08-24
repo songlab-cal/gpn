@@ -31,7 +31,8 @@ before or alongside GPN.
 
 ## Development
 
-GPN supports Python 3.11 and newer. Contributors use Python 3.13 by default and a
+GPN supports Python 3.13. Its Transformers version is pinned exactly in the
+package metadata, and the complete contributor environment is captured by the
 committed uv lockfile:
 
 ```bash
