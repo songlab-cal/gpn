@@ -1,4 +1,4 @@
-"""Deliberately refresh the committed outputs of the three quick starts."""
+"""Deliberately refresh the committed outputs of the three demos."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from pathlib import Path
 import nbformat
 from nbclient import NotebookClient
 
-from docs.prepare_notebooks import NOTEBOOKS, REPOSITORY_ROOT, SOURCE
+from docs.prepare_notebooks import MODEL_DEMOS, NOTEBOOKS, REPOSITORY_ROOT, SOURCE
 
 _EXPECTED_WARNING_FILTERS = (
     "ignore:IProgress not found",
@@ -39,11 +39,11 @@ from importlib.metadata import version as _gpn_version
 
 _gpn_model = globals().get("model_for_mlm", globals().get("model"))
 if _gpn_model is None:
-    raise RuntimeError("Quick start did not define model_for_mlm or model")
+    raise RuntimeError("Demo did not define model_for_mlm or model")
 _gpn_model_id = globals().get("MODEL_ID")
 _gpn_model_revision = globals().get("MODEL_REVISION")
 if not isinstance(_gpn_model_id, str) or not isinstance(_gpn_model_revision, str):
-    raise RuntimeError("Quick start did not define string MODEL_ID and MODEL_REVISION")
+    raise RuntimeError("Demo did not define string MODEL_ID and MODEL_REVISION")
 _gpn_resolved_model_id = getattr(_gpn_model.config, "_name_or_path", None)
 _gpn_resolved_revision = getattr(_gpn_model.config, "_commit_hash", None)
 if not isinstance(_gpn_resolved_model_id, str) or not _gpn_resolved_model_id:
@@ -157,7 +157,7 @@ def _validate_environment(*, allow_local: bool) -> None:
     actual = tuple(sorted(path.name for path in SOURCE.glob("*.ipynb")))
     if actual != tuple(sorted(NOTEBOOKS)):
         raise RuntimeError(
-            "Expected exactly the three canonical quick starts; "
+            "Expected the three canonical demos and precomputed-score workflow; "
             f"found: {', '.join(actual) or 'none'}"
         )
 
@@ -196,13 +196,13 @@ def _execute(path: Path) -> nbformat.NotebookNode:
 
 
 def main() -> None:
-    """Execute all quick starts, writing none unless all three succeed."""
+    """Execute all demos, writing none unless all three succeed."""
 
     args = _parse_args()
     _validate_environment(allow_local=args.allow_local)
     _configure_kernel_environment()
 
-    executed = [(SOURCE / name, _execute(SOURCE / name)) for name in NOTEBOOKS]
+    executed = [(SOURCE / name, _execute(SOURCE / name)) for name in MODEL_DEMOS]
     for path, notebook in executed:
         nbformat.write(notebook, path)
 

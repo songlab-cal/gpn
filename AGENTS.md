@@ -73,11 +73,12 @@ Place dependencies in base runtime, a feature extra, `dev`, or `docs` according
 to their actual consumers. Research-only dependencies never belong in the root
 project.
 
-Keep exactly the three canonical notebooks under `colabs/`. Documentation renders
-their committed outputs without execution. Do not add notebook-only scientific
-logic, local paths, secrets, downloaded models, or whole-genome MSAs.
-Refresh their outputs together with `python -m docs.refresh_notebooks` only in a
-dedicated compute allocation, then review output diffs and the scientific audit.
+Keep the three canonical model demos and the lightweight GPN-Star precomputed-score
+workflow under `colabs/`. Documentation renders them without execution. Do not add
+notebook-only scientific logic, local paths, secrets, downloaded models, or
+whole-genome MSAs. Refresh the three model-demo outputs together with
+`python -m docs.refresh_notebooks` only in a dedicated compute allocation, then
+review output diffs and the scientific audit.
 
 ## Research branches
 

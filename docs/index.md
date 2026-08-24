@@ -25,7 +25,7 @@ Transformers AutoClasses.
 Choose the supported model family and understand its inputs and outputs.
 :::
 
-:::{grid-item-card} Explore the quick starts
+:::{grid-item-card} Explore the demos
 :link: tutorials/index
 :link-type: doc
 
@@ -48,6 +48,7 @@ Inspect immutable model revisions, fixture provenance, and score conventions.
 installation
 models
 cli
+alignments
 tutorials/index
 scientific-validation
 api
@@ -55,13 +56,15 @@ hub-assets
 research
 archive
 development
+citations
 ```
 
 ## What is maintained?
 
 - **GPN and GPN-Star:** training on prepared inputs and inference.
 - **GPN-MSA:** deprecated, inference only.
-- **PhyloGPN and Sorghum gene expression:** inference only.
+- **PhyloGPN:** inference only.
+- **Sorghum gene expression:** inference-only fine-tune of GPN.
 - **Research workflows and dataset construction:** preserved historically, not
   maintained on `main`.
 

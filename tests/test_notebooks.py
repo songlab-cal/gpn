@@ -11,11 +11,13 @@ import pytest
 
 ROOT = Path(__file__).parents[1]
 COLABS = ROOT / "colabs"
-NOTEBOOKS = {
-    "gpn_quick_start.ipynb": "gpn",
-    "gpn_star_quick_start.ipynb": "gpn_star",
-    "phylogpn_quick_start.ipynb": "phylogpn",
+MODEL_DEMOS = {
+    "gpn_demo.ipynb": "gpn",
+    "gpn_star_demo.ipynb": "gpn_star",
+    "phylogpn_demo.ipynb": "phylogpn",
 }
+WORKFLOWS = {"gpn_star_precomputed_scores.ipynb"}
+NOTEBOOKS = set(MODEL_DEMOS) | WORKFLOWS
 BASELINE = json.loads(
     (ROOT / "tests" / "fixtures" / "published_model_baseline.json").read_text()
 )
@@ -78,20 +80,20 @@ def _base_vectors(text):
     }
 
 
-def test_exactly_three_canonical_quick_starts_are_maintained():
+def test_canonical_notebook_set_is_maintained():
     actual = {path.name for path in COLABS.glob("*.ipynb")}
     validation_dates = {
         _load_notebook(name)["metadata"]["gpn"]["last_scientific_validation"]
-        for name in NOTEBOOKS
+        for name in MODEL_DEMOS
     }
 
-    assert actual == set(NOTEBOOKS)
+    assert actual == NOTEBOOKS
     assert len(validation_dates) == 1
     date.fromisoformat(validation_dates.pop())
 
 
-def test_quick_starts_are_portable_static_notebooks():
-    for name, family in NOTEBOOKS.items():
+def test_demos_are_portable_static_notebooks():
+    for name, family in MODEL_DEMOS.items():
         path = COLABS / name
         serialized = path.read_text()
         notebook = json.loads(serialized)
@@ -165,8 +167,31 @@ def test_quick_starts_are_portable_static_notebooks():
         assert stderr_outputs == []
 
 
+def test_precomputed_score_workflow_is_portable_and_pinned():
+    path = COLABS / "gpn_star_precomputed_scores.ipynb"
+    serialized = path.read_text()
+    notebook = json.loads(serialized)
+    source = "\n".join("".join(cell.get("source", [])) for cell in notebook["cells"])
+
+    assert notebook["metadata"]["gpn"] == {
+        "dataset_id": "songlab/gpn-star-scores",
+        "dataset_revision": "5c799b2ec6aa089f0caa8294ae72adb4510f81ae",
+    }
+    assert "947e2320f66b83489063aa41252ff76498aeefbb" in source
+    assert "average_precision_score" in source
+    assert '-pl.col("llr_calibrated")' in source
+    assert "import gpn" not in source
+    assert "whole-genome" in source
+    for cell in notebook["cells"]:
+        if cell["cell_type"] != "code":
+            continue
+        if "skip-execution" in cell.get("metadata", {}).get("tags", []):
+            continue
+        ast.parse("".join(cell["source"]), filename=f"{path}:{cell['id']}")
+
+
 def test_gpn_committed_outputs_match_approved_baseline():
-    notebook = _load_notebook("gpn_quick_start.ipynb")
+    notebook = _load_notebook("gpn_demo.ipynb")
     expected = BASELINE["models"]["gpn"]["expected"]
     observed = _nucleotide_table(_plain_output(notebook, "gpn-mlm"))
 
@@ -179,7 +204,7 @@ def test_gpn_committed_outputs_match_approved_baseline():
 
 
 def test_gpn_star_committed_outputs_match_approved_baseline():
-    notebook = _load_notebook("gpn_star_quick_start.ipynb")
+    notebook = _load_notebook("gpn_star_demo.ipynb")
     expected = BASELINE["models"]["gpn_star"]["expected"]
     observed = _nucleotide_table(_plain_output(notebook, "star-model"))
 
@@ -217,7 +242,7 @@ def test_gpn_star_committed_outputs_match_approved_baseline():
 
 
 def test_phylogpn_committed_outputs_match_approved_baseline():
-    notebook = _load_notebook("phylogpn_quick_start.ipynb")
+    notebook = _load_notebook("phylogpn_demo.ipynb")
     expected = BASELINE["models"]["phylogpn"]["expected"]
 
     observed_logits = _base_vectors(_plain_output(notebook, "phylo-rates"))
