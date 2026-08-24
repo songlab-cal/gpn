@@ -101,7 +101,7 @@ markers = [
 ]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.13"
 files = [
   "src/gpn/_registration.py",
   "src/gpn/scoring.py",
@@ -133,11 +133,12 @@ biopython = "Bio"
 wandb = "wandb"
 
 [tool.deptry.per_rule_ignores]
-# Transformers discovers optional experiment trackers dynamically.
-DEP002 = ["wandb"]
+# Transformers discovers optional experiment trackers dynamically; FSSpec
+# discovers the Zstandard codec dynamically when loading ``*.zst`` shards.
+DEP002 = ["wandb", "zstandard"]
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py313"
 line-length = 88
 src = ["src"]
 force-exclude = true
