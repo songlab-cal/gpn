@@ -22,12 +22,17 @@ type CheckpointOptions = Annotated[
     Parameter(name="*", group="Checkpoint options"),
 ]
 
-_DEFAULT_PREDICTION_ARGUMENTS = TrainingArguments()
 _DEFAULT_CHECKPOINT_OPTIONS = CheckpointArguments()
 
 
 def _version() -> str:
     return importlib.metadata.version("gpn")
+
+
+def _prediction_arguments(
+    arguments: TrainingArguments | None,
+) -> TrainingArguments:
+    return arguments if arguments is not None else TrainingArguments()
 
 
 app = App(
@@ -74,7 +79,7 @@ def ss_vep(
     split: str = "test",
     is_file: bool = False,
     checkpoint: CheckpointOptions = _DEFAULT_CHECKPOINT_OPTIONS,
-    trainer: PredictionArguments = _DEFAULT_PREDICTION_ARGUMENTS,
+    trainer: PredictionArguments | None = None,
 ) -> None:
     """Score variants with single-species GPN.
 
@@ -104,7 +109,7 @@ def ss_vep(
         n_prefix=n_prefix,
         split=split,
         is_file=is_file,
-        training_arguments=trainer,
+        training_arguments=_prediction_arguments(trainer),
         checkpoint_arguments=checkpoint,
     )
 
@@ -122,7 +127,7 @@ def ss_logits(
     split: str = "test",
     is_file: bool = False,
     checkpoint: CheckpointOptions = _DEFAULT_CHECKPOINT_OPTIONS,
-    trainer: PredictionArguments = _DEFAULT_PREDICTION_ARGUMENTS,
+    trainer: PredictionArguments | None = None,
 ) -> None:
     """Compute strand-averaged masked-nucleotide logits with GPN."""
 
@@ -138,7 +143,7 @@ def ss_logits(
         n_prefix=n_prefix,
         split=split,
         is_file=is_file,
-        training_arguments=trainer,
+        training_arguments=_prediction_arguments(trainer),
         checkpoint_arguments=checkpoint,
     )
 
@@ -155,7 +160,7 @@ def ss_embedding(
     split: str = "test",
     is_file: bool = False,
     checkpoint: CheckpointOptions = _DEFAULT_CHECKPOINT_OPTIONS,
-    trainer: PredictionArguments = _DEFAULT_PREDICTION_ARGUMENTS,
+    trainer: PredictionArguments | None = None,
 ) -> None:
     """Extract strand-averaged GPN embeddings over interval centers."""
 
@@ -170,7 +175,7 @@ def ss_embedding(
         tokenizer_path=tokenizer_path,
         split=split,
         is_file=is_file,
-        training_arguments=trainer,
+        training_arguments=_prediction_arguments(trainer),
         checkpoint_arguments=checkpoint,
     )
 
@@ -186,7 +191,7 @@ def msa_vep(
     split: str = "test",
     is_file: bool = False,
     checkpoint: CheckpointOptions = _DEFAULT_CHECKPOINT_OPTIONS,
-    trainer: PredictionArguments = _DEFAULT_PREDICTION_ARGUMENTS,
+    trainer: PredictionArguments | None = None,
 ) -> None:
     """Score variants with a deprecated GPN-MSA checkpoint."""
 
@@ -200,7 +205,7 @@ def msa_vep(
         output_path,
         split=split,
         is_file=is_file,
-        training_arguments=trainer,
+        training_arguments=_prediction_arguments(trainer),
         checkpoint_arguments=checkpoint,
     )
 
@@ -216,7 +221,7 @@ def msa_logits(
     split: str = "test",
     is_file: bool = False,
     checkpoint: CheckpointOptions = _DEFAULT_CHECKPOINT_OPTIONS,
-    trainer: PredictionArguments = _DEFAULT_PREDICTION_ARGUMENTS,
+    trainer: PredictionArguments | None = None,
 ) -> None:
     """Compute masked-nucleotide logits with a deprecated GPN-MSA checkpoint."""
 
@@ -230,7 +235,7 @@ def msa_logits(
         output_path,
         split=split,
         is_file=is_file,
-        training_arguments=trainer,
+        training_arguments=_prediction_arguments(trainer),
         checkpoint_arguments=checkpoint,
     )
 
@@ -247,7 +252,7 @@ def msa_embedding(
     split: str = "test",
     is_file: bool = False,
     checkpoint: CheckpointOptions = _DEFAULT_CHECKPOINT_OPTIONS,
-    trainer: PredictionArguments = _DEFAULT_PREDICTION_ARGUMENTS,
+    trainer: PredictionArguments | None = None,
 ) -> None:
     """Extract embeddings with a deprecated GPN-MSA checkpoint."""
 
@@ -262,7 +267,7 @@ def msa_embedding(
         center_window_size=center_window_size,
         split=split,
         is_file=is_file,
-        training_arguments=trainer,
+        training_arguments=_prediction_arguments(trainer),
         checkpoint_arguments=checkpoint,
     )
 
@@ -287,7 +292,7 @@ def star_vep(
     split: str = "test",
     is_file: bool = False,
     checkpoint: CheckpointOptions = _DEFAULT_CHECKPOINT_OPTIONS,
-    trainer: PredictionArguments = _DEFAULT_PREDICTION_ARGUMENTS,
+    trainer: PredictionArguments | None = None,
 ) -> None:
     """Score variants with GPN-Star."""
 
@@ -301,7 +306,7 @@ def star_vep(
         output_path,
         split=split,
         is_file=is_file,
-        training_arguments=trainer,
+        training_arguments=_prediction_arguments(trainer),
         checkpoint_arguments=checkpoint,
     )
 
@@ -318,7 +323,7 @@ def star_logits(
     split: str = "test",
     is_file: bool = False,
     checkpoint: CheckpointOptions = _DEFAULT_CHECKPOINT_OPTIONS,
-    trainer: PredictionArguments = _DEFAULT_PREDICTION_ARGUMENTS,
+    trainer: PredictionArguments | None = None,
 ) -> None:
     """Compute masked-nucleotide logits with GPN-Star."""
 
@@ -333,7 +338,7 @@ def star_logits(
         phylo_dist_path=phylo_dist_path,
         split=split,
         is_file=is_file,
-        training_arguments=trainer,
+        training_arguments=_prediction_arguments(trainer),
         checkpoint_arguments=checkpoint,
     )
 
@@ -350,7 +355,7 @@ def star_embedding(
     split: str = "test",
     is_file: bool = False,
     checkpoint: CheckpointOptions = _DEFAULT_CHECKPOINT_OPTIONS,
-    trainer: PredictionArguments = _DEFAULT_PREDICTION_ARGUMENTS,
+    trainer: PredictionArguments | None = None,
 ) -> None:
     """Extract GPN-Star embeddings over interval centers."""
 
@@ -365,7 +370,7 @@ def star_embedding(
         center_window_size=center_window_size,
         split=split,
         is_file=is_file,
-        training_arguments=trainer,
+        training_arguments=_prediction_arguments(trainer),
         checkpoint_arguments=checkpoint,
     )
 
@@ -375,7 +380,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     try:
         result = app(argv, result_action="return_value")
-    except ValueError as error:
+    except (ImportError, ValueError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 2
     return result if isinstance(result, int) else 0
