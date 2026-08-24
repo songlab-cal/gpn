@@ -33,10 +33,10 @@ modernization stack:
 | `GHSA-29pf-2h5f-8g72` / `CVE-2026-4372` | high | `<5.3.0` | `5.3.0` |
 | `GHSA-fgcw-684q-jj6r` / `CVE-2026-5241` | high | `<5.5.0` | `5.5.0` |
 
-The modernization lock resolves Transformers 5.15.0. This governance layer also
-raises the supported lower bound from 4.46 to 5.5 and runs the full offline suite
-at 5.5.0. The alerts should close naturally when the historical manifest is removed
-from `main`; they must not be dismissed merely to make the dashboard green.
+The modernization package and lock both pin Transformers 5.15.0, the version used
+for the committed scientific fixtures and canonical Python 3.13 environment. The
+alerts should close naturally when the historical manifest is removed from
+`main`; they must not be dismissed merely to make the dashboard green.
 
 ## Approval-gated rollout
 

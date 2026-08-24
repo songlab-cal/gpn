@@ -107,7 +107,7 @@
         "merge-modernization-stack"
       ],
       "preconditions": [
-        "the final CI workflow has reported all six named contexts on a pull request",
+        "the final CI workflow has reported all four required contexts named in release/main-ruleset.json on a pull request",
         "squash merging remains enabled",
         "no approval count or CODEOWNERS rule is added while there is one active maintainer"
       ],
@@ -157,7 +157,7 @@
         "merge-modernization-stack"
       ],
       "preconditions": [
-        "the merged tree removes the historical vulnerable manifest and requires Transformers 5.5 or newer",
+        "the merged tree removes the historical vulnerable manifest and pins the validated Transformers 5.15.0 runtime",
         "the repository plan supports the selected public-repository security features"
       ],
       "verification": [
@@ -216,12 +216,12 @@
       ],
       "preconditions": [
         "the package version is exactly 0.9.0 and the tag target is the approved main commit",
-        "the final review packet records clean Python 3.11 and 3.13 installs plus wheel and sdist hashes",
+        "the final review packet records a clean Python 3.13 install plus wheel and sdist hashes",
         "the release workflow and pypi environment are unchanged from the reviewed versions"
       ],
       "verification": [
         "the workflow publishes exactly one wheel and one source distribution with PyPI attestations",
-        "clean CPU installs on Python 3.11 and 3.13 reproduce the documented package and model-registration smoke tests"
+        "a clean CPU install on Python 3.13 reproduces the documented package and model-registration smoke tests"
       ],
       "failure_response": [
         "never overwrite artifacts or reuse the version; stop downstream writes, document the incident, yank if appropriate, and prepare a patch release"

@@ -140,6 +140,7 @@ def test_archive_mutation_identifies_tag_object_and_peeled_commit() -> None:
 
 def test_proposed_main_ruleset_matches_ci_and_solo_maintenance() -> None:
     ruleset = _json("main-ruleset.json")
+    ledger = _json("external-mutations.json")
     assert ruleset["enforcement"] == "active"
     assert ruleset["bypass_actors"] == []
     assert ruleset["conditions"]["ref_name"] == {
@@ -162,17 +163,21 @@ def test_proposed_main_ruleset_matches_ci_and_solo_maintenance() -> None:
     required = {item["context"] for item in required_checks}
     assert required == {
         "Quality",
-        "Python 3.11",
         "Python 3.13",
-        "Transformers 5.5 / Python 3.11",
         "Documentation",
         "Package",
     }
+    protect_main = next(
+        action for action in ledger["pending"] if action["id"] == "protect-main"
+    )
+    assert (
+        "the final CI workflow has reported all four required contexts named in "
+        "release/main-ruleset.json on a pull request" in protect_main["preconditions"]
+    )
     ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text()
-    for context in required - {"Python 3.11", "Python 3.13"}:
+    for context in required:
         assert f"name: {context}" in ci
-    assert "name: Python ${{ matrix.python-version }}" in ci
-    assert 'python-version: ["3.11", "3.13"]' in ci
+    assert "matrix.python-version" not in ci
     assert {item["integration_id"] for item in required_checks} == {15368}
     assert (
         rules["required_status_checks"]["parameters"][
@@ -197,24 +202,22 @@ def test_release_workflow_uses_locked_isolated_trusted_publishing() -> None:
     assert 'git merge-base --is-ancestor "${GITHUB_SHA}" origin/main' in workflow
 
 
-def test_transformers_security_floor_is_locked_and_exercised() -> None:
+def test_transformers_version_is_pinned_to_the_validated_runtime() -> None:
     project = tomllib.loads((ROOT / "pyproject.toml").read_text())
+    assert project["project"]["requires-python"] == ">=3.13,<3.14"
     transformer_requirement = next(
         requirement
         for requirement in project["project"]["dependencies"]
         if requirement.startswith("transformers")
     )
-    assert transformer_requirement == "transformers>=5.5,<6"
+    assert transformer_requirement == "transformers==5.15.0"
 
     lock = (ROOT / "uv.lock").read_text()
-    assert '{ name = "transformers", specifier = ">=5.5,<6" }' in lock
+    assert '{ name = "transformers", specifier = "==5.15.0" }' in lock
 
     ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text()
-    assert "Transformers 5.5 / Python 3.11" in ci
-    assert '"transformers==5.5.0"' in ci
-    assert '--no-deps "transformers==5.5.0"' in ci
-    assert "Transformers 4.46" not in ci
-    assert "run: .venv/bin/python -m pytest" in ci
+    assert "transformers-lower-bound" not in ci
+    assert '--no-deps "transformers==' not in ci
 
 
 def test_security_policy_has_private_and_fallback_paths() -> None:

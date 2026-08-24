@@ -91,7 +91,7 @@ the approved tree, and rerun the release-candidate checks on that commit.
 3. The release workflow builds once, passes the immutable artifacts between jobs,
    and publishes with the `pypi` environment, GitHub OIDC, and PyPI attestations.
 4. Verify the GitHub Actions run, artifact hashes, PyPI metadata and attestations,
-   and a clean `pip install gpn==<version>` on Python 3.11 and 3.13.
+   and a clean `pip install gpn==<version>` on Python 3.13.
 5. Apply only the separately approved Hub and documentation mutations, then verify
    their public rendering without moving pinned model revisions.
 
@@ -102,7 +102,7 @@ publish a new patch release. Never reuse a tag or version.
 ## Repository rules
 
 `release/main-ruleset.json` is the reviewable proposal for `main`. It requires a
-PR, the six offline CI contexts, an up-to-date branch, and resolved review threads;
+PR, the four offline CI contexts, an up-to-date branch, and resolved review threads;
 each context is bound to the GitHub Actions app rather than accepting a same-named
 status from another source. It blocks force pushes and deletion. It intentionally
 requires zero approvals so a solo maintainer is not deadlocked. The absence of
