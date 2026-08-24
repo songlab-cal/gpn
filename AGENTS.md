@@ -37,10 +37,12 @@ scheduled Hub checks.
 ## Scientific changes
 
 Treat fixture updates as scientific changes. Record coordinates, assembly,
-species/nucleotide/label order, model revision, GPN and Transformers versions,
-device and dtype, generation command, artifact checksum, numerical tolerances,
-and the reason for approving new expectations or tolerance changes. Do not
-casually regenerate stored notebook output or fixtures.
+species/nucleotide/label order, model revision, the exact GPN source commit and
+tree, GPN and Transformers versions, device and dtype, generation command,
+artifact checksum, numerical tolerances, and the reason for approving new
+expectations or tolerance changes. Generate a candidate outside the repository
+from committed source, then review it before deliberately updating a fixture. Do
+not casually regenerate stored notebook output or fixtures.
 
 Genomic intervals are zero-based and half-open; VCF positions are one-based.
 Variant log-likelihood ratios are alternate minus reference. Give jaxtyping axes

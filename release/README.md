@@ -14,13 +14,14 @@ trigger.
 Pending entries have one of two dispositions. `approval_ready` entries have exact
 targets and payloads suitable for a maintainer decision. `deferred` entries still
 have named blockers and require a separate future approval; approval of the
-cumulative modernization review does not authorize them. In particular, merge
-and final-release actions remain deferred until the final review packet binds them
-to the exact cumulative tree and ordered component heads. `depends_on` records
-rollout order, and every exact file-writing proposal is paired with an immutable
-target head when the external system provides one.
+cumulative modernization review does not authorize them. Merge and final-release
+actions become approval-ready only after the final review packet names the
+cumulative PR that binds the exact tree and ordered component heads. `depends_on`
+records rollout order, and every exact file-writing proposal is paired with an
+immutable target head when the external system provides one.
 
-The cumulative `0.9.0` review packet is added at the final stack tip, after its
-exact commit and component PR set exist. Nothing in this directory grants
-authorization to merge, publish, change repository settings, or write to Hugging
-Face.
+The cumulative `0.9.0` review packet lives under `release/0.9.0/`. Its component
+manifest is immutable, while the cumulative pull-request body binds review to the
+final head commit and tree (a Git object cannot embed its own identity). Nothing
+in this directory grants authorization to merge, publish, change repository
+settings, or write to Hugging Face.

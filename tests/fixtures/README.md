@@ -28,8 +28,12 @@ uv run --extra inference python tests/fixtures/regenerate_alignment_fixture.py \
 ```
 
 `published_model_baseline.json` records immutable Hugging Face revisions, inputs,
-floating-point outputs, nucleotide order, and the environment used for the
-one-time validation. The model revisions are:
+floating-point outputs, nucleotide order, the exact committed GPN source snapshot,
+and the environment used for the one-time validation. The source commit is a clean
+parent that already contains the recorded generator, avoiding a self-reference to
+the commit that stores its output. `generator_sha256` identifies that exact script;
+`review_candidate_sha256` identifies the generated JSON reviewed before this
+provenance receipt was added. The model revisions are:
 
 | Model | Repository | Revision |
 | --- | --- | --- |
@@ -60,3 +64,17 @@ uv run --extra inference pytest -m published_models --run-published-models
 ```
 
 That command downloads model files, but it does not access an external MSA.
+
+To propose changed numerical expectations, first commit the exact GPN source and
+then generate a review candidate outside the repository:
+
+```bash
+uv run --extra inference python \
+  tests/fixtures/regenerate_published_model_baseline.py \
+  --output /tmp/published_model_baseline.candidate.json \
+  --approval-reason "why the scientific expectation changed"
+```
+
+The generator refuses tracked working-tree changes and refuses to overwrite the
+canonical fixture. Review the numerical diff, tolerances, source commit/tree,
+package versions, and approval reason before deliberately updating the fixture.

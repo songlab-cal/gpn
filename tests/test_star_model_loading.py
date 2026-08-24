@@ -7,6 +7,7 @@ import torch
 
 from gpn.star import inference as inference_module
 from gpn.star import model as model_module
+from gpn.star import utils as utils_module
 
 
 def make_phylo_dist(path: Path) -> Path:
@@ -14,6 +15,50 @@ def make_phylo_dist(path: Path) -> Path:
     for filename in model_module._PHYLO_DIST_FILENAMES:
         (path / filename).touch()
     return path
+
+
+def test_direct_msa_path_accepts_trailing_slash(tmp_path):
+    species_directory = tmp_path / "100"
+    store = species_directory / "all.zarr"
+    store.mkdir(parents=True)
+
+    result = utils_module.find_directory_sum_paths(f"{species_directory}/")
+
+    assert result == {100: str(store)}
+
+
+def test_direct_msa_symlink_preserves_logical_species_count(tmp_path):
+    physical_store = tmp_path / "source" / "99" / "all.zarr"
+    physical_store.mkdir(parents=True)
+    species_directory = tmp_path / "100"
+    species_directory.symlink_to(physical_store.parent, target_is_directory=True)
+
+    result = utils_module.find_directory_sum_paths(species_directory)
+
+    assert result == {100: str(species_directory / "all.zarr")}
+
+
+def test_msa_parent_ignores_unrelated_entries_and_orders_species_counts(tmp_path):
+    expected = {}
+    for species_count in (36, 100):
+        store = tmp_path / str(species_count) / "all.zarr"
+        store.mkdir(parents=True)
+        expected[species_count] = str(store)
+    (tmp_path / "README.txt").write_text("not an MSA")
+    (tmp_path / "notes").mkdir()
+    (tmp_path / "12").mkdir()
+
+    result = utils_module.find_directory_sum_paths(tmp_path)
+
+    assert list(result) == [100, 36]
+    assert result == {100: expected[100], 36: expected[36]}
+
+
+def test_msa_parent_without_valid_stores_has_targeted_error(tmp_path):
+    (tmp_path / "notes").mkdir()
+
+    with pytest.raises(ValueError, match="No GPN-Star MSA stores found"):
+        utils_module.find_directory_sum_paths(tmp_path)
 
 
 def test_explicit_phylo_dist_override_wins(tmp_path):
@@ -294,7 +339,7 @@ def test_mlm_for_logits_uses_auto_model_with_phylo_override(monkeypatch):
     )
 
     assert calls == {
-        "load": ("model", {"phylo_dist_path": "override"}),
+        "load": ("model", {"phylo_dist_path": "override", "revision": None}),
         "eval": True,
     }
     assert isinstance(wrapped_model.model, FakeModel)

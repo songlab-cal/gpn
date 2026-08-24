@@ -70,6 +70,14 @@ assert _registration._registered_families == set()
     assert result.returncode == 0, result.stderr
 
 
+def test_installed_package_never_enables_hugging_face_remote_code():
+    package_root = Path(__file__).parents[1] / "src" / "gpn"
+    for source_path in package_root.rglob("*.py"):
+        source = source_path.read_text()
+        assert "trust_remote_code=True" not in source, source_path
+        assert "trust_remote_code = True" not in source, source_path
+
+
 def test_ss_registration_is_explicit_and_idempotent():
     from gpn.ss.model import (
         GPNConfig,

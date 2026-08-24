@@ -222,12 +222,21 @@
   "environment": {
     "device": "cpu",
     "dtype": "float32",
-    "git_base_commit": "637aaac8efc1fac63ac9f7382d929958d9eb38ed",
+    "gpn_source_commit": "1dc8f776953d8f74eb0a3ac0a277a72ca38581a2",
+    "gpn_source_tree": "949c3f16dbffb12c1eacca17c165ba6a494e7a52",
+    "gpn_version": "0.9.0",
     "numpy": "2.5.2",
     "python": "3.13.2",
     "torch": "2.13.0+cpu",
     "transformers": "5.15.0",
-    "working_tree_changes": true
+    "working_tree_changes": false
+  },
+  "generation": {
+    "approval_reason": "Independent reproduction of the frozen 0.9.0 baseline",
+    "command": "uv run --extra inference python tests/fixtures/regenerate_published_model_baseline.py --output /tmp/published_model_baseline.candidate.json --approval-reason 'Independent reproduction of the frozen 0.9.0 baseline'",
+    "generator_sha256": "82e5a3d43385a39ee10f5bef8948bb7026482842decd51ef169d7c5527ce7ca5",
+    "method": "Direct inference from every pinned checkpoint revision",
+    "review_candidate_sha256": "972b893cf2b98a6de538399cc1cd98f3252386762490fc8f87bb7dcddfa5c26f"
   },
   "models": {
     "gpn": {
@@ -631,5 +640,5 @@
       "revision": "53209151b497d4840d50526d44c0460b6e6768b7"
     }
   },
-  "schema_version": 2
+  "schema_version": 3
 }

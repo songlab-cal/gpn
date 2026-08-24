@@ -12,6 +12,10 @@ def _json(name: str) -> dict:
     return json.loads((RELEASE_DIR / name).read_text())
 
 
+def _release_json(name: str) -> dict:
+    return json.loads((RELEASE_DIR / "0.9.0" / name).read_text())
+
+
 def test_external_mutation_ledger_conforms_to_schema() -> None:
     schema = _json("external-mutations.schema.json")
     ledger = _json("external-mutations.json")
@@ -59,9 +63,9 @@ def test_external_mutation_ledger_covers_release_boundary() -> None:
     }
     assert "pypi-trusted-publisher-binding" in applied
     assert pending["protect-main"]["source"] == "release/main-ruleset.json"
-    assert pending["publish-gpn-0-9-0"]["source"] == ".github/workflows/release.yml"
-    assert pending["merge-modernization-stack"]["disposition"] == "deferred"
-    assert pending["publish-gpn-0-9-0"]["disposition"] == "deferred"
+    assert pending["publish-gpn-0-9-0"]["source"] == "release/0.9.0/review.md"
+    assert pending["merge-modernization-stack"]["disposition"] == "approval_ready"
+    assert pending["publish-gpn-0-9-0"]["disposition"] == "approval_ready"
 
     for action in ledger["pending"]:
         source = action.get("source")
@@ -77,6 +81,23 @@ def test_external_mutation_dependencies_are_complete_and_ordered() -> None:
     for action in ledger["pending"]:
         assert set(action.get("depends_on", [])) <= prior_ids
         prior_ids.add(action["id"])
+
+
+def test_final_approval_has_an_exact_bounded_action_set() -> None:
+    ledger = _json("external-mutations.json")
+    ready_ids = {
+        action["id"]
+        for action in ledger["pending"]
+        if action["disposition"] == "approval_ready"
+    }
+
+    assert ready_ids == {
+        "merge-modernization-stack",
+        "protect-main",
+        "enable-security-features",
+        "publish-analysis-archive",
+        "publish-gpn-0-9-0",
+    }
 
 
 def test_hub_audit_is_outside_this_release() -> None:
@@ -175,3 +196,44 @@ def test_transformers_version_is_pinned_to_the_validated_runtime() -> None:
     ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text()
     assert "transformers-lower-bound" not in ci
     assert '--no-deps "transformers==' not in ci
+
+
+def test_release_version_metadata_is_consistent() -> None:
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text())
+    lock = tomllib.loads((ROOT / "uv.lock").read_text())
+    version = project["project"]["version"]
+    locked_project = next(
+        package
+        for package in lock["package"]
+        if package["name"] == "gpn" and package["source"] == {"editable": "."}
+    )
+    changelog = (ROOT / "CHANGELOG.md").read_text()
+    assert version == "0.9.0"
+    assert locked_project["version"] == version
+    assert f"## {version} — Unreleased\n" in changelog
+
+
+def test_release_component_manifest_is_a_contiguous_immutable_stack() -> None:
+    manifest = _release_json("component-prs.json")
+    components = manifest["components"]
+
+    assert manifest["release"] == "0.9.0"
+    assert manifest["base"] == {
+        "ref": "main",
+        "commit": "690557d949309cf4f4234554888bb5421c49aede",
+    }
+    assert [component["number"] for component in components] == [
+        *range(88, 97),
+        98,
+    ]
+    assert components[0]["base_ref"] == "main"
+    assert all(component["state"] == "merged" for component in components[:8])
+    assert components[8]["base_ref"] == "main"
+    assert all(component["state"] == "open" for component in components[8:])
+    for previous, current in zip(components[8:], components[9:]):
+        assert current["base_ref"] == previous["head_ref"]
+    assert all(len(component["head_commit"]) == 40 for component in components)
+    assert manifest["final_component"]["base_ref"] == components[-1]["head_ref"]
+    assert manifest["final_component"]["head_ref"] == "codex/final-release-prep"
+    assert manifest["final_component"]["number"] == 99
+    assert manifest["cumulative_pull_request"] == 100

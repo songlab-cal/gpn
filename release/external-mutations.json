@@ -71,17 +71,17 @@
     {
       "id": "merge-modernization-stack",
       "system": "github",
-      "authorization": "separate_future_maintainer_approval",
-      "disposition": "deferred",
+      "authorization": "explicit_final_maintainer_approval",
+      "disposition": "approval_ready",
       "operation": "merge the approved component pull requests bottom-up and close the cumulative review pull request",
       "targets": [
-        "songlab-cal/gpn:main"
+        "songlab-cal/gpn:main",
+        "songlab-cal/gpn#100"
       ],
-      "blocked_by": [
-        "the final review packet must bind approval to the exact cumulative head and tree plus the ordered component pull-request heads"
-      ],
+      "source": "release/0.9.0/review.md",
       "preconditions": [
-        "the cumulative review packet records the exact approved head and component PR order",
+        "the body of cumulative PR 100 records the exact approved head and tree and the maintainer repeats both identifiers in the approval",
+        "release/0.9.0/component-prs.json records the approved component PR order and immutable heads",
         "all required checks pass at the final stack tip",
         "the maintainer explicitly approves the cumulative diff and this ledger"
       ],
@@ -175,23 +175,22 @@
     {
       "id": "publish-gpn-0-9-0",
       "system": "github",
-      "authorization": "separate_future_maintainer_approval",
-      "disposition": "deferred",
+      "authorization": "explicit_final_maintainer_approval",
+      "disposition": "approval_ready",
       "operation": "publish GitHub Release v0.9.0 from the exact approved main commit, triggering the Trusted Publishing workflow",
       "targets": [
         "songlab-cal/gpn@v0.9.0",
         "https://pypi.org/project/gpn/0.9.0/"
       ],
-      "source": ".github/workflows/release.yml",
+      "source": "release/0.9.0/review.md",
       "depends_on": [
         "merge-modernization-stack",
         "protect-main",
         "publish-analysis-archive"
       ],
-      "blocked_by": [
-        "the final review packet must record the exact approved tree; after squash merging, the resulting main commit must be recorded and verified to have that tree"
-      ],
       "preconditions": [
+        "the body of cumulative PR 100 records the exact approved tree and the maintainer repeats it in the approval",
+        "the resulting main commit is recorded after squash merging and has exactly the approved tree",
         "the package version is exactly 0.9.0 and the tag target is the approved main commit",
         "the final review packet records a clean Python 3.13 install plus wheel and sdist hashes",
         "the release workflow and pypi environment are unchanged from the reviewed versions"

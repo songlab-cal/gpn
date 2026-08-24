@@ -83,10 +83,13 @@ def test_leaf_help_is_generated_from_typed_signatures(
 
     assert expected_help in output
     if "train" not in arguments:
+        assert "--model-revision" in output
         assert "--bf16-full-eval" in output
         assert "--torch-compile" in output
         assert "--trainer" not in output
         assert "--is-file" not in output
+    if arguments[0] == "ss" and "train" not in arguments:
+        assert "--tokenizer-revision" in output
 
 
 def test_inference_dispatch_builds_flat_transformers_and_checkpoint_arguments(
@@ -120,6 +123,10 @@ def test_inference_dispatch_builds_flat_transformers_and_checkpoint_arguments(
                 "512",
                 "--model-path",
                 "songlab/model",
+                "--model-revision",
+                "model-commit",
+                "--tokenizer-revision",
+                "tokenizer-commit",
                 "--output-path",
                 str(output_path),
                 "--per-device-eval-batch-size",
@@ -142,6 +149,8 @@ def test_inference_dispatch_builds_flat_transformers_and_checkpoint_arguments(
         output_path,
     )
     assert keyword["is_file"] is True
+    assert keyword["model_revision"] == "model-commit"
+    assert keyword["tokenizer_revision"] == "tokenizer-commit"
     assert keyword["training_arguments"].per_device_eval_batch_size == 16
     assert keyword["training_arguments"].bf16_full_eval is False
     assert keyword["training_arguments"].torch_compile is False

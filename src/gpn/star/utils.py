@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -78,14 +78,37 @@ def get_all_species_mask(clade_mask, clade_indices, species_clade_indices):
 
 
 def find_directory_sum_paths(path_str):
-    path_str = os.path.normpath(path_str)
-    dirs = os.listdir(path_str)
-    _, final_dirname = os.path.split(path_str)
-    if "all.zarr" in dirs:
-        return {int(final_dirname): os.path.join(path_str, "all.zarr")}
-    else:
-        dirs = sorted(dirs, key=int, reverse=True)
-        return {int(name): os.path.join(path_str, name, "all.zarr") for name in dirs}
+    # Preserve the logical directory name: SCF layouts commonly use a `100`
+    # symlink whose target is named `99` (99 aligned species plus the target).
+    root = Path(path_str).expanduser().absolute()
+    if not root.exists():
+        raise FileNotFoundError(f"MSA path does not exist: {root}")
+    if not root.is_dir():
+        raise NotADirectoryError(f"MSA path is not a directory: {root}")
+
+    direct_store = root / "all.zarr"
+    if direct_store.is_dir():
+        if not root.name.isdigit():
+            raise ValueError(
+                "A direct GPN-Star MSA directory must have a numeric species-count "
+                f"name, but found {root.name!r}: {root}"
+            )
+        return {int(root.name): str(direct_store)}
+
+    stores = [
+        (int(child.name), child / "all.zarr")
+        for child in root.iterdir()
+        if child.is_dir() and child.name.isdigit() and (child / "all.zarr").is_dir()
+    ]
+    if not stores:
+        raise ValueError(
+            "No GPN-Star MSA stores found. Expected either a numeric directory "
+            f"containing all.zarr or numeric children containing all.zarr: {root}"
+        )
+    return {
+        species_count: str(store)
+        for species_count, store in sorted(stores, reverse=True)
+    }
 
 
 def normalize_logits(logits):

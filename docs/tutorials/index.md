@@ -1,8 +1,9 @@
 # Demos
 
 The three model demos are existing scientific notebooks with portability and
-correctness fixes. The fourth notebook is a lightweight executable workflow for
-joining variants to public GPN-Star scores; it does not download a model or MSA.
+correctness fixes. The fourth notebook is a lightweight executable OMIM TraitGym
+workflow for joining variants to public GPN-Star scores and computing global
+AUPRC; it does not download a model or MSA.
 
 ```{toctree}
 :hidden:
@@ -44,8 +45,9 @@ published fixture.
 :link: ../_notebooks/gpn_star_precomputed_scores
 :link-type: doc
 
-Join a variant table to immutable, chromosome-sharded genome-wide scores without
-downloading a model or whole-genome alignment.
+Join the OMIM TraitGym variants to immutable, chromosome-sharded genome-wide
+scores and compute global AUPRC without downloading a model or whole-genome
+alignment.
 :::
 
 ::::

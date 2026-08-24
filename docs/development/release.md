@@ -32,7 +32,8 @@ distribution from a workstation.
 6. Obtain explicit approval for the cumulative code diff and only the pending
    mutations marked `approval_ready`. Entries marked `deferred` are explicitly
    outside that approval and require a later, separate approval after their
-   blockers are resolved. Component PRs remain unmerged before final approval.
+   blockers are resolved. Keep unreviewed component PRs unmerged; merge reviewed
+   components bottom-up only after explicit maintainer authorization.
 
 ## Reproduce the release candidate
 

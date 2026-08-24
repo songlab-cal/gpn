@@ -9,7 +9,7 @@
 [**Demos**](#demos) · [**Documentation**](https://github.com/songlab-cal/gpn/blob/main/docs/index.md) ·
 [**Research & papers**](https://github.com/songlab-cal/gpn/blob/main/docs/development/research.md)
 
-[![GPN predictions across an Arabidopsis locus](https://github.com/user-attachments/assets/282b6204-156b-4b6d-83ff-2f4a53a9bb2e)](https://genome.ucsc.edu/s/gbenegas/gpn-arabidopsis)
+![GPN-Star architecture, evolutionary scales, and genomic prediction tasks](docs/_static/gpn_star_overview.png)
 
 The GPN family of genomic language models.
 
@@ -100,7 +100,8 @@ when running the CLI against the full public alignment.
 
 For a lightweight executable workflow, use the
 [precomputed GPN-Star score notebook](https://github.com/songlab-cal/gpn/blob/main/colabs/gpn_star_precomputed_scores.ipynb)
-to annotate variants without downloading a model or MSA.
+to score the OMIM TraitGym benchmark and compute global AUPRC without downloading
+a model or MSA.
 
 ## Reproducible science
 
