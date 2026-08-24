@@ -4,8 +4,8 @@ These small fixtures preserve the behavior of the published models without makin
 the ordinary test suite download checkpoints or an alignment.
 
 `hg38_chr6_31575665_31575793_multiz100way.npz` contains only the 128 bp interval
-used by the existing GPN-MSA and GPN-Star quick starts. The 100-way slice was read
-once from an existing SCF Zarr. Stable public provenance is recorded for the
+used by the archived GPN-MSA notebook and retained GPN-Star quick start. The
+100-way slice was read once from an existing SCF Zarr. Stable public provenance is recorded for the
 equivalent `songlab/multiz100way-pigz` archive, including its immutable revision,
 42.3 GB archive size, and SHA-256; the archive itself was not downloaded. The raw
 128 bp slice has its own SHA-256 in the baseline metadata.
@@ -13,8 +13,9 @@ equivalent `songlab/multiz100way-pigz` archive, including its immutable revision
 The GPN-MSA array was reconstructed with the historical 99- and 89-species lists,
 which drops the ten closest primate columns. Tests verify the complete column
 relationship and species-list hashes, not merely selected cells. Its displayed
-leading and trailing rows and its model output match the existing GPN-MSA
-notebook. No full MSA is vendored or downloaded by the tests.
+leading and trailing rows and its model output match the GPN-MSA notebook
+preserved at the archive snapshot. No full MSA is vendored or downloaded by the
+tests.
 
 To regenerate the tiny file from any already-present equivalent 100-way Zarr,
 pass its local path explicitly. The utility checks the raw slice and final file
@@ -38,8 +39,9 @@ one-time validation. The model revisions are:
 | PhyloGPN | `songlab/PhyloGPN` | `3556db4c469e67d25f0f7a0a6653b48be3eebf51` |
 | Sorghum expression | `songlab/gpn-brassicales-gxa-sorghum-v1` | `53209151b497d4840d50526d44c0460b6e6768b7` |
 
-The GPN, GPN-MSA, and GPN-Star values reproduce their checked-in quick-start
-notebooks. GPN-Star calibration is bound to the pinned calibration-table hash.
+The GPN and GPN-Star values reproduce their retained quick-start notebooks; the
+GPN-MSA value reproduces its archived notebook. GPN-Star calibration is bound to
+the pinned calibration-table hash.
 The Sorghum label order and example row are bound to the pinned dataset's small
 `labels.txt` and `test.parquet` artifacts. The PhyloGPN quick-start output is stale
 relative to the current published weights: its C-to-T value at position one is

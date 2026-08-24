@@ -1,7 +1,0 @@
-channels:
-- bioconda
-dependencies:
-- multiz
-- ucsc-faonerecord
-- ucsc-mafspeciessubset
-- htslib

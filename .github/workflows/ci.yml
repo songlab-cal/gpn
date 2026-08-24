@@ -45,24 +45,28 @@ jobs:
             gpn/__init__.py \
             gpn/_registration.py \
             gpn/scoring.py \
+            gpn/training.py \
             tests/conftest.py \
             tests/fixtures/regenerate_alignment_fixture.py \
             tests/test_msa_model_loading.py \
             tests/test_published_models.py \
             tests/test_registration.py \
             tests/test_scientific_fixtures.py \
-            tests/test_scoring.py
+            tests/test_scoring.py \
+            tests/test_training_recipes.py
           uv run ruff check \
             gpn/__init__.py \
             gpn/_registration.py \
             gpn/scoring.py \
+            gpn/training.py \
             tests/conftest.py \
             tests/fixtures/regenerate_alignment_fixture.py \
             tests/test_msa_model_loading.py \
             tests/test_published_models.py \
             tests/test_registration.py \
             tests/test_scientific_fixtures.py \
-            tests/test_scoring.py
+            tests/test_scoring.py \
+            tests/test_training_recipes.py
 
       - name: Run offline tests
         env:
@@ -99,7 +103,7 @@ jobs:
 
       - name: Install lower-bound environment
         run: |
-          uv sync --locked --python 3.11 --group dev
+          uv sync --locked --python 3.11 --extra inference --group dev
           uv pip install --python .venv/bin/python "transformers==4.46.3"
 
       - name: Run compatibility tests offline
@@ -110,4 +114,5 @@ jobs:
           .venv/bin/python -m pytest \
             tests/test_registration.py \
             tests/test_msa_model_loading.py \
-            tests/test_scoring.py
+            tests/test_scoring.py \
+            tests/test_training_recipes.py

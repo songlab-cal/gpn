@@ -76,7 +76,6 @@ train = [
   "pandas>=2.1",
   "pyarrow>=15",
   "pybigwig>=0.3.22",
-  "scipy>=1.12",
   "tokenizers>=0.20",
   "tqdm>=4.66",
   "wandb>=0.18",
@@ -102,6 +101,8 @@ packages = ["gpn"]
 [tool.hatch.build.targets.sdist]
 include = [
   "/gpn",
+  "/docs",
+  "/recipes",
   "/tests",
   "/LICENSE",
   "/README.md",

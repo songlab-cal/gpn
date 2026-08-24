@@ -45,8 +45,8 @@ uv sync --all-extras --group dev
 | Model | Paper | Notes |
 | --------- | --- | ----------- |
 | GPN | [Benegas et al. 2023](https://doi.org/10.1073/pnas.2311219120) | Requires unaligned genomes | 
-| GPN-MSA | [Benegas et al. 2025](https://www.nature.com/articles/s41587-024-02511-w) | Requires aligned genomes for both training and inference [deprecated in favor of GPN-Star] |
-| PhyloGPN | [Albors et al. 2025](https://link.springer.com/chapter/10.1007/978-3-031-90252-9_7) | Uses an alignment during training, but does not require it for inference or fine-tuning |
+| GPN-MSA | [Benegas et al. 2025](https://www.nature.com/articles/s41587-024-02511-w) | Deprecated in favor of GPN-Star; inference only |
+| PhyloGPN | [Albors et al. 2025](https://link.springer.com/chapter/10.1007/978-3-031-90252-9_7) | Inference only; training and fine-tuning are not maintained here |
 | GPN-Star | [Ye et al. 2025](https://doi.org/10.1101/2025.09.21.677619) | Requires aligned genomes for both training and inference |
 
 ## GPN
@@ -73,8 +73,8 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-brassicales")
 - **Pretraining dataset:** Arabidopsis and 7 other Brassicales ([genomes-brassicales-balanced-v1](https://huggingface.co/datasets/songlab/genomes-brassicales-balanced-v1))
 - **Models:**
   - [gpn-brassicales](https://huggingface.co/songlab/gpn-brassicales)
-- **Analysis code:**
-  - [analysis/gpn_arabidopsis](https://github.com/songlab-cal/gpn/tree/main/analysis/gpn_arabidopsis)
+- **Historical analysis:**
+  - [Brassicales snapshot](https://github.com/songlab-cal/gpn/tree/30dee6cf45849dfdcfc043ca8baf44fd6ba51d74/analysis/gpn_arabidopsis)
 - **Additional resources:**
   - [processed-data-arabidopsis](https://huggingface.co/datasets/gonzalobenegas/processed-data-arabidopsis)
 
@@ -86,8 +86,8 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-brassicales")
   - [gpn-animal-promoter](https://huggingface.co/songlab/gpn-animal-promoter)
 - **Benchmark datasets:**
   - [TraitGym](https://huggingface.co/datasets/songlab/TraitGym)
-- **Analysis code:**
-  - [analysis/gpn_animal_promoter](https://github.com/songlab-cal/gpn/tree/main/analysis/gpn_animal_promoter)
+- **Historical analysis:**
+  - [Animal-promoter snapshot](https://github.com/songlab-cal/gpn/tree/30dee6cf45849dfdcfc043ca8baf44fd6ba51d74/analysis/gpn_animal_promoter)
 - **Additional resources:**
   - [Checkpoints](https://huggingface.co/datasets/songlab/gpn-animal-promoter-checkpoints)
   - [TraitGym Leaderboard](https://huggingface.co/spaces/songlab/TraitGym-leaderboard)
@@ -98,55 +98,17 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-brassicales")
 - **Finetuning dataset:** Sorghum gene expression data from Gene Expression Atlas ([gxa-sorghum-v1](https://huggingface.co/datasets/songlab/gxa-sorghum-v1))
 - **Models:**
   - [gpn-brassicales-gxa-sorghum-v1](https://huggingface.co/songlab/gpn-brassicales-gxa-sorghum-v1) (fine-tuned from gpn-brassicales)
-- **Analysis code:**
-  - [analysis/gpn_sorghum_expression](https://github.com/songlab-cal/gpn/tree/main/analysis/gpn_sorghum_expression)
+- **Historical analysis:**
+  - [Sorghum-expression snapshot](https://github.com/songlab-cal/gpn/tree/30dee6cf45849dfdcfc043ca8baf44fd6ba51d74/analysis/gpn_sorghum_expression)
 
-### Training on your own data
+### Training on prepared data
 
-<details>
-<summary><strong>1. Create a dataset</strong></summary>
-
-Use the [Snakemake workflow](https://github.com/songlab-cal/gpn/tree/main/workflow/make_dataset) to create a dataset:
-- Can automatically download data from NCBI given a list of accessions, or use your own fasta files
-- Navigate to `workflow/make_dataset/`, configure `config/config.yaml` and `config/assemblies.tsv`, then run:
-  ```bash
-  snakemake --cores all
-  ```
-
-</details>
+The maintained [GPN training recipe](https://github.com/songlab-cal/gpn/tree/main/recipes/gpn_training) starts from
+an already prepared sequence dataset and includes tiny CPU and realistic GPU
+profiles. Dataset construction is deliberately outside the maintained package.
 
 <details>
-<summary><strong>2. Train the model</strong></summary>
-
-Training features:
-- Automatically detects all available GPUs
-- Track metrics on [Weights & Biases](https://wandb.ai/)
-- Implemented encoders: `convnet` (default), `roformer` (Transformer), `bytenet`
-- Specify config overrides: e.g. `--config_overrides encoder=bytenet,num_hidden_layers=30`
-- The number of steps that you can train without overfitting will be a function of the size and diversity of your dataset
-
-Example command:
-```bash
-WANDB_PROJECT=your_project torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{print NF}') -m gpn.ss.run_mlm --do_train --do_eval \
-    --report_to wandb --prediction_loss_only True --remove_unused_columns False \
-    --dataset_name results/dataset --tokenizer_name gonzalobenegas/tokenizer-dna-mlm \
-    --soft_masked_loss_weight_train 0.1 --soft_masked_loss_weight_evaluation 0.0 \
-    --weight_decay 0.01 --optim adamw_torch \
-    --dataloader_num_workers 16 --seed 42 \
-    --save_strategy steps --save_steps 10000 --evaluation_strategy steps \
-    --eval_steps 10000 --logging_steps 10000 --max_steps 120000 --warmup_steps 1000 \
-    --learning_rate 1e-3 --lr_scheduler_type constant_with_warmup \
-    --run_name your_run --output_dir your_output_dir --model_type GPN \
-    --per_device_train_batch_size 512 --per_device_eval_batch_size 512 --gradient_accumulation_steps 1 --total_batch_size 2048 \
-    --torch_compile \
-    --ddp_find_unused_parameters False \
-    --bf16 --bf16_full_eval
-```
-
-</details>
-
-<details>
-<summary><strong>3. Extract embeddings</strong></summary>
+<summary><strong>Extract embeddings</strong></summary>
 
 Input file requires `chrom`, `start`, `end` columns.
 
@@ -160,7 +122,7 @@ torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{print NF}')
 </details>
 
 <details>
-<summary><strong>4. Variant effect prediction</strong></summary>
+<summary><strong>Variant effect prediction</strong></summary>
 
 Input file requires `chrom`, `pos`, `ref`, `alt` columns.
 
@@ -174,7 +136,9 @@ torchrun --nproc_per_node=$(echo $CUDA_VISIBLE_DEVICES | awk -F',' '{print NF}')
 </details>
 
 ## GPN-MSA
-A genomic language model trained on whole-genome alignments across multiple species.
+A deprecated genomic language model trained on whole-genome alignments across
+multiple species. The published checkpoint remains supported for inference;
+training code and workflows are preserved only in the historical archive.
 
 ### Quick start
 
@@ -186,10 +150,8 @@ register_auto_classes("msa")
 model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-msa-sapiens")
 ```
 
-* Play with the model: [examples/msa/basic_example.ipynb](https://github.com/songlab-cal/gpn/blob/main/examples/msa/basic_example.ipynb)
-* Variant effect prediction: [examples/msa/vep.ipynb](https://github.com/songlab-cal/gpn/blob/main/examples/msa/vep.ipynb)
-* Training (human): [examples/msa/training.ipynb](https://github.com/songlab-cal/gpn/blob/main/examples/msa/training.ipynb)
 * Model implementation: [gpn/msa/model.py](https://github.com/songlab-cal/gpn/blob/main/gpn/msa/model.py)
+* Scientific baseline: [published-model fixtures](https://github.com/songlab-cal/gpn/tree/main/tests/fixtures)
 
 ### Papers
 
@@ -206,18 +168,18 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-msa-sapiens")
   - [COSMIC](https://huggingface.co/datasets/songlab/cosmic) - Somatic missense mutations in cancer
   - [OMIM](https://huggingface.co/datasets/songlab/omim) - Regulatory variants implicated in Mendelian disorders
   - [gnomAD](https://huggingface.co/datasets/songlab/gnomad) - Genome-wide variants with allele frequency information
-- **Analysis code:**
-  - [analysis/gpn-msa_human](https://github.com/songlab-cal/gpn/tree/main/analysis/gpn-msa_human)
+- **Historical analysis and retired notebooks:**
+  - [GPN-MSA snapshot](https://github.com/songlab-cal/gpn/tree/30dee6cf45849dfdcfc043ca8baf44fd6ba51d74/analysis/gpn-msa_human)
 - **Additional resources:**
   - [hg38 genome-wide scores](https://huggingface.co/datasets/songlab/gpn-msa-hg38-scores)
   - [Gene essentiality predictions](https://huggingface.co/datasets/songlab/gpn-msa-hg38-gene-essentiality-scores)
 
-### Training on other species (e.g. other vertebrates, plants)
-* See https://github.com/songlab-cal/gpn/issues/28, https://github.com/songlab-cal/gpn/discussions/40, https://github.com/songlab-cal/gpn/issues/44
-* Another source for plant alignments: https://plantregmap.gao-lab.org/download.php#alignment-conservation
-
 ## PhyloGPN
-A phylogenetic genomic language model that uses an alignment during training but does not require it for inference or fine-tuning. PhyloGPN is a convolutional neural network that outputs rate matrix parameters for Felsenstein's F81 substitution model, trained on the Zoonomia alignment. It can be used for transfer learning and zero-shot variant deleteriousness prediction, especially useful for sequences not in reference genomes.
+A phylogenetic genomic language model trained on the Zoonomia alignment.
+PhyloGPN is a convolutional neural network that outputs rate-matrix parameters
+for Felsenstein's F81 substitution model. The published checkpoint is maintained
+here for inference, including zero-shot variant-effect prediction for sequences
+outside reference genomes.
 
 ### Quick start
 
@@ -254,6 +216,7 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-star-hg38-p243-200m")
 
 * Play with the model: [examples/star/demo.ipynb](https://github.com/songlab-cal/gpn/blob/main/examples/star/demo.ipynb)
 * Model implementation: [gpn/star/model.py](https://github.com/songlab-cal/gpn/blob/main/gpn/star/model.py)
+* Training on prepared data: [GPN-Star recipe](https://github.com/songlab-cal/gpn/tree/main/recipes/gpn_star_training)
 
 ### Papers
 
@@ -298,16 +261,14 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-star-hg38-p243-200m")
     - [galbase](https://huggingface.co/datasets/songlab/galbase) - Chicken population allele frequencies
   - **Arabidopsis thaliana:**
     - [1001gp](https://huggingface.co/datasets/songlab/1001gp) - Population allele frequencies from 1001 Genome Project
-- **Analysis code:**
-  - Model training and main results on variant effect prediction: [analysis/gpn-star/train_and_eval](https://github.com/songlab-cal/gpn/tree/main/analysis/gpn-star/train_and_eval)
-  - Complex trait heritability analysis (S-LDSC): [analysis/gpn-star/s-ldsc](https://github.com/songlab-cal/gpn/tree/main/analysis/gpn-star/s-ldsc)
-  - Whole-genome alignment processing: [analysis/gpn-star/wga_processing](https://github.com/songlab-cal/gpn/tree/main/analysis/gpn-star/wga_processing)
-  - Model interpretation: [analysis/gpn-star/interpretation](https://github.com/songlab-cal/gpn/tree/main/analysis/gpn-star/interpretation)
+- **Historical analysis:**
+  - [GPN-Star snapshot](https://github.com/songlab-cal/gpn/tree/30dee6cf45849dfdcfc043ca8baf44fd6ba51d74/analysis/gpn-star)
 
 ## Getting help
 
 - **Questions?** Open a [Discussion](https://github.com/songlab-cal/gpn/discussions) for usage questions, ideas, or general help
 - **Issues?** Report bugs or request features via [Issues](https://github.com/songlab-cal/gpn/issues)
+- **Research code?** See the [research branch and archive policy](https://github.com/songlab-cal/gpn/blob/main/docs/research.md)
 
 ## Citation
 [GPN](https://doi.org/10.1073/pnas.2311219120):
