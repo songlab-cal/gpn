@@ -33,7 +33,7 @@ from transformers import AutoModelForMaskedLM, AutoTokenizer
 MODEL_ID = "songlab/gpn-animal-promoter"
 OBSERVED_REVISION = "7cf3276a03b5e243efd421b8939ed3d1e7dcf9cc"
 
-register_auto_classes("gpn")
+register_auto_classes("ss")
 tokenizer = AutoTokenizer.from_pretrained(
     MODEL_ID,
     revision=OBSERVED_REVISION,

@@ -5,6 +5,8 @@ from pathlib import Path
 from huggingface_hub import DatasetCard, ModelCard
 from jsonschema import Draft202012Validator
 
+from gpn import register_auto_classes
+
 ROOT = Path(__file__).parents[1]
 HUB_DIR = ROOT / "hub"
 MANIFEST = json.loads((HUB_DIR / "manifest.json").read_text())
@@ -26,6 +28,13 @@ def test_manifest_conforms_to_its_json_schema() -> None:
 
 def test_supported_manifest_matches_scientific_baseline() -> None:
     records = MANIFEST["supported_models"]
+    expected_families = {
+        "gpn": "ss",
+        "gpn_msa": "msa",
+        "gpn_star": "star",
+        "phylogpn": "phylo",
+        "sorghum_expression": "ss",
+    }
     assert [record["key"] for record in records] == [
         "gpn",
         "gpn_msa",
@@ -37,6 +46,8 @@ def test_supported_manifest_matches_scientific_baseline() -> None:
 
     for record in records:
         baseline = BASELINE["models"][record["key"]]
+        assert record["family"] == expected_families[record["key"]]
+        register_auto_classes(record["family"])
         assert record["repo_id"] == baseline["model_id"]
         assert record["revision"] == baseline["revision"]
         assert COMMIT_RE.fullmatch(record["revision"])
@@ -184,7 +195,13 @@ def test_card_proposal_frontmatter_parses_offline() -> None:
     assert len(model_cards) == 6
     assert len(dataset_cards) == 2
     for path in model_cards:
+        source = path.read_text()
         assert ModelCard.load(path).data.to_dict()["inference"] is False
+        registration_families = re.findall(
+            r'register_auto_classes\("([^"]+)"\)', source
+        )
+        assert len(registration_families) == 1
+        register_auto_classes(registration_families[0])
     for path in dataset_cards:
         DatasetCard.load(path)
 

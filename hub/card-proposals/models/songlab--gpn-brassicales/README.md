@@ -38,7 +38,7 @@ from transformers import AutoModelForMaskedLM, AutoTokenizer
 MODEL_ID = "songlab/gpn-brassicales"
 REVISION = "eb9c35d0d18571abe84390d22e74f2b21d319ce3"
 
-register_auto_classes("gpn")
+register_auto_classes("ss")
 tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, revision=REVISION)
 model = AutoModelForMaskedLM.from_pretrained(
     MODEL_ID,

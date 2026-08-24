@@ -41,7 +41,7 @@ MODEL_ID = "songlab/gpn-brassicales-gxa-sorghum-v1"
 REVISION = "53209151b497d4840d50526d44c0460b6e6768b7"
 DATASET_REVISION = "0545539b3229946b90c1073c99a97bfb9f95cd83"
 
-register_auto_classes("gpn")
+register_auto_classes("ss")
 tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, revision=REVISION)
 model = AutoModelForSequenceClassification.from_pretrained(
     MODEL_ID,

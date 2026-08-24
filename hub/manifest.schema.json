@@ -136,8 +136,9 @@
         },
         "family": {
           "enum": [
-            "gpn",
-            "phylogpn",
+            "msa",
+            "phylo",
+            "ss",
             "star"
           ]
         },

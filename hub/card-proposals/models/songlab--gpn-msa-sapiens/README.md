@@ -37,7 +37,7 @@ from transformers import AutoModelForMaskedLM
 MODEL_ID = "songlab/gpn-msa-sapiens"
 REVISION = "4a7d4f75449cb2abd560b2af024d76f99233c6db"
 
-register_auto_classes("gpn")
+register_auto_classes("msa")
 model = AutoModelForMaskedLM.from_pretrained(
     MODEL_ID,
     revision=REVISION,

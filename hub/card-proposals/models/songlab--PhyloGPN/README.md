@@ -33,7 +33,7 @@ from transformers import AutoModel, AutoTokenizer
 MODEL_ID = "songlab/PhyloGPN"
 REVISION = "3556db4c469e67d25f0f7a0a6653b48be3eebf51"
 
-register_auto_classes("phylogpn")
+register_auto_classes("phylo")
 tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, revision=REVISION)
 model = AutoModel.from_pretrained(MODEL_ID, revision=REVISION).eval()
 
