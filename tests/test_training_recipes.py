@@ -3,6 +3,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -10,10 +11,10 @@ import torch
 from transformers import HfArgumentParser
 
 from gpn.ss.model import GPNConfig, GPNForMaskedLM
-from gpn.ss.run_mlm import (
+from gpn.ss.train import (
     DataTrainingArguments as GPNDataTrainingArguments,
 )
-from gpn.ss.run_mlm import (
+from gpn.ss.train import (
     ModelArguments as GPNModelArguments,
 )
 from gpn.star.data import Tokenizer as StarTokenizer
@@ -27,13 +28,28 @@ from gpn.star.train import (
 from gpn.star.train import (
     ModelArguments as StarModelArguments,
 )
-from gpn.training import GPNTrainingArguments, hf_token_kwargs
+from gpn.training import (
+    GPNTrainingArguments,
+    find_training_checkpoint,
+    load_training_dataset,
+    reject_unsupported_hub_push,
+)
 
 ROOT = Path(__file__).parents[1]
 RECIPE_DIRECTORIES = (
     ROOT / "recipes" / "gpn_training",
     ROOT / "recipes" / "gpn_star_training",
 )
+DATASET_REVISIONS = {
+    "gpn_training": (
+        "songlab/genomes-brassicales-balanced-v1",
+        "d11c6084dd2bb5575f9ce224cbcc435a687e67bf",
+    ),
+    "gpn_star_training": (
+        "songlab/gpn-msa-sapiens-dataset",
+        "57c0e187c674761955518f3579eb0d7b5a0b7078",
+    ),
+}
 
 
 @pytest.mark.parametrize("recipe_directory", RECIPE_DIRECTORIES)
@@ -41,8 +57,11 @@ def test_training_profiles_are_paired_and_use_prepared_inputs(recipe_directory):
     smoke = json.loads((recipe_directory / "cpu-smoke.json").read_text())
     gpu = json.loads((recipe_directory / "gpu.json").read_text())
 
-    assert smoke["dataset_name"].startswith("/path/to/prepared-")
+    dataset_name, dataset_revision = DATASET_REVISIONS[recipe_directory.name]
+    assert smoke["dataset_name"] == dataset_name
+    assert smoke["dataset_revision"] == dataset_revision
     assert gpu["dataset_name"] == smoke["dataset_name"]
+    assert gpu["dataset_revision"] == smoke["dataset_revision"]
     assert smoke["use_cpu"] is True
     assert smoke["max_steps"] == 1
     assert smoke["do_eval"] is False
@@ -80,14 +99,14 @@ def test_training_profile_is_accepted_by_entrypoint_parser(
     values = json.loads((recipe_directory / profile).read_text())
     parsed = HfArgumentParser(argument_types).parse_dict(values)
 
-    assert parsed[0].model_type in {"GPN", "GPNStar"}
     assert parsed[1].dataset_name == values["dataset_name"]
+    assert parsed[1].dataset_revision == values["dataset_revision"]
     assert parsed[2].output_dir == values["output_dir"]
     if "overwrite_output_dir" in values:
         assert parsed[2].overwrite_output_dir is True
 
 
-@pytest.mark.parametrize("module", ("gpn.ss.run_mlm", "gpn.star.train"))
+@pytest.mark.parametrize("module", ("gpn.ss.train", "gpn.star.train"))
 def test_training_entrypoint_help_is_offline(module):
     environment = os.environ.copy()
     environment.update(HF_HUB_OFFLINE="1", TRANSFORMERS_OFFLINE="1")
@@ -105,9 +124,50 @@ def test_training_entrypoint_help_is_offline(module):
     assert "--dataset_name" in result.stdout
 
 
-def test_hugging_face_auth_uses_current_token_keyword():
-    assert hf_token_kwargs(False) == {}
-    assert hf_token_kwargs(True) == {"token": True}
+def test_training_dataset_revision_is_forwarded_independently(monkeypatch):
+    calls = {}
+
+    def fake_load_dataset(*args, **kwargs):
+        calls["args"] = args
+        calls["kwargs"] = kwargs
+        return "dataset"
+
+    monkeypatch.setattr("gpn.training.load_dataset", fake_load_dataset)
+
+    result = load_training_dataset(
+        "songlab/example",
+        "config",
+        dataset_revision="dataset-commit",
+        cache_dir="cache",
+        streaming=True,
+    )
+
+    assert result == "dataset"
+    assert calls == {
+        "args": ("songlab/example", "config"),
+        "kwargs": {
+            "revision": "dataset-commit",
+            "cache_dir": "cache",
+            "streaming": True,
+        },
+    }
+
+
+def test_overwrite_output_does_not_resume_existing_checkpoint(tmp_path):
+    (tmp_path / "checkpoint-1").mkdir()
+    arguments = SimpleNamespace(
+        resume_from_checkpoint=None,
+        output_dir=str(tmp_path),
+        do_train=True,
+        overwrite_output_dir=True,
+    )
+
+    assert find_training_checkpoint(arguments) is None
+
+
+def test_hub_push_is_rejected_instead_of_silently_ignored():
+    with pytest.raises(ValueError, match="push_to_hub is not supported"):
+        reject_unsupported_hub_push(SimpleNamespace(push_to_hub=True))
 
 
 def test_star_collator_uses_stable_keyword_arguments():
@@ -118,6 +178,21 @@ def test_star_collator_uses_stable_keyword_arguments():
     )
 
     assert collator.mlm_probability == pytest.approx(0.15)
+    assert not hasattr(collator, "tokenizer")
+
+    source_ids = np.random.default_rng(42).integers(0, 6, (8, 20))
+    target_species = np.array([0, 1])
+    batch = collator(
+        [
+            {
+                "input_ids": source_ids[:, :2],
+                "loss_weight": np.ones((8, 2)),
+                "target_species": target_species,
+                "source_ids": source_ids,
+            }
+        ]
+    )
+    assert batch["labels"].shape == (1, 8, 2)
 
 
 def test_tiny_gpn_training_step():
@@ -144,14 +219,16 @@ def test_tiny_gpn_training_step():
 
 def test_tiny_gpn_star_training_step(tmp_path):
     species = 20
+    asset_dir = tmp_path / "source-phylo-dist"
+    asset_dir.mkdir()
     pairwise = np.ones((species, species), dtype=np.float32)
     np.fill_diagonal(pairwise, 0.0)
-    np.save(tmp_path / "pairwise.npy", pairwise)
-    np.save(tmp_path / "in_clade.npy", np.zeros(species, dtype=np.float32))
+    np.save(asset_dir / "pairwise.npy", pairwise)
+    np.save(asset_dir / "in_clade.npy", np.zeros(species, dtype=np.float32))
 
     model = GPNStarForMaskedLM(
         GPNStarConfig(
-            phylo_dist_path=str(tmp_path),
+            phylo_dist_path=str(asset_dir),
             num_hidden_layers=1,
             num_attention_heads=2,
             hidden_size=16,
@@ -182,3 +259,12 @@ def test_tiny_gpn_star_training_step(tmp_path):
 
     assert torch.isfinite(loss)
     assert any(parameter.grad is not None for parameter in model.parameters())
+
+    checkpoint = tmp_path / "checkpoint"
+    model.save_pretrained(checkpoint)
+    asset_dir.rename(tmp_path / "moved-source-phylo-dist")
+    reloaded = GPNStarForMaskedLM.from_pretrained(checkpoint)
+
+    assert reloaded.config.phylo_dist_path == str(checkpoint / "phylo_dist")
+    assert (checkpoint / "phylo_dist" / "pairwise.npy").is_file()
+    assert (checkpoint / "phylo_dist" / "in_clade.npy").is_file()

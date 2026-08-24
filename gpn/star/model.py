@@ -1,4 +1,5 @@
 import os
+import shutil
 
 import torch
 import torch.nn as nn
@@ -828,6 +829,30 @@ class BaseModelOutputWithRowAndColAttentions(ModelOutput):
 class GPNStarPreTrainedModel(PreTrainedModel):
     config_class = GPNStarConfig
     base_model_prefix = "model"
+
+    def save_pretrained(self, save_directory, *args, **kwargs):
+        """Save a portable checkpoint with its required phylogenetic assets."""
+        source_dir = self.config.phylo_dist_path
+        if not _contains_phylo_dist_files(source_dir):
+            raise FileNotFoundError(
+                "Cannot save GPN-Star without pairwise.npy and in_clade.npy in "
+                f"the configured phylo_dist_path: '{source_dir}'"
+            )
+
+        asset_dir = os.path.join(os.fspath(save_directory), "phylo_dist")
+        os.makedirs(asset_dir, exist_ok=True)
+        for filename in _PHYLO_DIST_FILENAMES:
+            source = os.path.join(source_dir, filename)
+            destination = os.path.join(asset_dir, filename)
+            if os.path.realpath(source) != os.path.realpath(destination):
+                shutil.copy2(source, destination)
+
+        original_path = self.config.phylo_dist_path
+        self.config.phylo_dist_path = None
+        try:
+            return super().save_pretrained(save_directory, *args, **kwargs)
+        finally:
+            self.config.phylo_dist_path = original_path
 
     @classmethod
     def from_pretrained(
