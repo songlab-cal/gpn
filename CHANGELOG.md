@@ -29,5 +29,6 @@ Hugging Face model revisions.
 ## 0.9.0a1 — 2026-08-18
 
 - Claimed the `gpn` PyPI distribution with an installable alpha package.
-- Added PEP 621 metadata, Python 3.11–3.13 support, explicit Transformers AutoClass
-  registration, and Trusted Publishing through GitHub Actions.
+- Added PEP 621 metadata, a canonical Python 3.13 and Transformers 5.15.0
+  environment, explicit Transformers AutoClass registration, and Trusted
+  Publishing through GitHub Actions.
