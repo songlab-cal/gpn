@@ -84,11 +84,11 @@ Transformers AutoClass registration and intentionally have no dedicated CLI.
 
 Only three existing quick starts are maintained, with portable setup, explicit
 registration, immutable model revisions, and small committed outputs. They render
-statically in the documentation and remain launchable in Colab.
+statically in the documentation without requiring a notebook kernel.
 
 | GPN | GPN-Star | PhyloGPN |
 | --- | --- | --- |
-| [Notebook](https://github.com/songlab-cal/gpn/blob/main/colabs/gpn_quick_start.ipynb) · [Colab](https://colab.research.google.com/github/songlab-cal/gpn/blob/main/colabs/gpn_quick_start.ipynb) | [Notebook](https://github.com/songlab-cal/gpn/blob/main/colabs/gpn_star_quick_start.ipynb) · [Colab](https://colab.research.google.com/github/songlab-cal/gpn/blob/main/colabs/gpn_star_quick_start.ipynb) | [Notebook](https://github.com/songlab-cal/gpn/blob/main/colabs/phylogpn_quick_start.ipynb) · [Colab](https://colab.research.google.com/github/songlab-cal/gpn/blob/main/colabs/phylogpn_quick_start.ipynb) |
+| [Notebook](https://github.com/songlab-cal/gpn/blob/main/colabs/gpn_quick_start.ipynb) | [Notebook](https://github.com/songlab-cal/gpn/blob/main/colabs/gpn_star_quick_start.ipynb) | [Notebook](https://github.com/songlab-cal/gpn/blob/main/colabs/phylogpn_quick_start.ipynb) |
 
 The GPN-Star tutorial uses a 3.5 KiB fixture from the published locus; it never
 downloads a whole-genome MSA.

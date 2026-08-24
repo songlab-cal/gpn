@@ -40,12 +40,27 @@ from importlib.metadata import version as _gpn_version
 _gpn_model = globals().get("model_for_mlm", globals().get("model"))
 if _gpn_model is None:
     raise RuntimeError("Quick start did not define model_for_mlm or model")
+_gpn_model_id = globals().get("MODEL_ID")
+_gpn_model_revision = globals().get("MODEL_REVISION")
+if not isinstance(_gpn_model_id, str) or not isinstance(_gpn_model_revision, str):
+    raise RuntimeError("Quick start did not define string MODEL_ID and MODEL_REVISION")
+_gpn_resolved_revision = getattr(_gpn_model.config, "_commit_hash", None)
+if (
+    _gpn_resolved_revision is not None
+    and _gpn_resolved_revision != _gpn_model_revision
+):
+    raise RuntimeError(
+        "Loaded model revision does not match MODEL_REVISION: "
+        f"{{_gpn_resolved_revision}} != {{_gpn_model_revision}}"
+    )
 _gpn_parameter = next(_gpn_model.parameters())
 print(
     "{_PROVENANCE_PREFIX}"
     + _gpn_json.dumps(
         {{
             "last_scientific_validation": _gpn_date.today().isoformat(),
+            "model_id": _gpn_model_id,
+            "model_revision": _gpn_model_revision,
             "output_environment": {{
                 "device": str(_gpn_parameter.device),
                 "dtype": str(_gpn_parameter.dtype),
@@ -86,7 +101,33 @@ def _update_provenance(
     gpn_metadata["last_scientific_validation"] = provenance[
         "last_scientific_validation"
     ]
+    gpn_metadata["model_id"] = provenance["model_id"]
+    gpn_metadata["model_revision"] = provenance["model_revision"]
     gpn_metadata["output_environment"] = provenance["output_environment"]
+
+
+def _remove_expected_stderr(cell: nbformat.NotebookNode, *, notebook_name: str) -> None:
+    """Remove only complete, recognized diagnostic streams from a cell."""
+
+    stderr = [
+        "".join(output.get("text", ""))
+        for output in cell.get("outputs", [])
+        if output.get("output_type") == "stream" and output.get("name") == "stderr"
+    ]
+    unexpected_stderr = [
+        text for text in stderr if _EXPECTED_STDERR.fullmatch(text.strip()) is None
+    ]
+    if unexpected_stderr:
+        details = "\n".join(unexpected_stderr)
+        raise RuntimeError(f"{notebook_name} emitted stderr:\n{details}")
+    if stderr:
+        cell.outputs = [
+            output
+            for output in cell.get("outputs", [])
+            if not (
+                output.get("output_type") == "stream" and output.get("name") == "stderr"
+            )
+        ]
 
 
 def _parse_args() -> argparse.Namespace:
@@ -143,26 +184,7 @@ def _execute(path: Path) -> nbformat.NotebookNode:
     _update_provenance(executed, _consume_provenance(executed))
     for cell in executed.cells:
         cell.metadata.pop("execution", None)
-        stderr = [
-            "".join(output.get("text", ""))
-            for output in cell.get("outputs", [])
-            if output.get("output_type") == "stream" and output.get("name") == "stderr"
-        ]
-        unexpected_stderr = [
-            text for text in stderr if not _EXPECTED_STDERR.search(text)
-        ]
-        if unexpected_stderr:
-            details = "\n".join(unexpected_stderr)
-            raise RuntimeError(f"{path.name} emitted stderr:\n{details}")
-        if stderr:
-            cell.outputs = [
-                output
-                for output in cell.get("outputs", [])
-                if not (
-                    output.get("output_type") == "stream"
-                    and output.get("name") == "stderr"
-                )
-            ]
+        _remove_expected_stderr(cell, notebook_name=path.name)
     return executed
 
 

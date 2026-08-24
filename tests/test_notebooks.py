@@ -36,6 +36,18 @@ def _load_notebook(name):
     return json.loads((COLABS / name).read_text())
 
 
+def _load_refresh_notebooks(monkeypatch):
+    monkeypatch.syspath_prepend(ROOT)
+    spec = importlib.util.spec_from_file_location(
+        "gpn_refresh_notebooks", ROOT / "docs" / "refresh_notebooks.py"
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    refresh_notebooks = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(refresh_notebooks)
+    return refresh_notebooks
+
+
 def _cell(notebook, cell_id):
     return next(cell for cell in notebook["cells"] if cell["id"] == cell_id)
 
@@ -78,7 +90,7 @@ def test_exactly_three_canonical_quick_starts_are_maintained():
     date.fromisoformat(validation_dates.pop())
 
 
-def test_quick_starts_are_portable_static_colabs():
+def test_quick_starts_are_portable_static_notebooks():
     for name, family in NOTEBOOKS.items():
         path = COLABS / name
         serialized = path.read_text()
@@ -107,7 +119,7 @@ def test_quick_starts_are_portable_static_colabs():
             "torch",
             "transformers",
         }
-        assert f"github/songlab-cal/gpn/blob/main/colabs/{name}" in source
+        assert "colab.research.google.com" not in source
         for forbidden in FORBIDDEN_TEXT:
             assert forbidden not in serialized
 
@@ -250,14 +262,7 @@ def test_sphinx_notebook_copy_is_deterministic(tmp_path, monkeypatch):
 def test_refresh_consumes_kernel_provenance_without_committing_helper_cell(
     monkeypatch,
 ):
-    monkeypatch.syspath_prepend(ROOT)
-    spec = importlib.util.spec_from_file_location(
-        "gpn_refresh_notebooks", ROOT / "docs" / "refresh_notebooks.py"
-    )
-    assert spec is not None
-    assert spec.loader is not None
-    refresh_notebooks = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(refresh_notebooks)
+    refresh_notebooks = _load_refresh_notebooks(monkeypatch)
 
     notebook = nbformat.v4.new_notebook(
         cells=[
@@ -268,6 +273,8 @@ def test_refresh_consumes_kernel_provenance_without_committing_helper_cell(
     )
     payload = {
         "last_scientific_validation": "2026-08-23",
+        "model_id": "songlab/example-model",
+        "model_revision": "0123456789abcdef",
         "output_environment": {
             "device": "cuda:0",
             "dtype": "torch.float32",
@@ -294,3 +301,81 @@ def test_refresh_consumes_kernel_provenance_without_committing_helper_cell(
 
     assert [cell["cell_type"] for cell in notebook.cells] == ["markdown"]
     assert notebook.metadata["gpn"] == payload
+
+
+def test_refresh_provenance_cell_records_loaded_model_identity(monkeypatch, capsys):
+    refresh_notebooks = _load_refresh_notebooks(monkeypatch)
+
+    class FakeModel:
+        config = type("Config", (), {"_commit_hash": "0123456789abcdef"})()
+
+        @staticmethod
+        def parameters():
+            parameter = type(
+                "Parameter", (), {"device": "cuda:0", "dtype": "torch.float32"}
+            )()
+            return iter([parameter])
+
+    namespace = {
+        "MODEL_ID": "songlab/example-model",
+        "MODEL_REVISION": "0123456789abcdef",
+        "model": FakeModel(),
+    }
+    exec(refresh_notebooks._provenance_cell().source, namespace)
+    output = capsys.readouterr().out.strip()
+    payload = json.loads(output.removeprefix(refresh_notebooks._PROVENANCE_PREFIX))
+
+    assert payload["model_id"] == namespace["MODEL_ID"]
+    assert payload["model_revision"] == namespace["MODEL_REVISION"]
+
+
+def test_refresh_provenance_cell_rejects_revision_mismatch(monkeypatch):
+    refresh_notebooks = _load_refresh_notebooks(monkeypatch)
+
+    class FakeModel:
+        config = type("Config", (), {"_commit_hash": "resolved-revision"})()
+
+        @staticmethod
+        def parameters():
+            return iter(())
+
+    namespace = {
+        "MODEL_ID": "songlab/example-model",
+        "MODEL_REVISION": "requested-revision",
+        "model": FakeModel(),
+    }
+    with pytest.raises(RuntimeError, match="resolved-revision != requested-revision"):
+        exec(refresh_notebooks._provenance_cell().source, namespace)
+
+
+def test_refresh_rejects_unexpected_text_beside_expected_stderr(monkeypatch):
+    refresh_notebooks = _load_refresh_notebooks(monkeypatch)
+
+    expected = (
+        "[transformers] ConvNetModel LOAD REPORT songlab/gpn-brassicales "
+        "cls.decoder.{0, 2, 3}.weight UNEXPECTED "
+        "can be ignored when loading from different task/architecture"
+    )
+    clean_cell = nbformat.v4.new_code_cell(
+        outputs=[
+            nbformat.v4.new_output(output_type="stream", name="stderr", text=expected)
+        ]
+    )
+    refresh_notebooks._remove_expected_stderr(
+        clean_cell, notebook_name="quick_start.ipynb"
+    )
+    assert clean_cell.outputs == []
+
+    mixed_cell = nbformat.v4.new_code_cell(
+        outputs=[
+            nbformat.v4.new_output(
+                output_type="stream",
+                name="stderr",
+                text=f"{expected}\nUnexpected warning",
+            )
+        ]
+    )
+    with pytest.raises(RuntimeError, match="Unexpected warning"):
+        refresh_notebooks._remove_expected_stderr(
+            mixed_cell, notebook_name="quick_start.ipynb"
+        )

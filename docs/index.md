@@ -29,7 +29,7 @@ Choose the supported model family and understand its inputs and outputs.
 :link: tutorials/index
 :link-type: doc
 
-Read annotated code and committed scientific plots, or launch a notebook in Colab.
+Read annotated code and committed scientific plots without starting a kernel.
 :::
 
 :::{grid-item-card} Reproduce the science
