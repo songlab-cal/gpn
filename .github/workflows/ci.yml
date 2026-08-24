@@ -42,10 +42,10 @@ jobs:
       - name: Check maintained code
         run: |
           uv run ruff format --check \
-            gpn/__init__.py \
-            gpn/_registration.py \
-            gpn/scoring.py \
-            gpn/training.py \
+            src/gpn/__init__.py \
+            src/gpn/_registration.py \
+            src/gpn/scoring.py \
+            src/gpn/training.py \
             tests/conftest.py \
             tests/fixtures/regenerate_alignment_fixture.py \
             tests/test_msa_model_loading.py \
@@ -55,10 +55,10 @@ jobs:
             tests/test_scoring.py \
             tests/test_training_recipes.py
           uv run ruff check \
-            gpn/__init__.py \
-            gpn/_registration.py \
-            gpn/scoring.py \
-            gpn/training.py \
+            src/gpn/__init__.py \
+            src/gpn/_registration.py \
+            src/gpn/scoring.py \
+            src/gpn/training.py \
             tests/conftest.py \
             tests/fixtures/regenerate_alignment_fixture.py \
             tests/test_msa_model_loading.py \
