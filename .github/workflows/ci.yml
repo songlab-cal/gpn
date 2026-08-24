@@ -39,10 +39,30 @@ jobs:
       - name: Install locked environment
         run: uv sync --locked --python ${{ matrix.python-version }} --extra inference --group dev
 
-      - name: Check focused bootstrap code
+      - name: Check maintained code
         run: |
-          uv run ruff format --check gpn/__init__.py gpn/_registration.py tests/test_registration.py
-          uv run ruff check gpn/__init__.py gpn/_registration.py tests/test_registration.py
+          uv run ruff format --check \
+            gpn/__init__.py \
+            gpn/_registration.py \
+            gpn/scoring.py \
+            tests/conftest.py \
+            tests/fixtures/regenerate_alignment_fixture.py \
+            tests/test_msa_model_loading.py \
+            tests/test_published_models.py \
+            tests/test_registration.py \
+            tests/test_scientific_fixtures.py \
+            tests/test_scoring.py
+          uv run ruff check \
+            gpn/__init__.py \
+            gpn/_registration.py \
+            gpn/scoring.py \
+            tests/conftest.py \
+            tests/fixtures/regenerate_alignment_fixture.py \
+            tests/test_msa_model_loading.py \
+            tests/test_published_models.py \
+            tests/test_registration.py \
+            tests/test_scientific_fixtures.py \
+            tests/test_scoring.py
 
       - name: Run offline tests
         env:
@@ -59,3 +79,35 @@ jobs:
         run: |
           uv run twine check dist/*
           uv run check-wheel-contents dist/*.whl
+
+  transformers-lower-bound:
+    name: Transformers 4.46 / Python 3.11
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.28"
+          enable-cache: true
+
+      - name: Install lower-bound environment
+        run: |
+          uv sync --locked --python 3.11 --group dev
+          uv pip install --python .venv/bin/python "transformers==4.46.3"
+
+      - name: Run compatibility tests offline
+        env:
+          HF_HUB_OFFLINE: "1"
+          TRANSFORMERS_OFFLINE: "1"
+        run: |
+          .venv/bin/python -m pytest \
+            tests/test_registration.py \
+            tests/test_msa_model_loading.py \
+            tests/test_scoring.py

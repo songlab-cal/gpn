@@ -58,12 +58,12 @@ A single-sequence genomic language model trained on unaligned genomes. Also know
 from gpn import register_auto_classes
 from transformers import AutoModelForMaskedLM
 
-register_auto_classes("gpn")
+register_auto_classes("ss")
 model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-brassicales")
 ```
 
 * Play with the model: [examples/ss/basic_example.ipynb](https://github.com/songlab-cal/gpn/blob/main/examples/ss/basic_example.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/songlab-cal/gpn/blob/main/examples/ss/basic_example.ipynb)
-* Model implementation: [gpn/model.py](https://github.com/songlab-cal/gpn/blob/main/gpn/model.py), [gpn/ss](https://github.com/songlab-cal/gpn/tree/main/gpn/ss)
+* Model implementation: [gpn/ss/model.py](https://github.com/songlab-cal/gpn/blob/main/gpn/ss/model.py)
 
 ### Papers
 
@@ -182,14 +182,14 @@ A genomic language model trained on whole-genome alignments across multiple spec
 from gpn import register_auto_classes
 from transformers import AutoModelForMaskedLM
 
-register_auto_classes("gpn")
+register_auto_classes("msa")
 model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-msa-sapiens")
 ```
 
 * Play with the model: [examples/msa/basic_example.ipynb](https://github.com/songlab-cal/gpn/blob/main/examples/msa/basic_example.ipynb)
 * Variant effect prediction: [examples/msa/vep.ipynb](https://github.com/songlab-cal/gpn/blob/main/examples/msa/vep.ipynb)
 * Training (human): [examples/msa/training.ipynb](https://github.com/songlab-cal/gpn/blob/main/examples/msa/training.ipynb)
-* Model implementation: [gpn/model.py](https://github.com/songlab-cal/gpn/blob/main/gpn/model.py), [gpn/msa](https://github.com/songlab-cal/gpn/tree/main/gpn/msa)
+* Model implementation: [gpn/msa/model.py](https://github.com/songlab-cal/gpn/blob/main/gpn/msa/model.py)
 
 ### Papers
 
@@ -222,13 +222,15 @@ A phylogenetic genomic language model that uses an alignment during training but
 ### Quick start
 
 ```python
+from gpn import register_auto_classes
 from transformers import AutoModel
 
-model = AutoModel.from_pretrained("songlab/PhyloGPN", trust_remote_code=True)
+register_auto_classes("phylo")
+model = AutoModel.from_pretrained("songlab/PhyloGPN")
 ```
 
 * Play with the model: [examples/phylogpn/basic_example.ipynb](https://github.com/songlab-cal/gpn/blob/main/examples/phylogpn/basic_example.ipynb)
-* Model implementation: [gpn/phylogpn.py](https://github.com/songlab-cal/gpn/blob/main/gpn/phylogpn.py)
+* Model implementation: [gpn/phylo/model.py](https://github.com/songlab-cal/gpn/blob/main/gpn/phylo/model.py)
 
 ### Papers
 
@@ -251,7 +253,7 @@ model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-star-hg38-p243-200m")
 ```
 
 * Play with the model: [examples/star/demo.ipynb](https://github.com/songlab-cal/gpn/blob/main/examples/star/demo.ipynb)
-* Model implementation: [gpn/model.py](https://github.com/songlab-cal/gpn/blob/main/gpn/model.py), [gpn/star](https://github.com/songlab-cal/gpn/tree/main/gpn/star)
+* Model implementation: [gpn/star/model.py](https://github.com/songlab-cal/gpn/blob/main/gpn/star/model.py)
 
 ### Papers
 

@@ -58,7 +58,7 @@ from gpn import register_auto_classes
 import numpy as np
 import pandas as pd
 
-register_auto_classes("gpn")
+register_auto_classes("ss")
 
 
 def standardize(x):

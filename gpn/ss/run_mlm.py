@@ -56,7 +56,7 @@ from gpn import register_auto_classes
 import numpy as np
 from torch.utils.data import DataLoader, IterableDataset, get_worker_info
 
-register_auto_classes("gpn")
+register_auto_classes("ss")
 
 
 class DataCollatorForLanguageModelingSimplified(DataCollatorForLanguageModeling):

@@ -64,7 +64,7 @@ from torch.utils.data import DataLoader, IterableDataset, get_worker_info
 
 from numpy.lib.stride_tricks import sliding_window_view
 
-register_auto_classes("gpn")
+register_auto_classes("msa")
 
 
 disable_caching()
