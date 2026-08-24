@@ -8,7 +8,7 @@ from typing import Any
 
 import datasets
 import transformers
-from datasets import load_dataset
+from datasets import DatasetDict, IterableDatasetDict, load_dataset
 from transformers import HfArgumentParser, Trainer, TrainingArguments
 from transformers.trainer_utils import get_last_checkpoint
 
@@ -20,7 +20,7 @@ def load_training_dataset(
     dataset_revision: str | None,
     cache_dir: str | None,
     streaming: bool = False,
-):
+) -> DatasetDict | IterableDatasetDict:
     """Load a training dataset with an explicit, independently pinned revision."""
 
     return load_dataset(

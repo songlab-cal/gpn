@@ -1,0 +1,45 @@
+minimum_pre_commit_version: "4.2.0"
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args: [--maxkb=2048]
+      - id: check-case-conflict
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: check-yaml
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+      - id: trailing-whitespace
+
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: d9fca3320346514799461a80b0753eb45d707d46 # 0.11.28
+    hooks:
+      - id: uv-lock
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: 65dbdb59d2f2d9c3bdc343c566821ad3319ddaa3 # v0.16.3
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy maintained typed surface
+        entry: uv run mypy
+        language: system
+        pass_filenames: false
+        files: ^(pyproject\.toml|src/gpn/(_registration|scoring|training|star/checkpoint)\.py)$
+
+      - id: deptry
+        name: dependency placement
+        entry: uv run deptry .
+        language: system
+        pass_filenames: false
+        files: ^(pyproject\.toml|src/)
