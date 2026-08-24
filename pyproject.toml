@@ -105,9 +105,7 @@ include = [
   "/tests",
   "/LICENSE",
   "/CHANGELOG.md",
-  "/CITATION.cff",
   "/CONTRIBUTING.md",
-  "/SECURITY.md",
   "/README.md",
   "/pyproject.toml",
 ]

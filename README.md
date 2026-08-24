@@ -6,7 +6,7 @@
 [![License](https://img.shields.io/github/license/songlab-cal/gpn)](https://github.com/songlab-cal/gpn/blob/main/LICENSE)
 
 [**Quick start**](#quick-start) · [**Models**](#model-family) ·
-[**Tutorials**](#tutorials) · [**Documentation**](https://github.com/songlab-cal/gpn/blob/main/docs/index.md) ·
+[**Demos**](#demos) · [**Documentation**](https://github.com/songlab-cal/gpn/blob/main/docs/index.md) ·
 [**Research & papers**](https://github.com/songlab-cal/gpn/blob/main/docs/research.md)
 
 [![GPN predictions across an Arabidopsis locus](https://github.com/user-attachments/assets/282b6204-156b-4b6d-83ff-2f4a53a9bb2e)](https://genome.ucsc.edu/s/gbenegas/gpn-arabidopsis)
@@ -55,7 +55,9 @@ API.
 | [GPN-MSA](https://doi.org/10.1038/s41587-024-02511-w) | a multispecies alignment | deprecated; inference only | [`songlab/gpn-msa-sapiens`](https://huggingface.co/songlab/gpn-msa-sapiens) |
 | [PhyloGPN](https://doi.org/10.1007/978-3-031-90252-9_7) | phylogenetic substitution rates | inference only | [`songlab/PhyloGPN`](https://huggingface.co/songlab/PhyloGPN) |
 | [GPN-Star](https://doi.org/10.1101/2025.09.21.677619) | alignments across evolutionary scales | training + inference | [`songlab/gpn-star-hg38-v100-200m`](https://huggingface.co/songlab/gpn-star-hg38-v100-200m) |
-| [Sorghum expression](https://doi.org/10.1038/s41587-026-03046-y) | fine-tuned GPN sequence features | inference only | [`songlab/gpn-brassicales-gxa-sorghum-v1`](https://huggingface.co/songlab/gpn-brassicales-gxa-sorghum-v1) |
+
+The [sorghum gene-expression checkpoint](https://huggingface.co/songlab/gpn-brassicales-gxa-sorghum-v1)
+is an inference-only fine-tune of GPN, not a separate model family.
 
 The [support guide](https://github.com/songlab-cal/gpn/blob/main/docs/models.md) defines required inputs, compatibility
 boundaries, immutable validated revisions, and output semantics. Classification in
@@ -80,18 +82,23 @@ GPN-Star checkpoints, and raw LLR semantics.
 PhyloGPN and the sorghum gene-expression fine-tune are maintained through explicit
 Transformers AutoClass registration and intentionally have no dedicated CLI.
 
-## Tutorials
+## Demos
 
-Only three existing quick starts are maintained, with portable setup, explicit
+Only three existing demos are maintained, with portable setup, explicit
 registration, immutable model revisions, and small committed outputs. They render
 statically in the documentation without requiring a notebook kernel.
 
 | GPN | GPN-Star | PhyloGPN |
 | --- | --- | --- |
-| [Notebook](https://github.com/songlab-cal/gpn/blob/main/colabs/gpn_quick_start.ipynb) | [Notebook](https://github.com/songlab-cal/gpn/blob/main/colabs/gpn_star_quick_start.ipynb) | [Notebook](https://github.com/songlab-cal/gpn/blob/main/colabs/phylogpn_quick_start.ipynb) |
+| [Notebook](https://github.com/songlab-cal/gpn/blob/main/colabs/gpn_demo.ipynb) | [Notebook](https://github.com/songlab-cal/gpn/blob/main/colabs/gpn_star_demo.ipynb) | [Notebook](https://github.com/songlab-cal/gpn/blob/main/colabs/phylogpn_demo.ipynb) |
 
-The GPN-Star tutorial uses a 3.5 KiB fixture from the published locus; it never
-downloads a whole-genome MSA.
+The GPN-Star demo uses a 3.5 KiB fixture from the published locus; it never
+downloads a whole-genome MSA. See the [alignment guide](https://github.com/songlab-cal/gpn/blob/main/docs/alignments.md)
+when running the CLI against the full public alignment.
+
+For a lightweight executable workflow, use the
+[precomputed GPN-Star score notebook](https://github.com/songlab-cal/gpn/blob/main/colabs/gpn_star_precomputed_scores.ipynb)
+to annotate variants without downloading a model or MSA.
 
 ## Reproducible science
 
@@ -126,13 +133,11 @@ uv run pytest
 - Report bugs and scientific regressions in [Issues](https://github.com/songlab-cal/gpn/issues).
 - Read [CONTRIBUTING.md](https://github.com/songlab-cal/gpn/blob/main/CONTRIBUTING.md) before proposing maintained or off-main
   research work.
-- Report sensitive vulnerabilities according to [SECURITY.md](https://github.com/songlab-cal/gpn/blob/main/SECURITY.md).
 
 ## Citation
 
-Please cite the paper for the model family you use. GitHub, Zotero, and other tools
-can read the software citation from [CITATION.cff](https://github.com/songlab-cal/gpn/blob/main/CITATION.cff); the full set of
-papers and assets is linked from the [research index](https://github.com/songlab-cal/gpn/blob/main/docs/research.md).
+Please cite the paper for each model or fine-tuned application you use. Copyable
+BibTeX entries are collected in the [citation guide](https://github.com/songlab-cal/gpn/blob/main/docs/citations.md).
 
 GPN is developed in the [Song Lab at UC Berkeley](https://people.eecs.berkeley.edu/~yss/group.html)
 and distributed under the [MIT License](https://github.com/songlab-cal/gpn/blob/main/LICENSE).

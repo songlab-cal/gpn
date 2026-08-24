@@ -8,11 +8,13 @@ from pathlib import Path
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 SOURCE = REPOSITORY_ROOT / "colabs"
 DESTINATION = Path(__file__).resolve().parent / "_notebooks"
-NOTEBOOKS = (
-    "gpn_quick_start.ipynb",
-    "gpn_star_quick_start.ipynb",
-    "phylogpn_quick_start.ipynb",
+MODEL_DEMOS = (
+    "gpn_demo.ipynb",
+    "gpn_star_demo.ipynb",
+    "phylogpn_demo.ipynb",
 )
+WORKFLOWS = ("gpn_star_precomputed_scores.ipynb",)
+NOTEBOOKS = MODEL_DEMOS + WORKFLOWS
 
 
 def main() -> None:
@@ -21,7 +23,7 @@ def main() -> None:
     actual = tuple(sorted(path.name for path in SOURCE.glob("*.ipynb")))
     if actual != tuple(sorted(NOTEBOOKS)):
         raise RuntimeError(
-            "Expected exactly the three canonical quick starts; "
+            "Expected the three canonical demos and precomputed-score workflow; "
             f"found: {', '.join(actual) or 'none'}"
         )
 

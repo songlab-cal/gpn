@@ -4,7 +4,7 @@ These small fixtures preserve the behavior of the published models without makin
 the ordinary test suite download checkpoints or an alignment.
 
 `hg38_chr6_31575665_31575793_multiz100way.npz` contains only the 128 bp interval
-used by the archived GPN-MSA notebook and retained GPN-Star quick start. The
+used by the archived GPN-MSA notebook and retained GPN-Star demo. The
 100-way slice was read once from an existing SCF Zarr. Stable public provenance is recorded for the
 equivalent `songlab/multiz100way-pigz` archive, including its immutable revision,
 42.3 GB archive size, and SHA-256; the archive itself was not downloaded. The raw
@@ -48,7 +48,7 @@ relative to the current published weights: its C-to-T value at position one is
 `-0.2926`, while the pinned published revision produces `0.7954897`. The current
 value was reproduced exactly with both the pinned Hugging Face remote
 implementation on Transformers 4.48.3 and the maintained local AutoClass
-implementation on Transformers 5.15.0. The quick start should display the current
+implementation on Transformers 5.15.0. The demo should display the current
 result when it is refreshed.
 
 Ordinary tests validate the fixture integrity and likelihood calculations entirely

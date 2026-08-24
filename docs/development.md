@@ -23,8 +23,9 @@ off-main research lifecycle.
 
 - Markdown under `docs/` is the conceptual source; docstrings feed only the curated
   API reference.
-- Exactly three existing quick starts live under `colabs/` and are rendered with
-  committed outputs. Sphinx and Read the Docs never execute them.
+- Three existing model demos and one lightweight precomputed-score workflow live
+  under `colabs/`. The model demos retain committed outputs; Sphinx and Read the
+  Docs never execute any notebook.
 - Notebook output refreshes are deliberate scientific changes. Record package,
   Transformers, model revision, dtype, and device metadata and compare numerical
   results to fixtures.

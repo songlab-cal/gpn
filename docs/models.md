@@ -10,7 +10,6 @@ mean that every historical training or dataset-building workflow is maintained.
 | GPN-MSA | `songlab/gpn-msa-sapiens` | deprecated; inference only | compatible local multispecies Zarr | `register_auto_classes("msa")` |
 | GPN-Star | `songlab/gpn-star-hg38-v100-200m` | training + inference | compatible local MSA hierarchy | `register_auto_classes("star")` |
 | PhyloGPN | `songlab/PhyloGPN` | inference only | DNA sequence | `register_auto_classes("phylo")` |
-| Sorghum expression | `songlab/gpn-brassicales-gxa-sorghum-v1` | inference only | 512 bp Sorghum sequence | `register_auto_classes("ss")` |
 
 ## Standard loading pattern
 
@@ -36,8 +35,12 @@ device placement, dtype, and local cache behavior.
 - GPN-MSA training is retired. New alignment-based training should use GPN-Star.
 - A checkpoint and MSA must agree on assembly, target genome, species count,
   species order, preprocessing, and tokenizer.
-- PhyloGPN and the Sorghum expression checkpoint have no maintained training or
-  fine-tuning path.
+- PhyloGPN has no maintained training or fine-tuning path.
+
+The [`songlab/gpn-brassicales-gxa-sorghum-v1`](https://huggingface.co/songlab/gpn-brassicales-gxa-sorghum-v1)
+checkpoint is an inference-only fine-tune of GPN for sorghum gene expression,
+not a separate model family. Load it through `register_auto_classes("ss")` and
+the standard AutoClasses.
 
 Immutable revisions and expected outputs are recorded in
 [`tests/fixtures/published_model_baseline.json`](https://github.com/songlab-cal/gpn/blob/main/tests/fixtures/published_model_baseline.json).
