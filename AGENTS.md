@@ -44,6 +44,18 @@ Variant log-likelihood ratios are alternate minus reference. Give jaxtyping axes
 stable semantic names; put runtime shape checks at boundaries and in tests, not
 in hot loops.
 
+## Package architecture
+
+Keep model-family implementations under `src/gpn/ss/`, `src/gpn/msa/`,
+`src/gpn/star/`, and `src/gpn/phylo/`. A module directly under `src/gpn/` must
+contain functionality genuinely shared by at least two families; family-specific
+models, data access, inference adapters, losses, and utilities belong inside that
+family's directory.
+
+Share behavior through small common functions and composition. Do not introduce
+inheritance between GPN model families. Do not restore retired compatibility
+modules or import-side-effect registration shims.
+
 ## APIs and dependencies
 
 Register Hugging Face Auto classes through the explicit
