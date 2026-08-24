@@ -14,12 +14,16 @@
 
 """Train GPN-Star on prepared genomic intervals and a local whole-genome MSA."""
 
+from __future__ import annotations
+
 import logging
 from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
 import torch
+from jaxtyping import Int
+from torch import Tensor
 from transformers import Trainer, set_seed
 
 from gpn.star.data import GenomeMSA, Tokenizer
@@ -48,11 +52,21 @@ class DataCollatorForLanguageModelingSimplified:
     def __call__(self, examples: list[dict[str, Any]]) -> dict[str, Any]:
         return self.torch_call(examples)
 
-    def torch_call(self, examples: list[dict[str, Any]]) -> dict[str, Any]:
+    def torch_call(self, examples: list[dict[str, Any]]) -> dict[str, Tensor]:
+        field_dtypes = {
+            "input_ids": torch.long,
+            "source_ids": torch.long,
+            "target_species": torch.long,
+            "loss_weight": torch.float32,
+        }
         batch = {
-            key: torch.stack([torch.tensor(example[key]) for example in examples])
+            key: torch.stack([torch.as_tensor(example[key]) for example in examples])
             for key in examples[0]
         }
+        for key, dtype in field_dtypes.items():
+            if key in batch:
+                batch[key] = batch[key].to(dtype)
+
         batch["input_ids"], batch["labels"], batch["source_ids"] = (
             self.torch_mask_tokens(
                 batch["input_ids"],
@@ -64,18 +78,29 @@ class DataCollatorForLanguageModelingSimplified:
 
     def torch_mask_tokens(
         self,
-        inputs: torch.Tensor,
-        source_ids: torch.Tensor,
-        target_species: torch.Tensor,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        inputs: Int[Tensor, "batch position target"],
+        source_ids: Int[Tensor, "batch position species"],
+        target_species: Int[Tensor, "batch target"],
+    ) -> tuple[
+        Int[Tensor, "batch position target"],
+        Int[Tensor, "batch position target"],
+        Int[Tensor, "batch position species"],
+    ]:
         """Mask the same positions within clades and prevent in-clade copying."""
 
-        clades = self.clades
+        clades = torch.as_tensor(
+            self.clades,
+            dtype=torch.long,
+            device=inputs.device,
+        )
         batch_size, length, _ = inputs.shape
         labels = inputs.clone()
 
         probability_matrix = torch.full(
-            (batch_size, length, clades.unique().size(0)), self.mlm_probability
+            (batch_size, length, clades.unique().size(0)),
+            float(self.mlm_probability),
+            dtype=torch.float32,
+            device=inputs.device,
         )
         masked_clades = torch.bernoulli(probability_matrix).bool()
         target_clades = clades[target_species]
@@ -86,7 +111,17 @@ class DataCollatorForLanguageModelingSimplified:
         )
         masked &= labels != 0
 
-        replaced = torch.bernoulli(torch.full(labels.shape, 0.9)).bool() & masked
+        replaced = (
+            torch.bernoulli(
+                torch.full(
+                    labels.shape,
+                    0.9,
+                    dtype=torch.float32,
+                    device=labels.device,
+                )
+            ).bool()
+            & masked
+        )
         inputs[replaced] = self.gpn_tokenizer.mask_token_id()
 
         masked_sources = get_all_species_mask(masked, target_clades, clades)

@@ -195,6 +195,57 @@ def test_star_collator_uses_stable_keyword_arguments():
     assert batch["labels"].shape == (1, 8, 2)
 
 
+def test_star_collator_normalizes_production_numpy_dtypes():
+    collator = StarDataCollator(
+        tokenizer=StarTokenizer(),
+        clades=torch.arange(20),
+        mlm_probability=0,
+    )
+    examples = [
+        {
+            "input_ids": np.full((4, 2), 2, dtype=np.uint8),
+            "source_ids": np.full((4, 20), 2, dtype=np.uint8),
+            "target_species": np.array([0, 1], dtype=np.int32),
+            "loss_weight": np.ones((4, 2), dtype=float),
+        }
+    ]
+
+    batch = collator.torch_call(examples)
+
+    assert batch["input_ids"].dtype == torch.long
+    assert batch["source_ids"].dtype == torch.long
+    assert batch["target_species"].dtype == torch.long
+    assert batch["labels"].dtype == torch.long
+    assert torch.equal(
+        batch["labels"],
+        torch.full((1, 4, 2), -100, dtype=torch.long),
+    )
+    assert batch["loss_weight"].dtype == torch.float32
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA is not available")
+def test_star_collator_masks_cuda_tensors():
+    device = torch.device("cuda")
+    collator = StarDataCollator(
+        tokenizer=StarTokenizer(),
+        clades=torch.arange(20),
+        mlm_probability=1.0,
+    )
+    inputs = torch.full((1, 4, 2), 2, dtype=torch.long, device=device)
+    source_ids = torch.full((1, 4, 20), 2, dtype=torch.long, device=device)
+    target_species = torch.tensor([[0, 1]], dtype=torch.long, device=device)
+
+    masked_inputs, labels, masked_source_ids = collator.torch_mask_tokens(
+        inputs,
+        source_ids,
+        target_species,
+    )
+
+    assert masked_inputs.device == device
+    assert labels.device == device
+    assert masked_source_ids.device == device
+
+
 def test_tiny_gpn_training_step():
     model = GPNForMaskedLM(
         GPNConfig(
