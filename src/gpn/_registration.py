@@ -3,9 +3,9 @@
 from threading import Lock
 from typing import Literal
 
-ModelFamily = Literal["ss", "msa", "star", "phylo"]
+ModelFamily = Literal["ss", "msa", "phylo", "star"]
 
-_FAMILIES: tuple[ModelFamily, ...] = ("ss", "msa", "star", "phylo")
+_FAMILIES: tuple[ModelFamily, ...] = ("ss", "msa", "phylo", "star")
 _registered_families: set[ModelFamily] = set()
 _registration_lock = Lock()
 
@@ -37,10 +37,10 @@ def register_auto_classes(*families: ModelFamily) -> None:
                 _register_ss()
             elif family == "msa":
                 _register_msa()
-            elif family == "star":
-                _register_star()
-            else:
+            elif family == "phylo":
                 _register_phylo()
+            else:
+                _register_star()
             _registered_families.add(family)
 
 
@@ -91,16 +91,6 @@ def _register_msa() -> None:
     AutoModelForMaskedLM.register(GPNMSAConfig, GPNMSAForMaskedLM)
 
 
-def _register_star() -> None:
-    from transformers import AutoConfig, AutoModel, AutoModelForMaskedLM
-
-    from .star.model import GPNStarConfig, GPNStarForMaskedLM, GPNStarModel
-
-    AutoConfig.register("GPNStar", GPNStarConfig)
-    AutoModel.register(GPNStarConfig, GPNStarModel)
-    AutoModelForMaskedLM.register(GPNStarConfig, GPNStarForMaskedLM)
-
-
 def _register_phylo() -> None:
     from transformers import AutoConfig, AutoModel, AutoTokenizer
 
@@ -112,3 +102,13 @@ def _register_phylo() -> None:
         PhyloGPNConfig,
         slow_tokenizer_class=PhyloGPNTokenizer,
     )
+
+
+def _register_star() -> None:
+    from transformers import AutoConfig, AutoModel, AutoModelForMaskedLM
+
+    from .star.model import GPNStarConfig, GPNStarForMaskedLM, GPNStarModel
+
+    AutoConfig.register("GPNStar", GPNStarConfig)
+    AutoModel.register(GPNStarConfig, GPNStarModel)
+    AutoModelForMaskedLM.register(GPNStarConfig, GPNStarForMaskedLM)

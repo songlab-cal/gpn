@@ -30,6 +30,11 @@ jobs:
           version: "0.11.28"
           enable-cache: false
 
+      - name: Install locked release tools
+        run: >-
+          uv sync --locked --python 3.13
+          --only-group release --no-install-project
+
       - name: Verify tag matches package version
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
@@ -41,12 +46,12 @@ jobs:
           git merge-base --is-ancestor "${GITHUB_SHA}" origin/main
 
       - name: Build distributions
-        run: uv build
+        run: uv build --no-build-isolation
 
       - name: Check distributions
         run: |
-          uvx --from twine twine check dist/*
-          uvx check-wheel-contents dist/*.whl
+          uv run --no-sync twine check dist/*
+          uv run --no-sync check-wheel-contents dist/*.whl
 
       - name: Upload immutable distributions
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -76,3 +81,5 @@ jobs:
 
       - name: Publish distributions
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          attestations: true

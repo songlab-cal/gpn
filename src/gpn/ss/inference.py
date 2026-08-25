@@ -55,10 +55,13 @@ def _tokenize_sequences(tokenizer: Any, sequences: list[str]) -> Any:
 class MLMforVEPModel(torch.nn.Module):
     """Average alternate-minus-reference likelihood across both strands."""
 
-    def __init__(self, model_path: str):
+    def __init__(self, model_path: str, model_revision: str | None = None):
         super().__init__()
         register_auto_classes("ss")
-        self.model = AutoModelForMaskedLM.from_pretrained(model_path)
+        self.model = AutoModelForMaskedLM.from_pretrained(
+            model_path,
+            revision=model_revision,
+        )
         self.model.eval()
 
     def get_llr(
@@ -92,10 +95,18 @@ class MLMforVEPModel(torch.nn.Module):
 class MLMforLogitsModel(torch.nn.Module):
     """Return strand-averaged A/C/G/T masked-token logits."""
 
-    def __init__(self, model_path: str, nucleotide_ids: list[int]):
+    def __init__(
+        self,
+        model_path: str,
+        nucleotide_ids: list[int],
+        model_revision: str | None = None,
+    ):
         super().__init__()
         register_auto_classes("ss")
-        self.model = AutoModelForMaskedLM.from_pretrained(model_path)
+        self.model = AutoModelForMaskedLM.from_pretrained(
+            model_path,
+            revision=model_revision,
+        )
         self.model.eval()
         self.nucleotide_ids = nucleotide_ids
 
@@ -123,12 +134,17 @@ class MLMforLogitsModel(torch.nn.Module):
 class ModelCenterEmbedding(torch.nn.Module):
     """Return a strand-averaged embedding over a central window."""
 
-    def __init__(self, model_path: str, center_window_size: int):
+    def __init__(
+        self,
+        model_path: str,
+        center_window_size: int,
+        model_revision: str | None = None,
+    ):
         super().__init__()
         if center_window_size <= 0:
             raise ValueError("center_window_size must be positive")
         register_auto_classes("ss")
-        self.model = AutoModel.from_pretrained(model_path)
+        self.model = AutoModel.from_pretrained(model_path, revision=model_revision)
         self.model.eval()
         self.center_window_size = center_window_size
 
@@ -159,11 +175,12 @@ class VEPInference:
         window_size: int,
         tokenizer: Any,
         n_prefix: int = 0,
+        model_revision: str | None = None,
     ):
         if n_prefix < 0:
             raise ValueError("n_prefix must be non-negative")
         _centered_bounds(np.array([0]), window_size)
-        self.model = MLMforVEPModel(model_path)
+        self.model = MLMforVEPModel(model_path, model_revision=model_revision)
         self.genome = genome
         self.window_size = window_size
         self.tokenizer = tokenizer
@@ -190,6 +207,7 @@ class LogitsInference:
         window_size: int,
         tokenizer: Any,
         n_prefix: int = 0,
+        model_revision: str | None = None,
     ):
         if n_prefix < 0:
             raise ValueError("n_prefix must be non-negative")
@@ -197,7 +215,11 @@ class LogitsInference:
         nucleotide_ids = [
             token_input_id(nucleotide, tokenizer, n_prefix) for nucleotide in "ACGT"
         ]
-        self.model = MLMforLogitsModel(model_path, nucleotide_ids)
+        self.model = MLMforLogitsModel(
+            model_path,
+            nucleotide_ids,
+            model_revision=model_revision,
+        )
         self.genome = genome
         self.window_size = window_size
         self.tokenizer = tokenizer
@@ -253,8 +275,13 @@ class EmbeddingInference:
         genome: Genome,
         tokenizer: Any,
         center_window_size: int,
+        model_revision: str | None = None,
     ):
-        self.model = ModelCenterEmbedding(model_path, center_window_size)
+        self.model = ModelCenterEmbedding(
+            model_path,
+            center_window_size,
+            model_revision=model_revision,
+        )
         self.genome = genome
         self.tokenizer = tokenizer
 
@@ -350,6 +377,8 @@ def _load_inputs(
     genome_path: str,
     model_path: str,
     tokenizer_path: str | None,
+    model_revision: str | None,
+    tokenizer_revision: str | None,
     split: str,
     is_file: bool,
 ) -> tuple[Dataset, Genome, Any]:
@@ -360,7 +389,13 @@ def _load_inputs(
         is_file=is_file,
     )
     genome = Genome(genome_path)
-    tokenizer = AutoTokenizer.from_pretrained(tokenizer_path or model_path)
+    resolved_tokenizer_revision = tokenizer_revision
+    if resolved_tokenizer_revision is None and tokenizer_path is None:
+        resolved_tokenizer_revision = model_revision
+    tokenizer = AutoTokenizer.from_pretrained(
+        tokenizer_path or model_path,
+        revision=resolved_tokenizer_revision,
+    )
     return dataset, genome, tokenizer
 
 
@@ -421,6 +456,8 @@ def vep(
     output_path: Path,
     *,
     tokenizer_path: str | None,
+    model_revision: str | None,
+    tokenizer_revision: str | None,
     n_prefix: int,
     split: str,
     is_file: bool,
@@ -428,9 +465,23 @@ def vep(
     checkpoint_arguments: CheckpointArguments,
 ) -> Path | None:
     dataset, genome, tokenizer = _load_inputs(
-        input_path, genome_path, model_path, tokenizer_path, split, is_file
+        input_path,
+        genome_path,
+        model_path,
+        tokenizer_path,
+        model_revision,
+        tokenizer_revision,
+        split,
+        is_file,
     )
-    inference = VEPInference(model_path, genome, window_size, tokenizer, n_prefix)
+    inference = VEPInference(
+        model_path,
+        genome,
+        window_size,
+        tokenizer,
+        n_prefix,
+        model_revision=model_revision,
+    )
     return _execute(
         operation="vep",
         dataset=dataset,
@@ -444,7 +495,12 @@ def vep(
         inference=inference,
         training_arguments=training_arguments,
         checkpoint_arguments=checkpoint_arguments,
-        operation_arguments={"n_prefix": n_prefix, "window_size": window_size},
+        operation_arguments={
+            "model_revision": model_revision,
+            "n_prefix": n_prefix,
+            "tokenizer_revision": tokenizer_revision,
+            "window_size": window_size,
+        },
     )
 
 
@@ -456,6 +512,8 @@ def logits(
     output_path: Path,
     *,
     tokenizer_path: str | None,
+    model_revision: str | None,
+    tokenizer_revision: str | None,
     n_prefix: int,
     split: str,
     is_file: bool,
@@ -463,9 +521,23 @@ def logits(
     checkpoint_arguments: CheckpointArguments,
 ) -> Path | None:
     dataset, genome, tokenizer = _load_inputs(
-        input_path, genome_path, model_path, tokenizer_path, split, is_file
+        input_path,
+        genome_path,
+        model_path,
+        tokenizer_path,
+        model_revision,
+        tokenizer_revision,
+        split,
+        is_file,
     )
-    inference = LogitsInference(model_path, genome, window_size, tokenizer, n_prefix)
+    inference = LogitsInference(
+        model_path,
+        genome,
+        window_size,
+        tokenizer,
+        n_prefix,
+        model_revision=model_revision,
+    )
     return _execute(
         operation="logits",
         dataset=dataset,
@@ -479,7 +551,12 @@ def logits(
         inference=inference,
         training_arguments=training_arguments,
         checkpoint_arguments=checkpoint_arguments,
-        operation_arguments={"n_prefix": n_prefix, "window_size": window_size},
+        operation_arguments={
+            "model_revision": model_revision,
+            "n_prefix": n_prefix,
+            "tokenizer_revision": tokenizer_revision,
+            "window_size": window_size,
+        },
     )
 
 
@@ -491,15 +568,30 @@ def embedding(
     output_path: Path,
     *,
     tokenizer_path: str | None,
+    model_revision: str | None,
+    tokenizer_revision: str | None,
     split: str,
     is_file: bool,
     training_arguments: TrainingArguments,
     checkpoint_arguments: CheckpointArguments,
 ) -> Path | None:
     dataset, genome, tokenizer = _load_inputs(
-        input_path, genome_path, model_path, tokenizer_path, split, is_file
+        input_path,
+        genome_path,
+        model_path,
+        tokenizer_path,
+        model_revision,
+        tokenizer_revision,
+        split,
+        is_file,
     )
-    inference = EmbeddingInference(model_path, genome, tokenizer, center_window_size)
+    inference = EmbeddingInference(
+        model_path,
+        genome,
+        tokenizer,
+        center_window_size,
+        model_revision=model_revision,
+    )
     return _execute(
         operation="embedding",
         dataset=dataset,
@@ -513,5 +605,9 @@ def embedding(
         inference=inference,
         training_arguments=training_arguments,
         checkpoint_arguments=checkpoint_arguments,
-        operation_arguments={"center_window_size": center_window_size},
+        operation_arguments={
+            "center_window_size": center_window_size,
+            "model_revision": model_revision,
+            "tokenizer_revision": tokenizer_revision,
+        },
     )

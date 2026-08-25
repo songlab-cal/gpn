@@ -34,10 +34,13 @@ from gpn.star.utils import find_directory_sum_paths
 
 
 class MLMforVEPModel(torch.nn.Module):
-    def __init__(self, model_path: str):
+    def __init__(self, model_path: str, model_revision: str | None = None):
         super().__init__()
         register_auto_classes("star")
-        self.model = AutoModelForMaskedLM.from_pretrained(model_path)
+        self.model = AutoModelForMaskedLM.from_pretrained(
+            model_path,
+            revision=model_revision,
+        )
         self.model.eval()
 
     def get_llr(
@@ -92,12 +95,18 @@ class MLMforVEPModel(torch.nn.Module):
 
 
 class MLMforLogitsModel(torch.nn.Module):
-    def __init__(self, model_path: str, phylo_dist_path: str | None = None):
+    def __init__(
+        self,
+        model_path: str,
+        phylo_dist_path: str | None = None,
+        model_revision: str | None = None,
+    ):
         super().__init__()
         register_auto_classes("star")
         self.model = AutoModelForMaskedLM.from_pretrained(
             model_path,
             phylo_dist_path=phylo_dist_path,
+            revision=model_revision,
         )
         self.model.eval()
         tokenizer = Tokenizer()
@@ -138,12 +147,17 @@ class MLMforLogitsModel(torch.nn.Module):
 
 
 class ModelCenterEmbedding(torch.nn.Module):
-    def __init__(self, model_path: str, center_window_size: int):
+    def __init__(
+        self,
+        model_path: str,
+        center_window_size: int,
+        model_revision: str | None = None,
+    ):
         super().__init__()
         if center_window_size <= 0:
             raise ValueError("center_window_size must be positive")
         register_auto_classes("star")
-        self.model = AutoModel.from_pretrained(model_path)
+        self.model = AutoModel.from_pretrained(model_path, revision=model_revision)
         self.model.eval()
         self.center_window_size = center_window_size
 
@@ -207,12 +221,13 @@ class VEPInference:
         model_path: str,
         genome_msa_list: list[GenomeMSA],
         window_size: int,
+        model_revision: str | None = None,
     ):
         validate_centered_window_size(window_size)
         self.genome_msa_list = genome_msa_list
         self.window_size = window_size
         self.tokenizer = Tokenizer()
-        self.model = MLMforVEPModel(model_path)
+        self.model = MLMforVEPModel(model_path, model_revision=model_revision)
         self.reverse_complementer = ReverseComplementer()
 
     def tokenize_function(self, variants: dict[str, list[Any]]) -> dict[str, Any]:
@@ -289,12 +304,17 @@ class LogitsInference:
         genome_msa_list: list[GenomeMSA],
         window_size: int,
         phylo_dist_path: str | None = None,
+        model_revision: str | None = None,
     ):
         validate_centered_window_size(window_size)
         self.genome_msa_list = genome_msa_list
         self.window_size = window_size
         self.tokenizer = Tokenizer()
-        self.model = MLMforLogitsModel(model_path, phylo_dist_path)
+        self.model = MLMforLogitsModel(
+            model_path,
+            phylo_dist_path,
+            model_revision=model_revision,
+        )
 
     def tokenize_function(self, positions: dict[str, list[Any]]) -> dict[str, Any]:
         chromosome_values, position_values = validate_positions_batch(
@@ -336,13 +356,18 @@ class EmbeddingInference:
         genome_msa_list: list[GenomeMSA],
         window_size: int,
         center_window_size: int,
+        model_revision: str | None = None,
     ):
         if window_size <= 0:
             raise ValueError("window_size must be positive")
         self.genome_msa_list = genome_msa_list
         self.window_size = window_size
         self.tokenizer = Tokenizer()
-        self.model = ModelCenterEmbedding(model_path, center_window_size)
+        self.model = ModelCenterEmbedding(
+            model_path,
+            center_window_size,
+            model_revision=model_revision,
+        )
 
     def tokenize_function(self, windows: dict[str, list[Any]]) -> dict[str, Any]:
         chrom = np.array(windows["chrom"])
@@ -459,6 +484,7 @@ def _run(
     msa_path: str,
     window_size: int,
     model_path: str,
+    model_revision: str | None,
     output_path: Path,
     split: str,
     is_file: bool,
@@ -472,23 +498,36 @@ def _run(
     )
     inference: Any
     if operation == "vep":
-        inference = VEPInference(model_path, genome_msa_list, window_size)
+        inference = VEPInference(
+            model_path,
+            genome_msa_list,
+            window_size,
+            model_revision=model_revision,
+        )
     elif operation == "logits":
         inference = LogitsInference(
             model_path,
             genome_msa_list,
             window_size,
             phylo_dist_path=phylo_dist_path,
+            model_revision=model_revision,
         )
     elif operation == "embedding":
         if center_window_size is None:
             raise ValueError("center_window_size is required for embedding")
         inference = EmbeddingInference(
-            model_path, genome_msa_list, window_size, center_window_size
+            model_path,
+            genome_msa_list,
+            window_size,
+            center_window_size,
+            model_revision=model_revision,
         )
     else:
         raise ValueError(f"Unknown GPN-Star inference operation: {operation}")
-    operation_arguments: dict[str, Any] = {"window_size": window_size}
+    operation_arguments: dict[str, Any] = {
+        "model_revision": model_revision,
+        "window_size": window_size,
+    }
     if center_window_size is not None:
         operation_arguments["center_window_size"] = center_window_size
     if phylo_dist_path is not None:
@@ -516,6 +555,7 @@ def vep(
     model_path: str,
     output_path: Path,
     *,
+    model_revision: str | None,
     split: str,
     is_file: bool,
     training_arguments: TrainingArguments,
@@ -527,6 +567,7 @@ def vep(
         msa_path=msa_path,
         window_size=window_size,
         model_path=model_path,
+        model_revision=model_revision,
         output_path=output_path,
         split=split,
         is_file=is_file,
@@ -545,6 +586,7 @@ def logits(
     output_path: Path,
     *,
     phylo_dist_path: str | None,
+    model_revision: str | None,
     split: str,
     is_file: bool,
     training_arguments: TrainingArguments,
@@ -556,6 +598,7 @@ def logits(
         msa_path=msa_path,
         window_size=window_size,
         model_path=model_path,
+        model_revision=model_revision,
         output_path=output_path,
         split=split,
         is_file=is_file,
@@ -574,6 +617,7 @@ def embedding(
     output_path: Path,
     *,
     center_window_size: int,
+    model_revision: str | None,
     split: str,
     is_file: bool,
     training_arguments: TrainingArguments,
@@ -585,6 +629,7 @@ def embedding(
         msa_path=msa_path,
         window_size=window_size,
         model_path=model_path,
+        model_revision=model_revision,
         output_path=output_path,
         split=split,
         is_file=is_file,

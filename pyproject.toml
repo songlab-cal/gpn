@@ -4,13 +4,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "gpn"
-version = "0.9.0a1"
-description = "Genomic pretrained networks for sequence and alignment-based inference"
+version = "0.9.0"
+description = "The GPN family of genomic language models."
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
 license = "MIT"
 license-files = ["LICENSE"]
-authors = [
+authors = [{ name = "Song Lab at UC Berkeley" }]
+maintainers = [
   { name = "Gonzalo Benegas", email = "gbenegas@berkeley.edu" },
   { name = "Chengzhong Ye", email = "czye@berkeley.edu" },
 ]
@@ -67,16 +68,33 @@ tracking = ["wandb>=0.18"]
 [project.urls]
 Issues = "https://github.com/songlab-cal/gpn/issues"
 Repository = "https://github.com/songlab-cal/gpn"
+Changelog = "https://github.com/songlab-cal/gpn/blob/main/CHANGELOG.md"
 
 [dependency-groups]
+docs = [
+  "myst-nb>=1.3",
+  "nbclient>=0.10",
+  "nbformat>=5.10",
+  "sphinx>=7,<10",
+  "sphinx-book-theme>=1.2",
+  "sphinx-copybutton>=0.5",
+  "sphinx-design>=0.6",
+]
 dev = [
   "check-wheel-contents>=0.6",
   "deptry>=0.24",
   "mypy>=1.18",
+  "nbclient>=0.10",
+  "nbformat>=5.10",
   "pre-commit>=4.2",
   "pytest>=8.3",
   "ruff>=0.16.3",
   "types-pyyaml>=6.0.12.20250915",
+  "twine>=6",
+]
+release = [
+  "check-wheel-contents>=0.6",
+  "hatchling>=1.27",
   "twine>=6",
 ]
 
@@ -87,9 +105,13 @@ packages = ["src/gpn"]
 include = [
   "/src/gpn",
   "/docs",
+  "/release",
+  "/colabs",
   "/recipes",
   "/tests",
   "/LICENSE",
+  "/CHANGELOG.md",
+  "/CONTRIBUTING.md",
   "/README.md",
   "/pyproject.toml",
 ]
@@ -144,6 +166,7 @@ ignore_missing_imports = true
 [tool.deptry]
 known_first_party = ["gpn"]
 ignore_notebooks = true
+extend_exclude = ["docs"]
 
 [tool.deptry.package_module_name_map]
 biopython = "Bio"
@@ -171,6 +194,9 @@ select = ["E4", "E7", "E9", "F", "I"]
 "src/gpn/phylo/model.py" = ["F722"]
 "src/gpn/scoring.py" = ["F722"]
 "src/gpn/star/train.py" = ["F722"]
+
+[tool.uv]
+default-groups = []
 
 [[tool.uv.index]]
 name = "pytorch-cpu"

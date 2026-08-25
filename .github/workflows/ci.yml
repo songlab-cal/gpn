@@ -64,6 +64,43 @@ jobs:
           TRANSFORMERS_OFFLINE: "1"
         run: uv run pytest
 
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.28"
+          enable-cache: true
+
+      - name: Install documentation environment
+        run: >-
+          uv sync --locked --python 3.13
+          --no-default-groups --group docs
+
+      - name: Prepare static notebooks
+        run: uv run --no-sync python docs/prepare_notebooks.py
+
+      - name: Build documentation strictly
+        run: >-
+          uv run --no-sync sphinx-build -n -W --keep-going
+          -b html docs docs/_build/html
+
+      - name: Upload documentation preview
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: documentation-preview
+          path: docs/_build/html
+          if-no-files-found: error
+          retention-days: 7
   package:
     name: Package
     runs-on: ubuntu-latest
@@ -82,20 +119,23 @@ jobs:
           enable-cache: true
 
       - name: Install locked build tools
-        run: uv sync --locked --python 3.13 --group dev
+        run: >-
+          uv sync --locked --python 3.13
+          --only-group release --no-install-project
 
       - name: Build and check distributions
         run: |
-          uv build
-          uv run twine check dist/*
-          uv run check-wheel-contents dist/*.whl
+          uv build --no-build-isolation
+          uv run --no-sync twine check dist/*
+          uv run --no-sync check-wheel-contents dist/*.whl
 
       - name: Rebuild wheel from source distribution
         run: |
           mkdir -p /tmp/gpn-wheel-from-sdist
-          uv build dist/gpn-*.tar.gz --wheel --out-dir /tmp/gpn-wheel-from-sdist
-          uv run twine check /tmp/gpn-wheel-from-sdist/*.whl
-          uv run check-wheel-contents /tmp/gpn-wheel-from-sdist/*.whl
+          uv build --no-build-isolation \
+            dist/gpn-*.tar.gz --wheel --out-dir /tmp/gpn-wheel-from-sdist
+          uv run --no-sync twine check /tmp/gpn-wheel-from-sdist/*.whl
+          uv run --no-sync check-wheel-contents /tmp/gpn-wheel-from-sdist/*.whl
 
       - name: Smoke-test installed wheel outside the checkout
         run: |

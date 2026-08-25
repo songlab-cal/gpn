@@ -180,8 +180,19 @@ def test_compile_errors_are_not_suppressed(
     assert torch._dynamo.config.suppress_errors is False
 
 
-def test_gpn_vep_loads_installed_model_without_remote_code(
+@pytest.mark.parametrize(
+    ("module", "wrapper", "family"),
+    (
+        (ss_inference, ss_inference.MLMforVEPModel, "ss"),
+        (msa_inference, msa_inference.MLMforVEPModel, "msa"),
+        (star_inference, star_inference.MLMforVEPModel, "star"),
+    ),
+)
+def test_vep_loads_pinned_installed_model_without_remote_code(
     monkeypatch: pytest.MonkeyPatch,
+    module,
+    wrapper,
+    family,
 ) -> None:
     registrations = []
     loads = []
@@ -194,18 +205,89 @@ def test_gpn_vep_loads_installed_model_without_remote_code(
         loads.append((args, kwargs))
         return FakeModel()
 
-    monkeypatch.setattr(ss_inference, "register_auto_classes", registrations.append)
+    monkeypatch.setattr(module, "register_auto_classes", registrations.append)
     monkeypatch.setattr(
-        ss_inference.AutoModelForMaskedLM,
+        module.AutoModelForMaskedLM,
         "from_pretrained",
         fake_from_pretrained,
     )
 
-    wrapped = ss_inference.MLMforVEPModel("songlab/gpn-brassicales")
+    wrapped = wrapper(
+        "songlab/example",
+        model_revision="0123456789abcdef0123456789abcdef01234567",
+    )
 
     assert isinstance(wrapped.model, FakeModel)
-    assert registrations == ["ss"]
-    assert loads == [(("songlab/gpn-brassicales",), {})]
+    assert registrations == [family]
+    assert loads == [
+        (
+            ("songlab/example",),
+            {"revision": "0123456789abcdef0123456789abcdef01234567"},
+        )
+    ]
+
+
+@pytest.mark.parametrize(
+    ("tokenizer_path", "model_revision", "tokenizer_revision", "expected"),
+    (
+        (None, "model-commit", None, ("songlab/model", "model-commit")),
+        (
+            "songlab/tokenizer",
+            "model-commit",
+            None,
+            ("songlab/tokenizer", None),
+        ),
+        (
+            "songlab/tokenizer",
+            "model-commit",
+            "tokenizer-commit",
+            ("songlab/tokenizer", "tokenizer-commit"),
+        ),
+    ),
+)
+def test_ss_tokenizer_revision_inherits_only_for_the_model_repository(
+    monkeypatch: pytest.MonkeyPatch,
+    tokenizer_path: str | None,
+    model_revision: str,
+    tokenizer_revision: str | None,
+    expected: tuple[str, str | None],
+) -> None:
+    loads = []
+    dataset = object()
+    genome = object()
+    tokenizer = object()
+
+    monkeypatch.setattr(ss_inference, "disable_caching", lambda: None)
+    monkeypatch.setattr(
+        ss_inference,
+        "load_dataset_from_file_or_dir",
+        lambda *args, **kwargs: dataset,
+    )
+    monkeypatch.setattr(ss_inference, "Genome", lambda path: genome)
+
+    def fake_from_pretrained(path, *, revision):
+        loads.append((path, revision))
+        return tokenizer
+
+    monkeypatch.setattr(
+        ss_inference.AutoTokenizer,
+        "from_pretrained",
+        fake_from_pretrained,
+    )
+
+    actual = ss_inference._load_inputs(
+        "songlab/variants",
+        "genome.fa.gz",
+        "songlab/model",
+        tokenizer_path,
+        model_revision,
+        tokenizer_revision,
+        "test",
+        False,
+    )
+
+    assert actual == (dataset, genome, tokenizer)
+    assert loads == [expected]
 
 
 class FakeGenome:

@@ -148,8 +148,9 @@ gpn star embedding \
 
 All three inference families support the same durable, process-count-independent
 batch checkpoints. Set `--checkpoint-batch-size`; the directory defaults to
-`OUTPUT_PATH_checkpoints`. See any inference command's help for revision and
-cleanup options.
+`OUTPUT_PATH_checkpoints`. See any inference command's help for cleanup options.
+`--checkpoint-revision` is an optional user-supplied identity for the input state
+used to validate resumable output batches.
 
 `LOCAL_MSA_PATH` is not itself an `all.zarr` store. It is either a numeric
 species-count directory containing `all.zarr`, or a parent containing one or more

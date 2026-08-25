@@ -1,5 +1,8 @@
+import argparse
 import hashlib
+import importlib.util
 import json
+import shlex
 from pathlib import Path
 
 import numpy as np
@@ -113,12 +116,85 @@ def test_alignment_fixture_is_small_and_self_consistent(baseline):
 
 
 def test_model_revisions_are_immutable_and_named(baseline):
-    assert baseline["schema_version"] == 2
+    assert baseline["schema_version"] == 3
     for name, (model_id, revision) in MODEL_REVISIONS.items():
         record = baseline["models"][name]
         assert record["model_id"] == model_id
         assert record["revision"] == revision
         assert len(revision) == 40
+
+
+def test_model_baseline_has_reproducible_source_and_generation_provenance(baseline):
+    environment = baseline["environment"]
+    assert environment["gpn_version"] == "0.9.0"
+    assert environment["gpn_source_commit"] == (
+        "1dc8f776953d8f74eb0a3ac0a277a72ca38581a2"
+    )
+    assert environment["gpn_source_tree"] == (
+        "949c3f16dbffb12c1eacca17c165ba6a494e7a52"
+    )
+    assert environment["working_tree_changes"] is False
+    generation = baseline["generation"]
+    assert "regenerate_published_model_baseline.py" in generation["command"]
+    assert "--output /tmp/" in generation["command"]
+    assert generation["approval_reason"]
+    assert generation["generator_sha256"] == (
+        "82e5a3d43385a39ee10f5bef8948bb7026482842decd51ef169d7c5527ce7ca5"
+    )
+    assert generation["review_candidate_sha256"] == (
+        "972b893cf2b98a6de538399cc1cd98f3252386762490fc8f87bb7dcddfa5c26f"
+    )
+
+
+def test_baseline_generator_rejects_a_gpn_import_outside_the_checkout(
+    monkeypatch,
+    tmp_path,
+):
+    generator_path = FIXTURE_DIR / "regenerate_published_model_baseline.py"
+    spec = importlib.util.spec_from_file_location("baseline_generator", generator_path)
+    assert spec is not None
+    assert spec.loader is not None
+    generator = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(generator)
+
+    generator._require_local_gpn_source()
+    monkeypatch.setattr(
+        generator.gpn, "__file__", str(tmp_path / "gpn" / "__init__.py")
+    )
+    with pytest.raises(SystemExit, match="imported gpn came from"):
+        generator._require_local_gpn_source()
+
+
+def test_baseline_generator_records_reproducible_quoted_command(tmp_path):
+    generator_path = FIXTURE_DIR / "regenerate_published_model_baseline.py"
+    spec = importlib.util.spec_from_file_location("baseline_generator", generator_path)
+    assert spec is not None
+    assert spec.loader is not None
+    generator = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(generator)
+
+    template = generator.ROOT / "tests" / "fixtures" / "custom template.json"
+    output = tmp_path / "candidate; review.json"
+    args = argparse.Namespace(
+        template=template,
+        output=output,
+        approval_reason="Changed calibration; preserve this text literally",
+    )
+
+    assert shlex.split(generator._generation_command(args)) == [
+        "uv",
+        "run",
+        "--extra",
+        "inference",
+        "python",
+        "tests/fixtures/regenerate_published_model_baseline.py",
+        "--template",
+        "tests/fixtures/custom template.json",
+        "--output",
+        str(output),
+        "--approval-reason",
+        args.approval_reason,
+    ]
 
 
 @pytest.mark.parametrize("model_name", NOTEBOOK_LOGITS)
