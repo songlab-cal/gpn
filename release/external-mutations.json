@@ -156,7 +156,7 @@
         "tag object 312a6c70de6700e729bcea4c9a67ab42a72f05f7",
         "commit 30dee6cf45849dfdcfc043ca8baf44fd6ba51d74"
       ],
-      "source": "docs/archive.md",
+      "source": "release/analysis-archive.md",
       "depends_on": [
         "merge-modernization-stack"
       ],

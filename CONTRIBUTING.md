@@ -46,8 +46,8 @@ Genomic intervals are zero-based and half-open, VCF positions are one-based,
 and variant log-likelihood ratios are alternate minus reference.
 
 Committed quick-start outputs are refreshed only on a dedicated compute node with
-`python -m docs.refresh_notebooks`; see `docs/development/index.md`. Do not execute the
-refresh on a login node or download a whole-genome MSA for it.
+`python -m docs.refresh_notebooks`; see `docs/development/index.md`. Do not
+execute the refresh on a login node or download a whole-genome MSA for it.
 
 ## Dependency placement
 
@@ -77,7 +77,8 @@ code. Contributing reusable pieces back to `main` is encouraged but optional.
 
 ## Maintainer releases
 
-Follow the [maintainer release runbook](docs/release.md). Releases are built from a
-reviewed commit on `main` and published by a GitHub Release tagged `v<version>`.
+Follow the [maintainer release runbook](docs/development/release.md). Releases
+are built from a reviewed commit on `main` and published by a GitHub Release
+tagged `v<version>`.
 The workflow verifies the version and ancestry, builds with locked tools, and uses
 PyPI Trusted Publishing with attestations. Do not upload distributions manually.

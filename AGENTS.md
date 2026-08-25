@@ -50,7 +50,7 @@ in hot loops.
 ## Package architecture
 
 Keep model-family implementations under `src/gpn/ss/`, `src/gpn/msa/`,
-`src/gpn/star/`, and `src/gpn/phylo/`. A module directly under `src/gpn/` must
+`src/gpn/phylo/`, and `src/gpn/star/`. A module directly under `src/gpn/` must
 contain functionality genuinely shared by at least two families; family-specific
 models, data access, inference adapters, losses, and utilities belong inside that
 family's directory.
@@ -87,6 +87,7 @@ Paper-specific and exploratory analysis must not be committed to `main`.
 Projects may live indefinitely on any off-main branch and evolve independently.
 See `docs/development/research.md` and `CONTRIBUTING.md` for non-binding project
 conventions.
+
 Contributing reusable code back to the maintained package is encouraged but
 optional; duplicated non-core analysis code is acceptable.
 

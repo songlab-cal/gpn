@@ -83,7 +83,7 @@ def test_hub_audit_is_outside_this_release() -> None:
     ledger = _json("external-mutations.json")
     assert all(action["system"] != "huggingface" for action in ledger["pending"])
     assert not (ROOT / "hub").exists()
-    assert "issue #81" in (ROOT / "docs" / "release.md").read_text()
+    assert "issue #81" in (ROOT / "docs" / "development" / "release.md").read_text()
 
 
 def test_archive_mutation_identifies_tag_object_and_peeled_commit() -> None:
