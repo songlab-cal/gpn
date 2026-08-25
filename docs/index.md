@@ -1,42 +1,42 @@
 ---
 myst:
   html_meta:
-    description: Genomic pretrained networks for sequence and alignment-based inference.
+    description: The GPN family of genomic language models.
 ---
 
 <div class="gpn-hero">
 
-# Genomic Pre-trained Network
+# GPN
 
-GPN is a family of genomic language models for learning constraint from DNA
-sequences and multispecies alignments. The maintained Python package gives
-scientists explicit, versioned access to published checkpoints through standard
-Transformers AutoClasses.
+The GPN family of genomic language models.
+
+Use published checkpoints for sequence- and alignment-based genomic inference,
+or train GPN and GPN-Star on prepared data through a reproducible Python package.
 
 </div>
 
 ::::{grid} 1 1 3 3
 :gutter: 2
 
-:::{grid-item-card} Start with a model
-:link: models
+:::{grid-item-card} Get started
+:link: getting-started/index
 :link-type: doc
 
-Choose the supported model family and understand its inputs and outputs.
+Install GPN, load a published checkpoint, or run an inference command.
 :::
 
-:::{grid-item-card} Explore the demos
+:::{grid-item-card} Choose a model
+:link: models/index
+:link-type: doc
+
+Compare the four model families, supported tasks, inputs, and published assets.
+:::
+
+:::{grid-item-card} Explore tutorials
 :link: tutorials/index
 :link-type: doc
 
-Read annotated code and committed scientific plots without starting a kernel.
-:::
-
-:::{grid-item-card} Reproduce the science
-:link: scientific-validation
-:link-type: doc
-
-Inspect immutable model revisions, fixture provenance, and score conventions.
+Read executable code and committed scientific plots without starting a kernel.
 :::
 
 ::::
@@ -45,27 +45,9 @@ Inspect immutable model revisions, fixture provenance, and score conventions.
 :hidden:
 :maxdepth: 2
 
-installation
-models
-cli
-alignments
+getting-started/index
+models/index
 tutorials/index
-scientific-validation
-api
-hub-assets
-research
-archive
-development
-citations
+reference/index
+development/index
 ```
-
-## What is maintained?
-
-- **GPN and GPN-Star:** training on prepared inputs and inference.
-- **GPN-MSA:** deprecated, inference only.
-- **PhyloGPN:** inference only.
-- **Sorghum gene expression:** inference-only fine-tune of GPN.
-- **Research workflows and dataset construction:** preserved historically, not
-  maintained on `main`.
-
-The [model support matrix](models.md) is the authoritative starting point.

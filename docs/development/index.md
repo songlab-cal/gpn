@@ -1,7 +1,8 @@
 # Development
 
-The maintained surface is `src/gpn`, tests, documentation, and the two prepared-
-data training recipes. Historical analysis and dataset construction are archived.
+The maintained surface is `src/gpn`, tests, documentation, and the two
+prepared-data training recipes. Historical analysis and dataset construction are
+preserved separately from `main`.
 
 ## Setup and checks
 
@@ -24,8 +25,8 @@ off-main research lifecycle.
 - Markdown under `docs/` is the conceptual source; docstrings feed only the curated
   API reference.
 - Three existing model demos and one lightweight precomputed-score workflow live
-  under `colabs/`. The model demos retain committed outputs; Sphinx and Read the
-  Docs never execute any notebook.
+  under `colabs/`. All four retain committed outputs; Sphinx and Read the Docs
+  never execute any notebook.
 - Notebook output refreshes are deliberate scientific changes. Record package,
   Transformers, model revision, dtype, and device metadata and compare numerical
   results to fixtures.
@@ -45,3 +46,11 @@ uv run --no-sync --with seaborn --with scikit-learn \
 The script refuses to run outside a Slurm allocation unless `--allow-local` is
 passed explicitly for another dedicated compute environment. Review every output
 diff and rerun the published-model audit before accepting a refresh.
+
+```{toctree}
+:hidden:
+:maxdepth: 1
+
+validation
+research
+```

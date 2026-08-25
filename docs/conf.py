@@ -3,7 +3,7 @@
 from importlib.metadata import version as distribution_version
 
 project = "GPN"
-author = "Gonzalo Benegas, Chengzhong Ye, and contributors"
+author = "Song Lab at UC Berkeley"
 copyright = "2026, Song Lab at UC Berkeley"
 release = distribution_version("gpn")
 version = release
@@ -43,7 +43,11 @@ nitpicky = True
 # builds. Keep internal references strict while accepting external array-type names.
 nitpick_ignore_regex = [
     ("py:class", r"(?:jaxtyping\.)?(?:Float|Int)(?:\[.*\])?"),
-    ("py:class", r"(?:torch\.)?(?:Tensor|Module)"),
+    ("py:class", r"(?:torch\.)?(?:Tensor|LongTensor|Module)"),
+    (
+        "py:class",
+        r"transformers\.modeling_outputs\.(?:SequenceClassifierOutput|TokenClassifierOutput)",
+    ),
     ("py:class", r"'.*'"),
 ]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]

@@ -4,9 +4,10 @@ Thank you for helping maintain GPN as reliable scientific software. Bug fixes,
 tests, documentation, and focused improvements to supported model workflows are
 welcome.
 
-GPN and GPN-Star support training and inference. GPN-MSA is deprecated and
-supports inference only. PhyloGPN and the Sorghum gene-expression models support
-inference only. Dataset-building workflows are not maintained.
+GPN supports training and inference. GPN-MSA is deprecated and supports inference
+only. PhyloGPN supports inference only. GPN-Star supports training and inference.
+The Sorghum gene-expression model supports inference only. Dataset-building
+workflows are not maintained.
 
 ## Local setup
 
@@ -45,7 +46,7 @@ Genomic intervals are zero-based and half-open, VCF positions are one-based,
 and variant log-likelihood ratios are alternate minus reference.
 
 Committed quick-start outputs are refreshed only on a dedicated compute node with
-`python -m docs.refresh_notebooks`; see `docs/development.md`. Do not execute the
+`python -m docs.refresh_notebooks`; see `docs/development/index.md`. Do not execute the
 refresh on a login node or download a whole-genome MSA for it.
 
 ## Dependency placement

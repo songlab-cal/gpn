@@ -35,8 +35,8 @@ one-time validation. The model revisions are:
 | --- | --- | --- |
 | GPN | `songlab/gpn-brassicales` | `eb9c35d0d18571abe84390d22e74f2b21d319ce3` |
 | GPN-MSA | `songlab/gpn-msa-sapiens` | `4a7d4f75449cb2abd560b2af024d76f99233c6db` |
-| GPN-Star V100 | `songlab/gpn-star-hg38-v100-200m` | `0c949f132d35619a3eb188b402848c998a3313ae` |
 | PhyloGPN | `songlab/PhyloGPN` | `3556db4c469e67d25f0f7a0a6653b48be3eebf51` |
+| GPN-Star V100 | `songlab/gpn-star-hg38-v100-200m` | `0c949f132d35619a3eb188b402848c998a3313ae` |
 | Sorghum expression | `songlab/gpn-brassicales-gxa-sorghum-v1` | `53209151b497d4840d50526d44c0460b6e6768b7` |
 
 The GPN and GPN-Star values reproduce their retained quick-start notebooks; the

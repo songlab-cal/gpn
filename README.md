@@ -1,4 +1,4 @@
-# GPN — Genomic Pre-trained Network
+# GPN — Genomic Pretrained Network
 
 [![CI](https://github.com/songlab-cal/gpn/actions/workflows/ci.yml/badge.svg)](https://github.com/songlab-cal/gpn/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/gpn)](https://pypi.org/project/gpn/)
@@ -7,14 +7,16 @@
 
 [**Quick start**](#quick-start) · [**Models**](#model-family) ·
 [**Demos**](#demos) · [**Documentation**](https://github.com/songlab-cal/gpn/blob/main/docs/index.md) ·
-[**Research & papers**](https://github.com/songlab-cal/gpn/blob/main/docs/research.md)
+[**Research & papers**](https://github.com/songlab-cal/gpn/blob/main/docs/development/research.md)
 
 [![GPN predictions across an Arabidopsis locus](https://github.com/user-attachments/assets/282b6204-156b-4b6d-83ff-2f4a53a9bb2e)](https://genome.ucsc.edu/s/gbenegas/gpn-arabidopsis)
 
-GPN is a family of genomic language models that learns evolutionary constraint
-from DNA sequences and multispecies alignments. The `gpn` package provides the
-canonical implementations for published Song Lab checkpoints through explicit,
-standard [Transformers AutoClasses](https://huggingface.co/docs/transformers/en/model_doc/auto).
+The GPN family of genomic language models.
+
+GPN learns evolutionary constraint from DNA sequences and multispecies
+alignments. The `gpn` package provides the canonical implementations for
+published Song Lab checkpoints through explicit, standard
+[Transformers AutoClasses](https://huggingface.co/docs/transformers/en/model_doc/auto).
 
 ## Quick start
 
@@ -42,8 +44,8 @@ model = AutoModelForMaskedLM.from_pretrained(
 ```
 
 Use `register_auto_classes("msa")` for GPN-MSA,
-`register_auto_classes("star")` for GPN-Star, and
-`register_auto_classes("phylo")` for PhyloGPN. The package deliberately leaves
+`register_auto_classes("phylo")` for PhyloGPN, and
+`register_auto_classes("star")` for GPN-Star. The package deliberately leaves
 revision, dtype, device placement, and cache choices in the normal Transformers
 API.
 
@@ -59,7 +61,7 @@ API.
 The [sorghum gene-expression checkpoint](https://huggingface.co/songlab/gpn-brassicales-gxa-sorghum-v1)
 is an inference-only fine-tune of GPN, not a separate model family.
 
-The [support guide](https://github.com/songlab-cal/gpn/blob/main/docs/models.md) defines required inputs, compatibility
+The [support guide](https://github.com/songlab-cal/gpn/blob/main/docs/models/index.md) defines required inputs, compatibility
 boundaries, immutable validated revisions, and output semantics. Classification in
 a Hugging Face collection does not automatically make every historical asset part
 of the package support contract.
@@ -76,7 +78,7 @@ gpn star {train,vep,logits,embedding} ...
 ```
 
 GPN-MSA has no training command. Dataset and whole-genome-alignment construction
-are outside the maintained package. See the [CLI guide](https://github.com/songlab-cal/gpn/blob/main/docs/cli.md) for local MSA
+are outside the maintained package. See the [CLI guide](https://github.com/songlab-cal/gpn/blob/main/docs/getting-started/cli.md) for local MSA
 layouts, coordinate systems, precision controls, distributed execution, durable
 GPN-Star checkpoints, and raw LLR semantics.
 PhyloGPN and the sorghum gene-expression fine-tune are maintained through explicit
@@ -88,12 +90,12 @@ Only three existing demos are maintained, with portable setup, explicit
 registration, immutable model revisions, and small committed outputs. They render
 statically in the documentation without requiring a notebook kernel.
 
-| GPN | GPN-Star | PhyloGPN |
+| GPN | PhyloGPN | GPN-Star |
 | --- | --- | --- |
-| [Notebook](https://github.com/songlab-cal/gpn/blob/main/colabs/gpn_demo.ipynb) | [Notebook](https://github.com/songlab-cal/gpn/blob/main/colabs/gpn_star_demo.ipynb) | [Notebook](https://github.com/songlab-cal/gpn/blob/main/colabs/phylogpn_demo.ipynb) |
+| [Notebook](https://github.com/songlab-cal/gpn/blob/main/colabs/gpn_demo.ipynb) | [Notebook](https://github.com/songlab-cal/gpn/blob/main/colabs/phylogpn_demo.ipynb) | [Notebook](https://github.com/songlab-cal/gpn/blob/main/colabs/gpn_star_demo.ipynb) |
 
 The GPN-Star demo uses a 3.5 KiB fixture from the published locus; it never
-downloads a whole-genome MSA. See the [alignment guide](https://github.com/songlab-cal/gpn/blob/main/docs/alignments.md)
+downloads a whole-genome MSA. See the [alignment guide](https://github.com/songlab-cal/gpn/blob/main/docs/models/gpn-star.md#alignment-data)
 when running the CLI against the full public alignment.
 
 For a lightweight executable workflow, use the
@@ -107,10 +109,10 @@ fixture-backed numerical regression. Normal pull-request tests are offline; the
 published checkpoints are audited deliberately rather than through a recurring
 Hub monitor.
 
-- [Scientific validation and score conventions](https://github.com/songlab-cal/gpn/blob/main/docs/scientific-validation.md)
+- [Scientific validation and score conventions](https://github.com/songlab-cal/gpn/blob/main/docs/development/validation.md)
 - [GPN training on prepared data](https://github.com/songlab-cal/gpn/tree/main/recipes/gpn_training)
 - [GPN-Star training on prepared data](https://github.com/songlab-cal/gpn/tree/main/recipes/gpn_star_training)
-- [Historical analysis archive and research lifecycle](https://github.com/songlab-cal/gpn/blob/main/docs/research.md)
+- [Research branch lifecycle](https://github.com/songlab-cal/gpn/blob/main/docs/development/research.md)
 
 Variant scores use `alternate_logit - reference_logit`; negative values mean the
 alternate is less likely under the model. Genomic intervals are zero-based and
@@ -137,7 +139,7 @@ uv run pytest
 ## Citation
 
 Please cite the paper for each model or fine-tuned application you use. Copyable
-BibTeX entries are collected in the [citation guide](https://github.com/songlab-cal/gpn/blob/main/docs/citations.md).
+BibTeX entries are collected in the [citation guide](https://github.com/songlab-cal/gpn/blob/main/docs/reference/citations.md).
 
 GPN is developed in the [Song Lab at UC Berkeley](https://people.eecs.berkeley.edu/~yss/group.html)
 and distributed under the [MIT License](https://github.com/songlab-cal/gpn/blob/main/LICENSE).

@@ -13,8 +13,8 @@ ROOT = Path(__file__).parents[1]
 COLABS = ROOT / "colabs"
 MODEL_DEMOS = {
     "gpn_demo.ipynb": "gpn",
-    "gpn_star_demo.ipynb": "gpn_star",
     "phylogpn_demo.ipynb": "phylogpn",
+    "gpn_star_demo.ipynb": "gpn_star",
 }
 WORKFLOWS = {"gpn_star_precomputed_scores.ipynb"}
 NOTEBOOKS = set(MODEL_DEMOS) | WORKFLOWS
@@ -174,14 +174,49 @@ def test_precomputed_score_workflow_is_portable_and_pinned():
     source = "\n".join("".join(cell.get("source", [])) for cell in notebook["cells"])
 
     assert notebook["metadata"]["gpn"] == {
+        "benchmark_id": "songlab/omim_traitgym",
+        "benchmark_revision": "9317562efb8c61f31bb5fc62a19f731b2f8b4384",
         "dataset_id": "songlab/gpn-star-scores",
         "dataset_revision": "5c799b2ec6aa089f0caa8294ae72adb4510f81ae",
     }
-    assert "947e2320f66b83489063aa41252ff76498aeefbb" in source
+    assert '"hf://datasets/songlab/omim_traitgym@"' in source
+    assert "9317562efb8c61f31bb5fc62a19f731b2f8b4384" in source
+    assert '"hf://datasets/songlab/gpn-star-scores@"' in source
+    assert "5c799b2ec6aa089f0caa8294ae72adb4510f81ae" in source
+    assert 'KEYS = ["chrom", "pos", "ref", "alt"]' in source
     assert "average_precision_score" in source
+    assert "global AUPRC" in source
+    assert "variants.height == 3_380" in source
+    assert 'get_column("label").sum() == 338' in source
+    assert 'annotated.get_column("label").to_numpy()' in source
+    assert 'annotated.get_column("effect_score").to_numpy()' in source
+    assert "partition_by" not in source
+    assert "group_by" not in source
     assert '-pl.col("llr_calibrated")' in source
+    assert 'filter(pl.col("pos").is_in(positions))' in source
+    for forbidden in FORBIDDEN_TEXT + (
+        "AutoModel",
+        "AutoTokenizer",
+        "from_pretrained",
+        "hf_hub_download",
+        "snapshot_download",
+        "predictions/GPN-Star-M447.parquet",
+        "all.zarr",
+        "ukb_finemapped",
+    ):
+        assert forbidden not in serialized
     assert "import gpn" not in source
     assert "whole-genome" in source
+    assert _cell(notebook, "scores-input")["outputs"]
+    assert _cell(notebook, "scores-query")["outputs"]
+    auprc_outputs = _cell(notebook, "scores-auprc")["outputs"]
+    assert auprc_outputs == [
+        {
+            "name": "stdout",
+            "output_type": "stream",
+            "text": ["Genome-wide join global AUPRC: 0.7644\n"],
+        }
+    ]
     for cell in notebook["cells"]:
         if cell["cell_type"] != "code":
             continue

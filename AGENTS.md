@@ -2,10 +2,11 @@
 
 ## Maintained scope
 
-Maintain `src/gpn/`, `tests/`, `docs/`, and the GPN and GPN-Star recipes.
-GPN and GPN-Star support training and inference. GPN-MSA is deprecated and
-supports inference only. PhyloGPN and the Sorghum gene-expression models support
-inference only. Dataset-building workflows are not maintained.
+Maintain `src/gpn/`, `tests/`, `docs/`, and the GPN and GPN-Star recipes. GPN
+supports training and inference. GPN-MSA is deprecated and supports inference
+only. PhyloGPN supports inference only. GPN-Star supports training and inference.
+The Sorghum gene-expression model supports inference only. Dataset-building
+workflows are not maintained.
 
 Historical analysis, dataset builders, GPN-MSA training, and retired notebooks
 are preserved at `analysis-archive-2026-08-18`. Do not restore or modernize them
@@ -84,7 +85,8 @@ review output diffs and the scientific audit.
 
 Paper-specific and exploratory analysis must not be committed to `main`.
 Projects may live indefinitely on any off-main branch and evolve independently.
-See `docs/research.md` and `CONTRIBUTING.md` for non-binding project conventions.
+See `docs/development/research.md` and `CONTRIBUTING.md` for non-binding project
+conventions.
 Contributing reusable code back to the maintained package is encouraged but
 optional; duplicated non-core analysis code is acceptable.
 

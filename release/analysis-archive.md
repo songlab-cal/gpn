@@ -1,5 +1,9 @@
 # Historical analysis archive
 
+This maintainer-facing manifest records the exact contents of the archive. It is
+kept outside the public documentation navigation because it describes a release
+operation, not the supported package.
+
 The historical research tree is preserved at commit
 `30dee6cf45849dfdcfc043ca8baf44fd6ba51d74` by the annotated tag
 `analysis-archive-2026-08-18`. The tag exists locally in the modernization stack
@@ -28,9 +32,9 @@ functions were removed from otherwise maintained data modules:
 | `gpn/ss/finetune.py` | blob `ad19df07615d8991fc0eac83685be044bff5621c` |
 | `gpn/ss/train_tokenizer_ss.py` | blob `eb86cba870ed766deab0336ddcc2f9aa5bf1046a` |
 
-The `analysis/` count consists of 60 GPN-MSA files, 83 GPN-Star files,
-15 animal-promoter files, 30 Brassicales files, 19 Sorghum-expression files,
-and the archive README.
+The `analysis/` count consists of 30 Brassicales files, 15 animal-promoter files,
+60 GPN-MSA files, 83 GPN-Star files, 19 Sorghum-expression files, and the archive
+README.
 
 After the tag is published, inspect or check out the snapshot with:
 

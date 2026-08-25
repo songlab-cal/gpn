@@ -84,7 +84,7 @@ jobs:
       - name: Install documentation environment
         run: >-
           uv sync --locked --python 3.13
-          --no-default-groups --group docs
+          --no-default-groups --extra inference --group docs
 
       - name: Prepare static notebooks
         run: uv run --no-sync python docs/prepare_notebooks.py

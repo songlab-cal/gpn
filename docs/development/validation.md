@@ -11,7 +11,7 @@ network access.
 ## Fixture-backed regressions
 
 Small checked-in fixtures reproduce the published quick-start inputs for GPN,
-GPN-MSA, GPN-Star, PhyloGPN, and Sorghum expression. The MSA fixture is a compressed
+GPN-MSA, PhyloGPN, GPN-Star, and Sorghum expression. The MSA fixture is a compressed
 128 bp slice, not a whole-genome alignment. Its source coordinates, public archive
 revision, byte hashes, model revisions, dtype/device, and tolerances live in the
 [fixture provenance](https://github.com/songlab-cal/gpn/blob/main/tests/fixtures/README.md).

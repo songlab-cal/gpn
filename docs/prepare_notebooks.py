@@ -10,8 +10,8 @@ SOURCE = REPOSITORY_ROOT / "colabs"
 DESTINATION = Path(__file__).resolve().parent / "_notebooks"
 MODEL_DEMOS = (
     "gpn_demo.ipynb",
-    "gpn_star_demo.ipynb",
     "phylogpn_demo.ipynb",
+    "gpn_star_demo.ipynb",
 )
 WORKFLOWS = ("gpn_star_precomputed_scores.ipynb",)
 NOTEBOOKS = MODEL_DEMOS + WORKFLOWS

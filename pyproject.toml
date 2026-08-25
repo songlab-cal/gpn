@@ -5,12 +5,13 @@ build-backend = "hatchling.build"
 [project]
 name = "gpn"
 version = "0.9.0a1"
-description = "Genomic pretrained networks for sequence and alignment-based inference"
+description = "The GPN family of genomic language models."
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
 license = "MIT"
 license-files = ["LICENSE"]
-authors = [
+authors = [{ name = "Song Lab at UC Berkeley" }]
+maintainers = [
   { name = "Gonzalo Benegas", email = "gbenegas@berkeley.edu" },
   { name = "Chengzhong Ye", email = "czye@berkeley.edu" },
 ]
