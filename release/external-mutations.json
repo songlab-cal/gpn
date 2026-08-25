@@ -69,28 +69,27 @@
   ],
   "pending": [
     {
-      "id": "merge-modernization-stack",
+      "id": "merge-modernization-pr",
       "system": "github",
       "authorization": "explicit_final_maintainer_approval",
       "disposition": "approval_ready",
-      "operation": "merge the approved component pull requests bottom-up and close the cumulative review pull request",
+      "operation": "squash-merge the single approved modernization pull request",
       "targets": [
         "songlab-cal/gpn:main",
         "songlab-cal/gpn#100"
       ],
       "source": "release/0.9.0/review.md",
       "preconditions": [
-        "the body of cumulative PR 100 records the exact approved head and tree and the maintainer repeats both identifiers in the approval",
-        "release/0.9.0/component-prs.json records the approved component PR order and immutable heads",
-        "all required checks pass at the final stack tip",
-        "the maintainer explicitly approves the cumulative diff and this ledger"
+        "the body of PR 100 records the exact approved head and tree and the maintainer repeats both identifiers in the approval",
+        "all required checks pass on the exact PR head",
+        "the maintainer explicitly approves the complete diff and this ledger"
       ],
       "verification": [
-        "main has the same tree as the approved cumulative tip",
-        "all component pull requests preserve their reviewed topic boundaries"
+        "main has the same tree as the approved PR tip",
+        "PR 100 is merged without any additional code or configuration change"
       ],
       "failure_response": [
-        "stop at the first conflict or changed tree and return the revised cumulative diff for review"
+        "stop at the first conflict or changed tree and return the revised complete diff for review"
       ]
     },
     {
@@ -104,7 +103,7 @@
       ],
       "source": "release/main-ruleset.json",
       "depends_on": [
-        "merge-modernization-stack"
+        "merge-modernization-pr"
       ],
       "preconditions": [
         "the final CI workflow has reported all four required contexts named in release/main-ruleset.json on a pull request",
@@ -131,7 +130,7 @@
       ],
       "source": "release/governance-audit-2026-08-19.md",
       "depends_on": [
-        "merge-modernization-stack"
+        "merge-modernization-pr"
       ],
       "preconditions": [
         "the merged tree removes the historical vulnerable manifest and pins the validated Transformers 5.15.0 runtime",
@@ -158,7 +157,7 @@
       ],
       "source": "release/analysis-archive.md",
       "depends_on": [
-        "merge-modernization-stack"
+        "merge-modernization-pr"
       ],
       "preconditions": [
         "the archive manifest, annotated tag object 312a6c70de6700e729bcea4c9a67ab42a72f05f7, and peeled commit match the reviewed removal boundary",
@@ -184,13 +183,13 @@
       ],
       "source": "release/0.9.0/review.md",
       "depends_on": [
-        "merge-modernization-stack",
+        "merge-modernization-pr",
         "protect-main",
         "publish-analysis-archive"
       ],
       "preconditions": [
-        "the body of cumulative PR 100 records the exact approved tree and the maintainer repeats it in the approval",
-        "the resulting main commit is recorded after squash merging and has exactly the approved tree",
+        "the body of PR 100 records the exact approved tree and the maintainer repeats it in the approval",
+        "the resulting main commit is recorded after squash-merging PR 100 and has exactly the approved tree",
         "the package version is exactly 0.9.0 and the tag target is the approved main commit",
         "the final review packet records a clean Python 3.13 install plus wheel and sdist hashes",
         "the release workflow and pypi environment are unchanged from the reviewed versions"

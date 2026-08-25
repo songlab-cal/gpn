@@ -18,7 +18,7 @@ distribution from a workstation.
 
 ## Before final approval
 
-1. Freeze scope and assemble the cumulative review PR against `main`.
+1. Freeze scope and assemble one review PR against `main`.
 2. Keep Hugging Face asset auditing and card changes outside this release; that
    work remains tracked separately in issue #81.
 3. Set the final package version and update `CHANGELOG.md`.
@@ -26,14 +26,14 @@ distribution from a workstation.
    revisions. Run the opt-in published-model tests deliberately if a compatibility
    input changed.
 5. Complete the review packet and external-mutation manifest under `release/`.
-   Record the exact cumulative head and tree plus the ordered component PR heads.
-   A squash merge creates new commit IDs, so approval binds to the reviewed tree;
-   record the resulting `main` commit and verify its tree immediately after merge.
-6. Obtain explicit approval for the cumulative code diff and only the pending
+   Record the exact PR head and tree. A squash merge creates a new commit ID, so
+   approval binds to the reviewed tree; record the resulting `main` commit and
+   verify its tree immediately after merge.
+6. Obtain explicit approval for the complete code diff and only the pending
    mutations marked `approval_ready`. Entries marked `deferred` are explicitly
    outside that approval and require a later, separate approval after their
-   blockers are resolved. Keep unreviewed component PRs unmerged; merge reviewed
-   components bottom-up only after explicit maintainer authorization.
+   blockers are resolved. Do not merge the review PR without explicit maintainer
+   authorization.
 
 ## Reproduce the release candidate
 
@@ -79,10 +79,10 @@ validation.
 
 ## Merge and publish
 
-After approval, merge the component PRs bottom-up and keep descendants restacked.
-Do not publish while the final `main` tree differs from the approved cumulative
-tip. Record the new `main` commit created by the squash merges, verify its tree is
-the approved tree, and rerun the release-candidate checks on that commit.
+After approval, squash-merge the single reviewed PR. Do not publish while the
+resulting `main` tree differs from the approved PR tree. Record the new `main`
+commit, verify its tree is the approved tree, and rerun the release-candidate
+checks on that commit.
 
 1. Create the annotated historical archive tag/Release only if it is among the
    approved external mutations.

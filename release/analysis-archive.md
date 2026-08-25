@@ -6,7 +6,7 @@ operation, not the supported package.
 
 The historical research tree is preserved at commit
 `30dee6cf45849dfdcfc043ca8baf44fd6ba51d74` by the annotated tag
-`analysis-archive-2026-08-18`. The tag exists locally in the modernization stack
+`analysis-archive-2026-08-18`. The tag exists locally in the modernization candidate
 but must not be pushed or published as a GitHub release until final maintainer
 approval.
 

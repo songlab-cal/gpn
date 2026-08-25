@@ -12,10 +12,6 @@ def _json(name: str) -> dict:
     return json.loads((RELEASE_DIR / name).read_text())
 
 
-def _release_json(name: str) -> dict:
-    return json.loads((RELEASE_DIR / "0.9.0" / name).read_text())
-
-
 def test_external_mutation_ledger_conforms_to_schema() -> None:
     schema = _json("external-mutations.schema.json")
     ledger = _json("external-mutations.json")
@@ -54,7 +50,7 @@ def test_external_mutation_ledger_covers_release_boundary() -> None:
     applied = {action["id"]: action for action in ledger["applied"]}
 
     assert set(pending) == {
-        "merge-modernization-stack",
+        "merge-modernization-pr",
         "protect-main",
         "enable-security-features",
         "publish-analysis-archive",
@@ -64,7 +60,7 @@ def test_external_mutation_ledger_covers_release_boundary() -> None:
     assert "pypi-trusted-publisher-binding" in applied
     assert pending["protect-main"]["source"] == "release/main-ruleset.json"
     assert pending["publish-gpn-0-9-0"]["source"] == "release/0.9.0/review.md"
-    assert pending["merge-modernization-stack"]["disposition"] == "approval_ready"
+    assert pending["merge-modernization-pr"]["disposition"] == "approval_ready"
     assert pending["publish-gpn-0-9-0"]["disposition"] == "approval_ready"
 
     for action in ledger["pending"]:
@@ -92,7 +88,7 @@ def test_final_approval_has_an_exact_bounded_action_set() -> None:
     }
 
     assert ready_ids == {
-        "merge-modernization-stack",
+        "merge-modernization-pr",
         "protect-main",
         "enable-security-features",
         "publish-analysis-archive",
@@ -213,27 +209,41 @@ def test_release_version_metadata_is_consistent() -> None:
     assert f"## {version} — Unreleased\n" in changelog
 
 
-def test_release_component_manifest_is_a_contiguous_immutable_stack() -> None:
-    manifest = _release_json("component-prs.json")
-    components = manifest["components"]
+def test_release_review_uses_one_pull_request() -> None:
+    review = (RELEASE_DIR / "0.9.0" / "review.md").read_text()
+    runbook = (ROOT / "docs" / "development" / "release.md").read_text()
+    release_readme = (RELEASE_DIR / "README.md").read_text()
+    ledger = _json("external-mutations.json")
+    merge = next(
+        action
+        for action in ledger["pending"]
+        if action["id"] == "merge-modernization-pr"
+    )
 
-    assert manifest["release"] == "0.9.0"
-    assert manifest["base"] == {
-        "ref": "main",
-        "commit": "690557d949309cf4f4234554888bb5421c49aede",
-    }
-    assert [component["number"] for component in components] == [
-        *range(88, 97),
-        98,
-    ]
-    assert components[0]["base_ref"] == "main"
-    assert all(component["state"] == "merged" for component in components[:8])
-    assert components[8]["base_ref"] == "main"
-    assert all(component["state"] == "open" for component in components[8:])
-    for previous, current in zip(components[8:], components[9:]):
-        assert current["base_ref"] == previous["head_ref"]
-    assert all(len(component["head_commit"]) == 40 for component in components)
-    assert manifest["final_component"]["base_ref"] == components[-1]["head_ref"]
-    assert manifest["final_component"]["head_ref"] == "codex/final-release-prep"
-    assert manifest["final_component"]["number"] == 99
-    assert manifest["cumulative_pull_request"] == 100
+    assert "pull/100" in review
+    assert "690557d949309cf4f4234554888bb5421c49aede" in review
+    assert "pull/96" not in review
+    assert "pull/98" not in review
+    assert "pull/99" not in review
+    assert "component-prs.json" not in review
+    assert not (RELEASE_DIR / "0.9.0" / "component-prs.json").exists()
+    assert merge["operation"] == (
+        "squash-merge the single approved modernization pull request"
+    )
+    assert merge["targets"] == ["songlab-cal/gpn:main", "songlab-cal/gpn#100"]
+    assert any(
+        "exact approved head and tree" in item for item in merge["preconditions"]
+    )
+    assert any("exact PR head" in item for item in merge["preconditions"])
+
+    governance_text = "\n".join(
+        (review, runbook, release_readme, json.dumps(ledger))
+    ).lower()
+    for stale_term in (
+        "bottom-up",
+        "component pull request",
+        "cumulative pr",
+        "modernization stack",
+        "stack tip",
+    ):
+        assert stale_term not in governance_text

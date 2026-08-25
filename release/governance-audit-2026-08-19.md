@@ -25,7 +25,7 @@ workflow separates build and publish jobs.
 
 Three open Dependabot alerts point to the historical
 `analysis/gpn-star/interpretation/requirements.txt`, which is removed in the
-modernization stack:
+modernization pull request:
 
 | Advisory | Severity | Affected Transformers | First patched |
 | --- | --- | --- | --- |
