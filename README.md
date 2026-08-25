@@ -39,8 +39,6 @@ Explore the [GPN-Star models, alignments, scores, and benchmark datasets](https:
 | [PhyloGPN](https://github.com/songlab-cal/gpn/blob/main/docs/models/phylogpn.md) | [Albors et al. 2025](https://link.springer.com/chapter/10.1007/978-3-031-90252-9_7) | Uses an alignment during training, but does not require it for inference or fine-tuning |
 | [GPN-Star](https://github.com/songlab-cal/gpn/blob/main/docs/models/gpn-star.md) | [Ye et al. 2025](https://doi.org/10.1101/2025.09.21.677619) | Requires aligned genomes for training and inference |
 
-The [sorghum gene-expression model](https://huggingface.co/songlab/gpn-brassicales-gxa-sorghum-v1) is a fine-tuned application of GPN.
-
 ## Command line
 
 Install file-backed inference dependencies with `pip install "gpn[inference]"` or training dependencies with `pip install "gpn[train]"`.
@@ -59,10 +57,10 @@ GPN and GPN-Star can be trained on prepared data using the maintained [GPN](http
 
 ## Demos
 
-- **[Precomputed GPN-Star scores](https://github.com/songlab-cal/gpn/blob/main/colabs/gpn_star_precomputed_scores.ipynb)** · [Open in Colab](https://colab.research.google.com/github/songlab-cal/gpn/blob/main/colabs/gpn_star_precomputed_scores.ipynb)
-- **[GPN-Star](https://github.com/songlab-cal/gpn/blob/main/colabs/gpn_star_demo.ipynb)** · [Open in Colab](https://colab.research.google.com/github/songlab-cal/gpn/blob/main/colabs/gpn_star_demo.ipynb)
-- **[GPN](https://github.com/songlab-cal/gpn/blob/main/colabs/gpn_demo.ipynb)** · [Open in Colab](https://colab.research.google.com/github/songlab-cal/gpn/blob/main/colabs/gpn_demo.ipynb)
-- **[PhyloGPN](https://github.com/songlab-cal/gpn/blob/main/colabs/phylogpn_demo.ipynb)** · [Open in Colab](https://colab.research.google.com/github/songlab-cal/gpn/blob/main/colabs/phylogpn_demo.ipynb)
+- **[Precomputed GPN-Star scores](https://github.com/songlab-cal/gpn/blob/main/colabs/gpn_star_precomputed_scores.ipynb)** · [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/songlab-cal/gpn/blob/main/colabs/gpn_star_precomputed_scores.ipynb)
+- **[GPN-Star](https://github.com/songlab-cal/gpn/blob/main/colabs/gpn_star_demo.ipynb)** · [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/songlab-cal/gpn/blob/main/colabs/gpn_star_demo.ipynb)
+- **[GPN](https://github.com/songlab-cal/gpn/blob/main/colabs/gpn_demo.ipynb)** · [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/songlab-cal/gpn/blob/main/colabs/gpn_demo.ipynb)
+- **[PhyloGPN](https://github.com/songlab-cal/gpn/blob/main/colabs/phylogpn_demo.ipynb)** · [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/songlab-cal/gpn/blob/main/colabs/phylogpn_demo.ipynb)
 
 ## Historical analyses
 

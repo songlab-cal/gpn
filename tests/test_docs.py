@@ -6,12 +6,13 @@ ROOT = Path(__file__).parents[1]
 def test_python_api_documentation_is_not_built():
     sphinx_config = (ROOT / "docs" / "conf.py").read_text()
     project = (ROOT / "pyproject.toml").read_text()
-    reference_index = (ROOT / "docs" / "reference" / "index.md").read_text()
+    docs_index = (ROOT / "docs" / "index.md").read_text()
 
+    assert not (ROOT / "docs" / "reference" / "index.md").exists()
     assert not (ROOT / "docs" / "reference" / "python-api.md").exists()
     assert "autodoc" not in sphinx_config
     assert "sphinx-autodoc-typehints" not in project
-    assert "python-api" not in reference_index
+    assert "python-api" not in docs_index
 
 
 def test_hosted_docs_use_only_the_docs_dependency_group():

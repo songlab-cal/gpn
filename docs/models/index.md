@@ -10,9 +10,6 @@ inputs and modeling objectives.
 | {doc}`PhyloGPN <phylogpn>` | [Albors et al. 2025](https://link.springer.com/chapter/10.1007/978-3-031-90252-9_7) | Uses an alignment during training, but does not require it for inference or fine-tuning |
 | {doc}`GPN-Star <gpn-star>` | [Ye et al. 2025](https://doi.org/10.1101/2025.09.21.677619) | Requires aligned genomes for training and inference |
 
-The {ref}`sorghum-expression` checkpoint is a fine-tuned application of GPN, not
-a separate model family.
-
 ## Maintained support
 
 GPN and GPN-Star support training on prepared data and inference. GPN-MSA is

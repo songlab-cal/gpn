@@ -45,6 +45,6 @@ Read executable code and committed scientific plots without starting a kernel.
 getting-started/index
 models/index
 tutorials/index
-reference/index
+reference/citations
 development/index
 ```
