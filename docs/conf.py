@@ -11,18 +11,8 @@ version = release
 extensions = [
     "myst_nb",
     "sphinx_design",
-    "sphinx.ext.autodoc",
-    "sphinx.ext.autosummary",
-    "sphinx.ext.napoleon",
-    "sphinx_autodoc_typehints",
     "sphinx_copybutton",
 ]
-
-autosummary_generate = True
-autodoc_member_order = "bysource"
-autodoc_typehints = "description"
-napoleon_google_docstring = True
-napoleon_numpy_docstring = False
 
 myst_enable_extensions = [
     "attrs_block",
@@ -39,17 +29,6 @@ nb_merge_streams = True
 nb_output_stderr = "remove"
 
 nitpicky = True
-# External inventories are intentionally not fetched during offline documentation
-# builds. Keep internal references strict while accepting external array-type names.
-nitpick_ignore_regex = [
-    ("py:class", r"(?:jaxtyping\.)?(?:Float|Int)(?:\[.*\])?"),
-    ("py:class", r"(?:torch\.)?(?:Tensor|LongTensor|Module)"),
-    (
-        "py:class",
-        r"transformers\.modeling_outputs\.(?:SequenceClassifierOutput|TokenClassifierOutput)",
-    ),
-    ("py:class", r"'.*'"),
-]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 html_theme = "sphinx_book_theme"

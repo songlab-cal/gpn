@@ -8,17 +8,11 @@ prepared datasets.
 
 ```python
 from gpn import register_auto_classes
-from transformers import AutoModelForMaskedLM, AutoTokenizer
+from transformers import AutoModelForMaskedLM
 
 register_auto_classes("ss")
 
-model_id = "songlab/gpn-brassicales"
-revision = "eb9c35d0d18571abe84390d22e74f2b21d319ce3"
-tokenizer = AutoTokenizer.from_pretrained(model_id, revision=revision)
-model = AutoModelForMaskedLM.from_pretrained(
-    model_id,
-    revision=revision,
-).eval()
+model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-brassicales")
 ```
 
 The {doc}`GPN tutorial <../_notebooks/gpn_demo>` demonstrates tokenization,
@@ -61,3 +55,9 @@ accompanies the [Nature Biotechnology paper](https://doi.org/10.1038/s41587-026-
 
 - [`songlab/gxa-sorghum-v1`](https://huggingface.co/datasets/songlab/gxa-sorghum-v1): sorghum gene-expression data from Gene Expression Atlas.
 - [`songlab/gpn-brassicales-gxa-sorghum-v1`](https://huggingface.co/songlab/gpn-brassicales-gxa-sorghum-v1): a gene-expression model fine-tuned from `gpn-brassicales`.
+
+## Historical analyses
+
+- [Brassicales GPN analysis](https://github.com/songlab-cal/gpn/tree/analysis-archive-2026-08-18/analysis/gpn_arabidopsis)
+- [Animal-promoter and TraitGym analysis](https://github.com/songlab-cal/gpn/tree/analysis-archive-2026-08-18/analysis/gpn_animal_promoter)
+- [Sorghum gene-expression analysis](https://github.com/songlab-cal/gpn/tree/analysis-archive-2026-08-18/analysis/gpn_sorghum_expression)

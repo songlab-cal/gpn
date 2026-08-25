@@ -11,10 +11,7 @@ from gpn import register_auto_classes
 from transformers import AutoModelForMaskedLM
 
 register_auto_classes("star")
-model = AutoModelForMaskedLM.from_pretrained(
-    "songlab/gpn-star-hg38-v100-200m",
-    revision="0c949f132d35619a3eb188b402848c998a3313ae",
-).eval()
+model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-star-hg38-v100-200m")
 ```
 
 The {doc}`GPN-Star tutorial <../_notebooks/gpn_star_demo>` uses a tiny alignment
@@ -163,3 +160,8 @@ Chromosome names must match the store. This example uses the spelling in the
 published archive; do not silently add or strip a `chr` prefix. Other GPN-Star
 checkpoints can require different public or local alignment stores: check the
 model card before substituting one alignment for another.
+
+## Historical analysis
+
+The [GPN-Star paper analysis](https://github.com/songlab-cal/gpn/tree/analysis-archive-2026-08-18/analysis/gpn-star)
+is preserved in the historical archive.

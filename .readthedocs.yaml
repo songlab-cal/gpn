@@ -14,8 +14,6 @@ python:
       command: sync
       groups:
         - docs
-      extras:
-        - inference
 
 sphinx:
   builder: dirhtml

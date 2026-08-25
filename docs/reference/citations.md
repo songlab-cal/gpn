@@ -2,7 +2,7 @@
 
 Please cite the paper for each model or fine-tuned application you use.
 
-## GPN
+## [GPN](https://doi.org/10.1073/pnas.2311219120)
 
 ```bibtex
 @article{benegas2023dna,
@@ -17,7 +17,7 @@ Please cite the paper for each model or fine-tuned application you use.
 }
 ```
 
-## GPN-MSA
+## [GPN-MSA](https://www.nature.com/articles/s41587-024-02511-w)
 
 ```bibtex
 @article{benegas2025dna,
@@ -30,7 +30,7 @@ Please cite the paper for each model or fine-tuned application you use.
 }
 ```
 
-## PhyloGPN
+## [PhyloGPN](https://link.springer.com/chapter/10.1007/978-3-031-90252-9_7)
 
 ```bibtex
 @inproceedings{albors2025phylogenetic,
@@ -43,7 +43,7 @@ Please cite the paper for each model or fine-tuned application you use.
 }
 ```
 
-## GPN-Star
+## [GPN-Star](https://doi.org/10.1101/2025.09.21.677619)
 
 ```bibtex
 @article{ye2025predicting,
@@ -56,7 +56,7 @@ Please cite the paper for each model or fine-tuned application you use.
 }
 ```
 
-## Sorghum gene-expression prediction with fine-tuned GPN
+## [Sorghum gene-expression prediction with fine-tuned GPN](https://www.nature.com/articles/s41587-026-03046-y)
 
 ```bibtex
 @article{groover2026mapping,

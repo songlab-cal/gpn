@@ -10,14 +10,11 @@ not training or fine-tuning.
 
 ```python
 from gpn import register_auto_classes
-from transformers import AutoModel, AutoTokenizer
+from transformers import AutoModel
 
 register_auto_classes("phylo")
 
-model_id = "songlab/PhyloGPN"
-revision = "3556db4c469e67d25f0f7a0a6653b48be3eebf51"
-tokenizer = AutoTokenizer.from_pretrained(model_id, revision=revision)
-model = AutoModel.from_pretrained(model_id, revision=revision).eval()
+model = AutoModel.from_pretrained("songlab/PhyloGPN")
 ```
 
 The {doc}`PhyloGPN tutorial <../_notebooks/phylogpn_demo>` demonstrates rate

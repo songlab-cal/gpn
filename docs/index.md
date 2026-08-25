@@ -8,10 +8,7 @@ myst:
 
 # GPN
 
-The GPN family of genomic language models.
-
-Use published checkpoints for sequence- and alignment-based genomic inference,
-or train GPN and GPN-Star on prepared data through a reproducible Python package.
+Code and resources for genomic language models [GPN](https://doi.org/10.1073/pnas.2311219120), [GPN-MSA](https://www.nature.com/articles/s41587-024-02511-w), [PhyloGPN](https://link.springer.com/chapter/10.1007/978-3-031-90252-9_7) and [GPN-Star](https://doi.org/10.1101/2025.09.21.677619).
 
 </div>
 

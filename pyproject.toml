@@ -76,7 +76,6 @@ docs = [
   "nbclient>=0.10",
   "nbformat>=5.10",
   "sphinx>=7,<10",
-  "sphinx-autodoc-typehints>=2.5",
   "sphinx-book-theme>=1.2",
   "sphinx-copybutton>=0.5",
   "sphinx-design>=0.6",

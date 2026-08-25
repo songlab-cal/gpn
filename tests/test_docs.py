@@ -3,20 +3,24 @@ from pathlib import Path
 ROOT = Path(__file__).parents[1]
 
 
-def test_autodoc_directives_render_generated_rest_as_rest():
-    api_source = (ROOT / "docs" / "reference" / "python-api.md").read_text()
+def test_python_api_documentation_is_not_built():
+    sphinx_config = (ROOT / "docs" / "conf.py").read_text()
+    project = (ROOT / "pyproject.toml").read_text()
+    reference_index = (ROOT / "docs" / "reference" / "index.md").read_text()
 
-    assert "```{eval-rst}" in api_source
-    assert "```{autofunction}" not in api_source
-    assert "```{autoclass}" not in api_source
+    assert not (ROOT / "docs" / "reference" / "python-api.md").exists()
+    assert "autodoc" not in sphinx_config
+    assert "sphinx-autodoc-typehints" not in project
+    assert "python-api" not in reference_index
 
 
-def test_hosted_docs_install_inference_dependencies_for_api_imports():
+def test_hosted_docs_use_only_the_docs_dependency_group():
     ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text()
     read_the_docs = (ROOT / ".readthedocs.yaml").read_text()
 
-    assert "--no-default-groups --extra inference --group docs" in ci
-    assert "extras:\n        - inference" in read_the_docs
+    assert "--no-default-groups --group docs" in ci
+    assert "--extra inference" not in ci
+    assert "extras:" not in read_the_docs
 
 
 def test_public_docs_are_attributed_to_song_lab():

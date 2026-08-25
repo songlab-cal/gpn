@@ -43,7 +43,6 @@ gpn ss vep \
   --genome-path genome.fa.gz \
   --window-size 512 \
   --model-path songlab/gpn-brassicales \
-  --model-revision MODEL_COMMIT \
   --output-path scores.parquet \
   --per-device-eval-batch-size 64
 ```
@@ -56,7 +55,6 @@ gpn ss logits \
   --genome-path GENOME_PATH \
   --window-size WINDOW_SIZE \
   --model-path MODEL_PATH \
-  --model-revision MODEL_COMMIT \
   --output-path OUTPUT_PATH
 gpn ss embedding \
   --input-path WINDOWS_PATH \
@@ -78,9 +76,6 @@ log-likelihood ratio averaged over forward and reverse-complement sequence
 orientations. In particular, negative values mean the alternate is less likely
 than the reference under the model.
 
-When `--tokenizer-path` selects a different Hub repository, pin it independently
-with `--tokenizer-revision`. Otherwise the tokenizer inherits `--model-revision`.
-
 ## GPN-MSA
 
 GPN-MSA is deprecated and supports inference only. Its public commands cover
@@ -92,7 +87,6 @@ gpn msa vep \
   --msa-path LOCAL_MSA_PATH \
   --window-size WINDOW_SIZE \
   --model-path MODEL_PATH \
-  --model-revision MODEL_COMMIT \
   --output-path OUTPUT_PATH
 gpn msa logits \
   --input-path INPUT_PATH \
@@ -154,10 +148,9 @@ gpn star embedding \
 
 All three inference families support the same durable, process-count-independent
 batch checkpoints. Set `--checkpoint-batch-size`; the directory defaults to
-`OUTPUT_PATH_checkpoints`. See any inference command's help for revision and
-cleanup options. `--model-revision` pins a Hugging Face model snapshot;
-`--checkpoint-revision` is a user-supplied identity for the input state used to
-validate resumable output batches. They are independent.
+`OUTPUT_PATH_checkpoints`. See any inference command's help for cleanup options.
+`--checkpoint-revision` is an optional user-supplied identity for the input state
+used to validate resumable output batches.
 
 `LOCAL_MSA_PATH` is not itself an `all.zarr` store. It is either a numeric
 species-count directory containing `all.zarr`, or a parent containing one or more
@@ -203,7 +196,6 @@ torchrun --standalone --nproc-per-node=4 --module gpn.cli \
   --genome-path genome.fa.gz \
   --window-size 512 \
   --model-path songlab/gpn-brassicales \
-  --model-revision MODEL_COMMIT \
   --output-path scores.parquet \
   --per-device-eval-batch-size 64 \
   --dataloader-num-workers 4 \

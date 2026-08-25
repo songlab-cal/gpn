@@ -2,74 +2,48 @@
 
 [![CI](https://github.com/songlab-cal/gpn/actions/workflows/ci.yml/badge.svg)](https://github.com/songlab-cal/gpn/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/gpn)](https://pypi.org/project/gpn/)
-[![Python](https://img.shields.io/pypi/pyversions/gpn)](https://pypi.org/project/gpn/)
+[![Python 3.13](https://img.shields.io/badge/Python-3.13-blue)](https://www.python.org/downloads/release/python-3130/)
 [![License](https://img.shields.io/github/license/songlab-cal/gpn)](https://github.com/songlab-cal/gpn/blob/main/LICENSE)
 
-[**Quick start**](#quick-start) · [**Models**](#model-family) ·
-[**Demos**](#demos) · [**Documentation**](https://github.com/songlab-cal/gpn/blob/main/docs/index.md) ·
-[**Research & papers**](https://github.com/songlab-cal/gpn/blob/main/docs/development/research.md)
+[**Quick start**](#quick-start) · [**Model families**](#model-families) ·
+[**Demos**](#demos) · [**Documentation**](https://github.com/songlab-cal/gpn/blob/main/docs/index.md)
 
 ![GPN-Star architecture, evolutionary scales, and genomic prediction tasks](docs/_static/gpn_star_overview.png)
 
-The GPN family of genomic language models.
-
-GPN learns evolutionary constraint from DNA sequences and multispecies
-alignments. The `gpn` package provides the canonical implementations for
-published Song Lab checkpoints through explicit, standard
-[Transformers AutoClasses](https://huggingface.co/docs/transformers/en/model_doc/auto).
+Code and resources for genomic language models [GPN](https://doi.org/10.1073/pnas.2311219120), [GPN-MSA](https://www.nature.com/articles/s41587-024-02511-w), [PhyloGPN](https://link.springer.com/chapter/10.1007/978-3-031-90252-9_7) and [GPN-Star](https://doi.org/10.1101/2025.09.21.677619).
 
 ## Quick start
-
-Install the model APIs from PyPI:
 
 ```bash
 pip install gpn
 ```
 
-Load the published Brassicales model without mutable remote code or imports for
-side effects:
+Load GPN-Star, our latest model, with standard Transformers AutoClasses:
 
 ```python
 from gpn import register_auto_classes
-from transformers import AutoModelForMaskedLM, AutoTokenizer
+from transformers import AutoModelForMaskedLM
 
-register_auto_classes("ss")
-
-model_id = "songlab/gpn-brassicales"
-model_revision = "eb9c35d0d18571abe84390d22e74f2b21d319ce3"
-tokenizer = AutoTokenizer.from_pretrained(model_id, revision=model_revision)
-model = AutoModelForMaskedLM.from_pretrained(
-    model_id, revision=model_revision
-).eval()
+register_auto_classes("star")
+model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-star-hg38-v100-200m")
 ```
 
-Use `register_auto_classes("msa")` for GPN-MSA,
-`register_auto_classes("phylo")` for PhyloGPN, and
-`register_auto_classes("star")` for GPN-Star. The package deliberately leaves
-revision, dtype, device placement, and cache choices in the normal Transformers
-API.
+Explore the [GPN-Star models, alignments, scores, and benchmark datasets](https://github.com/songlab-cal/gpn/blob/main/docs/models/gpn-star.md#published-assets).
 
-## Model family
+## Model families
 
-| Model | What it learns from | Maintained support | Published checkpoint |
-| --- | --- | --- | --- |
-| [GPN](https://doi.org/10.1073/pnas.2311219120) | unaligned genomes | training + inference | [`songlab/gpn-brassicales`](https://huggingface.co/songlab/gpn-brassicales) |
-| [GPN-MSA](https://doi.org/10.1038/s41587-024-02511-w) | a multispecies alignment | deprecated; inference only | [`songlab/gpn-msa-sapiens`](https://huggingface.co/songlab/gpn-msa-sapiens) |
-| [PhyloGPN](https://doi.org/10.1007/978-3-031-90252-9_7) | phylogenetic substitution rates | inference only | [`songlab/PhyloGPN`](https://huggingface.co/songlab/PhyloGPN) |
-| [GPN-Star](https://doi.org/10.1101/2025.09.21.677619) | alignments across evolutionary scales | training + inference | [`songlab/gpn-star-hg38-v100-200m`](https://huggingface.co/songlab/gpn-star-hg38-v100-200m) |
+| Model | Paper | Notes |
+| --- | --- | --- |
+| [GPN](https://github.com/songlab-cal/gpn/blob/main/docs/models/gpn.md) | [Benegas et al. 2023](https://doi.org/10.1073/pnas.2311219120) | Requires unaligned genomes |
+| [GPN-MSA](https://github.com/songlab-cal/gpn/blob/main/docs/models/gpn-msa.md) | [Benegas et al. 2025](https://www.nature.com/articles/s41587-024-02511-w) | Requires aligned genomes for training and inference; deprecated in favor of GPN-Star |
+| [PhyloGPN](https://github.com/songlab-cal/gpn/blob/main/docs/models/phylogpn.md) | [Albors et al. 2025](https://link.springer.com/chapter/10.1007/978-3-031-90252-9_7) | Uses an alignment during training, but does not require it for inference or fine-tuning |
+| [GPN-Star](https://github.com/songlab-cal/gpn/blob/main/docs/models/gpn-star.md) | [Ye et al. 2025](https://doi.org/10.1101/2025.09.21.677619) | Requires aligned genomes for training and inference |
 
-The [sorghum gene-expression checkpoint](https://huggingface.co/songlab/gpn-brassicales-gxa-sorghum-v1)
-is an inference-only fine-tune of GPN, not a separate model family.
-
-The [support guide](https://github.com/songlab-cal/gpn/blob/main/docs/models/index.md)
-defines required inputs, compatibility boundaries, immutable validated revisions,
-and output semantics. Classification in a Hugging Face collection does not
-automatically make every historical asset part of the package support contract.
+The [sorghum gene-expression model](https://huggingface.co/songlab/gpn-brassicales-gxa-sorghum-v1) is a fine-tuned application of GPN.
 
 ## Command line
 
-Install file-backed inference dependencies with `pip install "gpn[inference]"` or
-training dependencies with `pip install "gpn[train]"`.
+Install file-backed inference dependencies with `pip install "gpn[inference]"` or training dependencies with `pip install "gpn[train]"`.
 
 ```text
 gpn ss {train,vep,logits,embedding} ...
@@ -77,71 +51,94 @@ gpn msa {vep,logits,embedding} ...
 gpn star {train,vep,logits,embedding} ...
 ```
 
-GPN-MSA has no training command. Dataset and whole-genome-alignment construction
-are outside the maintained package. See the
-[CLI guide](https://github.com/songlab-cal/gpn/blob/main/docs/getting-started/cli.md)
-for local MSA layouts, coordinate systems, precision controls, distributed
-execution, durable GPN-Star checkpoints, and raw LLR semantics.
-PhyloGPN and the sorghum gene-expression fine-tune are maintained through explicit
-Transformers AutoClass registration and intentionally have no dedicated CLI.
+See the [CLI guide](https://github.com/songlab-cal/gpn/blob/main/docs/getting-started/cli.md) for inputs, outputs, and multi-GPU inference.
+
+## Training
+
+GPN and GPN-Star can be trained on prepared data using the maintained [GPN](https://github.com/songlab-cal/gpn/tree/main/recipes/gpn_training) and [GPN-Star](https://github.com/songlab-cal/gpn/tree/main/recipes/gpn_star_training) recipes.
 
 ## Demos
 
-Only three existing demos are maintained, with portable setup, explicit
-registration, immutable model revisions, and small committed outputs. They render
-statically in the documentation without requiring a notebook kernel.
+- **[Precomputed GPN-Star scores](https://github.com/songlab-cal/gpn/blob/main/colabs/gpn_star_precomputed_scores.ipynb)** · [Open in Colab](https://colab.research.google.com/github/songlab-cal/gpn/blob/main/colabs/gpn_star_precomputed_scores.ipynb)
+- **[GPN-Star](https://github.com/songlab-cal/gpn/blob/main/colabs/gpn_star_demo.ipynb)** · [Open in Colab](https://colab.research.google.com/github/songlab-cal/gpn/blob/main/colabs/gpn_star_demo.ipynb)
+- **[GPN](https://github.com/songlab-cal/gpn/blob/main/colabs/gpn_demo.ipynb)** · [Open in Colab](https://colab.research.google.com/github/songlab-cal/gpn/blob/main/colabs/gpn_demo.ipynb)
+- **[PhyloGPN](https://github.com/songlab-cal/gpn/blob/main/colabs/phylogpn_demo.ipynb)** · [Open in Colab](https://colab.research.google.com/github/songlab-cal/gpn/blob/main/colabs/phylogpn_demo.ipynb)
 
-| GPN | PhyloGPN | GPN-Star |
-| --- | --- | --- |
-| [Notebook](https://github.com/songlab-cal/gpn/blob/main/colabs/gpn_demo.ipynb) | [Notebook](https://github.com/songlab-cal/gpn/blob/main/colabs/phylogpn_demo.ipynb) | [Notebook](https://github.com/songlab-cal/gpn/blob/main/colabs/gpn_star_demo.ipynb) |
+## Historical analyses
 
-The GPN-Star demo uses a 3.5 KiB fixture from the published locus; it never
-downloads a whole-genome MSA. See the [alignment guide](https://github.com/songlab-cal/gpn/blob/main/docs/models/gpn-star.md#alignment-data)
-when running the CLI against the full public alignment.
-
-For a lightweight executable workflow, use the
-[precomputed GPN-Star score notebook](https://github.com/songlab-cal/gpn/blob/main/colabs/gpn_star_precomputed_scores.ipynb)
-to score the OMIM TraitGym benchmark and compute global AUPRC without downloading
-a model or MSA.
-
-## Reproducible science
-
-Every supported family has an immutable published revision and an approved
-fixture-backed numerical regression. Normal pull-request tests are offline; the
-published checkpoints are audited deliberately rather than through a recurring
-Hub monitor.
-
-- [Scientific validation and score conventions](https://github.com/songlab-cal/gpn/blob/main/docs/development/validation.md)
-- [GPN training on prepared data](https://github.com/songlab-cal/gpn/tree/main/recipes/gpn_training)
-- [GPN-Star training on prepared data](https://github.com/songlab-cal/gpn/tree/main/recipes/gpn_star_training)
-- [Research branch lifecycle](https://github.com/songlab-cal/gpn/blob/main/docs/development/research.md)
-
-Variant scores use `alternate_logit - reference_logit`; negative values mean the
-alternate is less likely under the model. Genomic intervals are zero-based and
-half-open, while VEP positions are one-based.
+The paper analyses and retired research workflows are preserved in the [`analysis-archive-2026-08-18`](https://github.com/songlab-cal/gpn/tree/analysis-archive-2026-08-18) archive.
 
 ## Development and help
 
-GPN supports one reproducible runtime: Python 3.13 with the exact Transformers
-version declared by the package and the complete environment pinned in `uv.lock`:
+See the [documentation](https://github.com/songlab-cal/gpn/blob/main/docs/index.md), ask questions in [Discussions](https://github.com/songlab-cal/gpn/discussions), or report problems in [Issues](https://github.com/songlab-cal/gpn/issues).
 
-```bash
-git clone https://github.com/songlab-cal/gpn.git
-cd gpn
-uv sync --extra train --group dev --group docs
-uv run pre-commit run --all-files
-uv run pytest
-```
-
-- Ask usage questions in [Discussions](https://github.com/songlab-cal/gpn/discussions).
-- Report bugs and scientific regressions in [Issues](https://github.com/songlab-cal/gpn/issues).
-- Read [CONTRIBUTING.md](https://github.com/songlab-cal/gpn/blob/main/CONTRIBUTING.md)
-  before proposing maintained or off-main research work.
+GPN is developed in the [Song Lab at UC Berkeley](https://people.eecs.berkeley.edu/~yss/group.html) and distributed under the [MIT License](https://github.com/songlab-cal/gpn/blob/main/LICENSE).
 
 ## Citation
 
-Please cite the paper for each model or fine-tuned application you use. Copyable
-BibTeX entries are collected in the [citation guide](https://github.com/songlab-cal/gpn/blob/main/docs/reference/citations.md).
+[GPN](https://doi.org/10.1073/pnas.2311219120):
 
-GPN is developed in the [Song Lab at UC Berkeley](https://people.eecs.berkeley.edu/~yss/group.html)
-and distributed under the [MIT License](https://github.com/songlab-cal/gpn/blob/main/LICENSE).
+```bibtex
+@article{benegas2023dna,
+  title={DNA language models are powerful predictors of genome-wide variant effects},
+  author={Benegas, Gonzalo and Batra, Sanjit Singh and Song, Yun S},
+  journal={Proceedings of the National Academy of Sciences},
+  volume={120},
+  number={44},
+  pages={e2311219120},
+  year={2023},
+  publisher={National Acad Sciences}
+}
+```
+
+[GPN-MSA](https://www.nature.com/articles/s41587-024-02511-w):
+
+```bibtex
+@article{benegas2025dna,
+  title={A DNA language model based on multispecies alignment predicts the effects of genome-wide variants},
+  author={Benegas, Gonzalo and Albors, Carlos and Aw, Alan J and Ye, Chengzhong and Song, Yun S},
+  journal={Nature Biotechnology},
+  pages={1--6},
+  year={2025},
+  publisher={Nature Publishing Group US New York}
+}
+```
+
+[PhyloGPN](https://link.springer.com/chapter/10.1007/978-3-031-90252-9_7):
+
+```bibtex
+@inproceedings{albors2025phylogenetic,
+  title={A Phylogenetic Approach to Genomic Language Modeling},
+  author={Albors, Carlos and Li, Jianan Canal and Benegas, Gonzalo and Ye, Chengzhong and Song, Yun S},
+  booktitle={International Conference on Research in Computational Molecular Biology},
+  pages={99--117},
+  year={2025},
+  organization={Springer}
+}
+```
+
+[GPN-Star](https://doi.org/10.1101/2025.09.21.677619):
+
+```bibtex
+@article{ye2025predicting,
+  title={Predicting functional constraints across evolutionary timescales with phylogeny-informed genomic language models},
+  author={Ye, Chengzhong and Benegas, Gonzalo and Albors, Carlos and Li, Jianan Canal and Prillo, Sebastian and Fields, Peter D and Clarke, Brian and Song, Yun S},
+  journal={bioRxiv},
+  pages={2025--09},
+  year={2025},
+  publisher={Cold Spring Harbor Laboratory}
+}
+```
+
+[Sorghum gene expression prediction](https://www.nature.com/articles/s41587-026-03046-y):
+
+```bibtex
+@article{groover2026mapping,
+  title={Mapping cis-regulatory mutations at scale in sorghum enables modulation of gene expression},
+  author={Groover, Evan D and Ding, David and Wang, Flora Z and Benegas, Gonzalo and Rivera, Joseph and Schwartz, Shahar and Chen, Stephen and Moubarak, Michael F and Georgieva, Viktoriya and Lemaux, Peggy G and others},
+  journal={Nature Biotechnology},
+  pages={1--11},
+  year={2026},
+  publisher={Nature Publishing Group US New York}
+}
+```

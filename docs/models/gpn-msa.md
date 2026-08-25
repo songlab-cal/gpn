@@ -11,10 +11,7 @@ from gpn import register_auto_classes
 from transformers import AutoModelForMaskedLM
 
 register_auto_classes("msa")
-model = AutoModelForMaskedLM.from_pretrained(
-    "songlab/gpn-msa-sapiens",
-    revision="4a7d4f75449cb2abd560b2af024d76f99233c6db",
-).eval()
+model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-msa-sapiens")
 ```
 
 File-backed inference uses `gpn msa {vep,logits,embedding}` and a compatible
@@ -46,3 +43,8 @@ accompanies the [Nature Biotechnology paper](https://doi.org/10.1038/s41587-024-
 
 - [`songlab/gpn-msa-hg38-scores`](https://huggingface.co/datasets/songlab/gpn-msa-hg38-scores): hg38 genome-wide variant scores.
 - [`songlab/gpn-msa-hg38-gene-essentiality-scores`](https://huggingface.co/datasets/songlab/gpn-msa-hg38-gene-essentiality-scores): gene-essentiality predictions.
+
+## Historical analysis
+
+The [GPN-MSA paper analysis](https://github.com/songlab-cal/gpn/tree/analysis-archive-2026-08-18/analysis/gpn-msa_human)
+is preserved in the historical archive.

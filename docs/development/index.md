@@ -26,8 +26,7 @@ inspection tools used by the release workflow; see the [release runbook](release
 
 ## Documentation policy
 
-- Markdown under `docs/` is the conceptual source; docstrings feed only the curated
-  API reference.
+- Markdown under `docs/` is the source for all published documentation.
 - Three existing model demos and one lightweight precomputed-score workflow live
   under `colabs/`. All four retain committed outputs; Sphinx and Read the Docs
   never execute any notebook.
