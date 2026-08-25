@@ -107,5 +107,7 @@ jobs:
             --no-config \
             /tmp/gpn-wheel-from-sdist/*.whl
           cd /tmp
+          /tmp/gpn-wheel-smoke/bin/gpn --version
+          /tmp/gpn-wheel-smoke/bin/gpn --help
           /tmp/gpn-wheel-smoke/bin/python -c \
             "from importlib.metadata import version; from pathlib import Path; import gpn; gpn.register_auto_classes(); assert version('gpn') == Path('/tmp/gpn-expected-version').read_text().strip()"

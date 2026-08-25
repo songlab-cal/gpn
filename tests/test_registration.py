@@ -39,6 +39,37 @@ assert "transformers" not in sys.modules
     assert result.returncode == 0, result.stderr
 
 
+def test_importing_command_modules_does_not_register_models():
+    code = """
+import importlib
+from gpn import _registration
+
+for module in (
+    "gpn.ss.train",
+    "gpn.ss.inference",
+    "gpn.msa.inference",
+    "gpn.star.train",
+    "gpn.star.inference",
+):
+    importlib.import_module(module)
+
+assert _registration._registered_families == set()
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        check=False,
+        capture_output=True,
+        env={
+            **os.environ,
+            "HF_HUB_OFFLINE": "1",
+            "TRANSFORMERS_OFFLINE": "1",
+        },
+        text=True,
+        timeout=60,
+    )
+    assert result.returncode == 0, result.stderr
+
+
 def test_ss_registration_is_explicit_and_idempotent():
     from gpn.ss.model import (
         GPNConfig,

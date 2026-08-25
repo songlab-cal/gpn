@@ -1,15 +1,12 @@
-import json
-import os
-import subprocess
-import sys
 from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
 import pytest
 import torch
-from transformers import HfArgumentParser
+import yaml
 
+from gpn.data import Tokenizer as StarTokenizer
 from gpn.ss.model import GPNConfig, GPNForMaskedLM
 from gpn.ss.train import (
     DataTrainingArguments as GPNDataTrainingArguments,
@@ -17,7 +14,6 @@ from gpn.ss.train import (
 from gpn.ss.train import (
     ModelArguments as GPNModelArguments,
 )
-from gpn.star.data import Tokenizer as StarTokenizer
 from gpn.star.model import GPNStarConfig, GPNStarForMaskedLM
 from gpn.star.train import (
     DataCollatorForLanguageModelingSimplified as StarDataCollator,
@@ -32,6 +28,7 @@ from gpn.training import (
     GPNTrainingArguments,
     find_training_checkpoint,
     load_training_dataset,
+    parse_training_arguments,
     reject_unsupported_hub_push,
 )
 
@@ -54,8 +51,8 @@ DATASET_REVISIONS = {
 
 @pytest.mark.parametrize("recipe_directory", RECIPE_DIRECTORIES)
 def test_training_profiles_are_paired_and_use_prepared_inputs(recipe_directory):
-    smoke = json.loads((recipe_directory / "cpu-smoke.json").read_text())
-    gpu = json.loads((recipe_directory / "gpu.json").read_text())
+    smoke = yaml.safe_load((recipe_directory / "cpu-smoke.yaml").read_text())
+    gpu = yaml.safe_load((recipe_directory / "gpu.yaml").read_text())
 
     dataset_name, dataset_revision = DATASET_REVISIONS[recipe_directory.name]
     assert smoke["dataset_name"] == dataset_name
@@ -89,15 +86,19 @@ def test_training_profiles_are_paired_and_use_prepared_inputs(recipe_directory):
         ),
     ),
 )
-@pytest.mark.parametrize("profile", ("cpu-smoke.json", "gpu.json"))
+@pytest.mark.parametrize("profile", ("cpu-smoke.yaml", "gpu.yaml"))
 def test_training_profile_is_accepted_by_entrypoint_parser(
     recipe_directory, argument_types, profile, monkeypatch
 ):
     monkeypatch.setattr(
         "transformers.training_args.is_torch_bf16_gpu_available", lambda: True
     )
-    values = json.loads((recipe_directory / profile).read_text())
-    parsed = HfArgumentParser(argument_types).parse_dict(values)
+    values = yaml.safe_load((recipe_directory / profile).read_text())
+    parsed = parse_training_arguments(
+        argument_types[0],
+        argument_types[1],
+        recipe_directory / profile,
+    )
 
     assert parsed[1].dataset_name == values["dataset_name"]
     assert parsed[1].dataset_revision == values["dataset_revision"]
@@ -106,22 +107,16 @@ def test_training_profile_is_accepted_by_entrypoint_parser(
         assert parsed[2].overwrite_output_dir is True
 
 
-@pytest.mark.parametrize("module", ("gpn.ss.train", "gpn.star.train"))
-def test_training_entrypoint_help_is_offline(module):
-    environment = os.environ.copy()
-    environment.update(HF_HUB_OFFLINE="1", TRANSFORMERS_OFFLINE="1")
-    result = subprocess.run(
-        [sys.executable, "-m", module, "--help"],
-        cwd=ROOT,
-        env=environment,
-        capture_output=True,
-        check=False,
-        text=True,
-        timeout=60,
-    )
+def test_training_parser_rejects_non_yaml_profiles(tmp_path):
+    profile = tmp_path / "profile.json"
+    profile.write_text("{}")
 
-    assert result.returncode == 0, result.stderr
-    assert "--dataset_name" in result.stdout
+    with pytest.raises(ValueError, match="must use the .yaml"):
+        parse_training_arguments(
+            GPNModelArguments,
+            GPNDataTrainingArguments,
+            profile,
+        )
 
 
 def test_training_dataset_revision_is_forwarded_independently(monkeypatch):

@@ -3,6 +3,8 @@
 This is the maintained example for training human GPN-Star V100 from scratch on
 a public, already-prepared interval dataset and a compatible local
 multiple-sequence alignment (MSA). It does not build or download an MSA.
+The trainer accepts one YAML profile per run so the complete configuration is
+reviewable and version-controlled.
 
 ## Prepared input contract
 
@@ -59,18 +61,18 @@ uv pip install --python .venv/bin/python --reinstall torch \
 A later `uv sync` will restore the locked CPU build, so the GPU launch below
 uses `--no-sync`.
 
-Edit the two local alignment paths in `cpu-smoke.json`, then verify the complete
+Edit the two local alignment paths in `cpu-smoke.yaml`, then verify the complete
 Hub-dataset/MSA plumbing with one small CPU step:
 
 ```bash
-uv run python -m gpn.star.train recipes/gpn_star_training/cpu-smoke.json
+uv run gpn star train recipes/gpn_star_training/cpu-smoke.yaml
 ```
 
-For a realistic four-GPU starting point, edit `gpu.json` and run:
+For a realistic four-GPU starting point, edit `gpu.yaml` and run:
 
 ```bash
-uv run --no-sync torchrun --standalone --nproc_per_node=4 \
-  -m gpn.star.train recipes/gpn_star_training/gpu.json
+uv run --no-sync torchrun --standalone --nproc-per-node=4 --module gpn.cli \
+  star train recipes/gpn_star_training/gpu.yaml
 ```
 
 The GPU profile records the architecture of the published 200M-parameter model.

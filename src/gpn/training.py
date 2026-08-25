@@ -1,6 +1,5 @@
 import logging
 import math
-import os
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -8,6 +7,7 @@ from typing import Any
 
 import datasets
 import transformers
+import yaml
 from datasets import DatasetDict, IterableDatasetDict, load_dataset
 from transformers import HfArgumentParser, Trainer, TrainingArguments
 from transformers.trainer_utils import get_last_checkpoint
@@ -33,17 +33,21 @@ def load_training_dataset(
 
 
 def parse_training_arguments(
-    model_arguments: type[Any], data_arguments: type[Any]
+    model_arguments: type[Any],
+    data_arguments: type[Any],
+    profile: Path,
 ) -> tuple[Any, Any, "GPNTrainingArguments"]:
-    """Parse either one JSON profile or ordinary command-line arguments."""
+    """Parse one reviewed YAML training profile."""
 
+    if profile.suffix.lower() not in {".yaml", ".yml"}:
+        raise ValueError("Training profiles must use the .yaml or .yml extension")
+    values = yaml.safe_load(profile.read_text(encoding="utf-8"))
+    if not isinstance(values, dict):
+        raise ValueError("Training profile must contain a YAML mapping")
     parser = HfArgumentParser((model_arguments, data_arguments, GPNTrainingArguments))
-    if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
-        arguments = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
-    else:
-        arguments = parser.parse_args_into_dataclasses()
-    reject_unsupported_hub_push(arguments[2])
-    return arguments
+    parsed = parser.parse_dict(values)
+    reject_unsupported_hub_push(parsed[2])
+    return parsed
 
 
 def reject_unsupported_hub_push(training_args: "GPNTrainingArguments") -> None:

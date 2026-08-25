@@ -1,0 +1,33 @@
+# One-step CPU validation of the maintained GPN-Star training path.
+dataset_name: songlab/gpn-msa-sapiens-dataset
+dataset_revision: 57c0e187c674761955518f3579eb0d7b5a0b7078
+msa_path: /path/to/prepared-msa/100
+phylo_dist_path: /path/to/prepared-phylo-dist
+config_overrides: time_enc=fire_1,clade_thres=0.2,num_hidden_layers=1,num_attention_heads=2,hidden_size=16,intermediate_size=32,max_position_embeddings=128
+
+do_train: true
+do_eval: false
+use_cpu: true
+max_steps: 1
+per_device_train_batch_size: 1
+per_device_eval_batch_size: 1
+gradient_accumulation_steps: 1
+
+mlm_probability: 0.15
+soft_masked_loss_weight_train: 0.1
+soft_masked_loss_weight_evaluation: 0.0
+learning_rate: 0.0001
+lr_scheduler_type: constant
+weight_decay: 0.01
+optim: adamw_torch
+seed: 42
+
+dataloader_num_workers: 0
+remove_unused_columns: false
+prediction_loss_only: true
+eval_strategy: "no"
+save_strategy: "no"
+logging_steps: 1
+report_to: []
+output_dir: outputs/gpn-star-cpu-smoke
+overwrite_output_dir: true

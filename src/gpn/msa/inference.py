@@ -1,152 +1,500 @@
-import argparse
-import os
-import tempfile
+"""Inference-only support for the deprecated GPN-MSA family."""
 
-import torch._dynamo
-from datasets import disable_caching
-from transformers import Trainer, TrainingArguments
+from __future__ import annotations
 
-from gpn.data import GenomeMSA, load_dataset_from_file_or_dir
-from gpn.msa.embedding import EmbeddingInference
-from gpn.msa.logits import LogitsInference
-from gpn.msa.vep import VEPInference
-from gpn.msa.vep_delta_embed import VEPDeltaEmbedInference
-from gpn.msa.vep_embedding import VEPEmbeddingInference
-from gpn.msa.vep_embeddings import VEPEmbeddingsInference
-from gpn.msa.vep_euclidean_dist import VEPEuclideanDistInference
-from gpn.msa.vep_influence import VEPInfluenceInference
-from gpn.msa.vep_ref_embed import VEPRefEmbedInference
+from pathlib import Path
+from typing import Any
 
-torch._dynamo.config.suppress_errors = True
+import numpy as np
+import pandas as pd
+import torch
+from datasets import Dataset, disable_caching
+from transformers import AutoModel, AutoModelForMaskedLM, TrainingArguments
 
-
-disable_caching()
-
-
-class_mapping = {
-    "vep": VEPInference,
-    "logits": LogitsInference,
-    "embedding": EmbeddingInference,
-    "vep_embedding": VEPEmbeddingInference,
-    "vep_influence": VEPInfluenceInference,
-    "vep_ref_embed": VEPRefEmbedInference,
-    "vep_delta_embed": VEPDeltaEmbedInference,
-    "vep_euclidean_dist": VEPEuclideanDistInference,
-    "vep_embeddings": VEPEmbeddingsInference,
-}
+from gpn import register_auto_classes
+from gpn.arguments import CheckpointArguments
+from gpn.data import ReverseComplementer, Tokenizer, load_dataset_from_file_or_dir
+from gpn.inference import (
+    build_run_signature,
+    execute_inference,
+    resource_identity,
+)
+from gpn.msa.data import GenomeMSA
+from gpn.scoring import (
+    require_reference_matches,
+    validate_centered_window_size,
+    validate_positions_batch,
+    validate_snv_batch,
+)
 
 
-def run_inference(
-    dataset,
-    inference,
-    per_device_batch_size=8,
-    dataloader_num_workers=0,
-):
-    dataset.set_transform(inference.tokenize_function)
-    training_args = TrainingArguments(
-        output_dir=tempfile.TemporaryDirectory().name,
-        per_device_eval_batch_size=per_device_batch_size,
-        dataloader_num_workers=dataloader_num_workers,
-        remove_unused_columns=False,
-        torch_compile=True,
-        fp16=True,
-    )
-    trainer = Trainer(model=inference.model, args=training_args)
-    pred = trainer.predict(test_dataset=dataset).predictions
-    return inference.postprocess(pred)
+class MLMforVEPModel(torch.nn.Module):
+    def __init__(self, model_path: str):
+        super().__init__()
+        register_auto_classes("msa")
+        self.model = AutoModelForMaskedLM.from_pretrained(model_path)
+        self.model.eval()
+
+    def get_llr(
+        self,
+        input_ids: torch.Tensor,
+        aux_features: torch.Tensor,
+        pos: torch.Tensor,
+        ref: torch.Tensor,
+        alt: torch.Tensor,
+    ) -> torch.Tensor:
+        logits = self.model(input_ids=input_ids, aux_features=aux_features).logits
+        logits = logits[torch.arange(len(pos), device=pos.device), pos]
+        row = torch.arange(len(ref), device=ref.device)
+        return logits[row, alt] - logits[row, ref]
+
+    def forward(
+        self,
+        input_ids_fwd: torch.Tensor | None = None,
+        aux_features_fwd: torch.Tensor | None = None,
+        pos_fwd: torch.Tensor | None = None,
+        ref_fwd: torch.Tensor | None = None,
+        alt_fwd: torch.Tensor | None = None,
+        input_ids_rev: torch.Tensor | None = None,
+        aux_features_rev: torch.Tensor | None = None,
+        pos_rev: torch.Tensor | None = None,
+        ref_rev: torch.Tensor | None = None,
+        alt_rev: torch.Tensor | None = None,
+    ) -> torch.Tensor:
+        llr_fwd = self.get_llr(
+            input_ids_fwd, aux_features_fwd, pos_fwd, ref_fwd, alt_fwd
+        )
+        llr_rev = self.get_llr(
+            input_ids_rev, aux_features_rev, pos_rev, ref_rev, alt_rev
+        )
+        return (llr_fwd + llr_rev) / 2
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Run inference with AutoModelForMaskedLM",
-    )
-    parser.add_argument(
-        "command",
-        type=str,
-        help="""Command to run:
-        - vep: zero-shot variant effect prediction (LLR)
-        - logits: masked language model logits
-        - embedding: averaged embedding from last layer
-        """,
-        choices=class_mapping.keys(),
-    )
-    parser.add_argument(
-        "input_path",
-        type=str,
-        help="""Input path, either HF dataset, parquet, csv/tsv, vcf, with columns:
-        - vep: chrom, pos, ref, alt
-        - logits: chrom, pos
-        - embedding: chrom, start, end
-        """,
-    )
-    parser.add_argument(
-        "msa_path",
-        type=str,
-        help="Genome MSA path (zarr)",
-    )
-    parser.add_argument("window_size", type=int, help="Genomic window size")
-    parser.add_argument("model_path", help="Model path (local or on HF hub)", type=str)
-    parser.add_argument("output_path", help="Output path (parquet)", type=str)
-    parser.add_argument(
-        "--per_device_batch_size",
-        help="Per device batch size",
-        type=int,
-        default=8,
-    )
-    parser.add_argument(
-        "--dataloader_num_workers", type=int, default=0, help="Dataloader num workers"
-    )
-    parser.add_argument(
-        "--split",
-        type=str,
-        default="test",
-        help="Dataset split",
-    )
-    parser.add_argument(
-        "--is_file",
-        action="store_true",
-        help="VARIANTS_PATH is a file, not directory",
-    )
-    parser.add_argument(
-        "--disable_aux_features",
-        action="store_true",
-    )
-    parser.add_argument(
-        "--center_window_size",
-        type=int,
-        help="[embedding] Genomic window size to average at the center of the windows",
-    )
-    args = parser.parse_args()
-    print(args)
+class MLMforLogitsModel(torch.nn.Module):
+    def __init__(self, model_path: str):
+        super().__init__()
+        register_auto_classes("msa")
+        self.model = AutoModelForMaskedLM.from_pretrained(model_path)
+        self.model.eval()
+        tokenizer = Tokenizer()
+        self.nucleotide_ids = [tokenizer.vocab.index(base) for base in "ACGT"]
 
+    def get_logits(
+        self,
+        input_ids: torch.Tensor,
+        aux_features: torch.Tensor,
+        pos: torch.Tensor,
+    ) -> torch.Tensor:
+        logits = self.model(input_ids=input_ids, aux_features=aux_features).logits
+        return logits[torch.arange(len(pos), device=pos.device), pos]
+
+    def forward(
+        self,
+        input_ids_fwd: torch.Tensor | None = None,
+        aux_features_fwd: torch.Tensor | None = None,
+        pos_fwd: torch.Tensor | None = None,
+        input_ids_rev: torch.Tensor | None = None,
+        aux_features_rev: torch.Tensor | None = None,
+        pos_rev: torch.Tensor | None = None,
+    ) -> torch.Tensor:
+        a, c, g, t = self.nucleotide_ids
+        logits_fwd = self.get_logits(input_ids_fwd, aux_features_fwd, pos_fwd)[
+            :, [a, c, g, t]
+        ]
+        logits_rev = self.get_logits(input_ids_rev, aux_features_rev, pos_rev)[
+            :, [t, g, c, a]
+        ]
+        return (logits_fwd + logits_rev) / 2
+
+
+class ModelCenterEmbedding(torch.nn.Module):
+    def __init__(self, model_path: str, center_window_size: int):
+        super().__init__()
+        if center_window_size <= 0:
+            raise ValueError("center_window_size must be positive")
+        register_auto_classes("msa")
+        self.model = AutoModel.from_pretrained(model_path)
+        self.model.eval()
+        self.center_window_size = center_window_size
+
+    def get_center_embedding(
+        self,
+        input_ids: torch.Tensor,
+        aux_features: torch.Tensor,
+    ) -> torch.Tensor:
+        embedding = self.model(
+            input_ids=input_ids, aux_features=aux_features
+        ).last_hidden_state
+        center = embedding.shape[1] // 2
+        left = center - self.center_window_size // 2
+        right = left + self.center_window_size
+        if left < 0 or right > embedding.shape[1]:
+            raise ValueError("center_window_size exceeds the input window")
+        return embedding[:, left:right].mean(axis=1)
+
+    def forward(
+        self,
+        input_ids_fwd: torch.Tensor | None = None,
+        input_ids_rev: torch.Tensor | None = None,
+        aux_features_fwd: torch.Tensor | None = None,
+        aux_features_rev: torch.Tensor | None = None,
+    ) -> torch.Tensor:
+        embedding_fwd = self.get_center_embedding(input_ids_fwd, aux_features_fwd)
+        embedding_rev = self.get_center_embedding(input_ids_rev, aux_features_rev)
+        return (embedding_fwd + embedding_rev) / 2
+
+
+def _alignment(
+    genome_msa: GenomeMSA,
+    chrom: np.ndarray,
+    start: np.ndarray,
+    end: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    return genome_msa.get_msa_batch_fwd_rev(chrom, start, end, tokenize=True)
+
+
+class VEPInference:
+    def __init__(self, model_path: str, genome_msa: GenomeMSA, window_size: int):
+        validate_centered_window_size(window_size)
+        self.genome_msa = genome_msa
+        self.window_size = window_size
+        self.tokenizer = Tokenizer()
+        self.model = MLMforVEPModel(model_path)
+        self.reverse_complementer = ReverseComplementer()
+
+    def tokenize_function(self, variants: dict[str, list[Any]]) -> dict[str, Any]:
+        chromosomes, positions, references, alternates = validate_snv_batch(
+            variants["chrom"], variants["pos"], variants["ref"], variants["alt"]
+        )
+        chrom = np.array(chromosomes)
+        pos = np.array(positions) - 1
+        start = pos - self.window_size // 2
+        end = pos + self.window_size // 2
+        msa_fwd, msa_rev = _alignment(self.genome_msa, chrom, start, end)
+        pos_fwd = self.window_size // 2
+        pos_rev = pos_fwd - 1
+        ref_fwd = np.array(
+            [np.frombuffer(value.encode("ascii"), dtype="S1") for value in references]
+        )
+        alt_fwd = np.array(
+            [np.frombuffer(value.encode("ascii"), dtype="S1") for value in alternates]
+        )
+        ref_rev = self.reverse_complementer(ref_fwd)
+        alt_rev = self.reverse_complementer(alt_fwd)
+
+        def prepare(
+            msa: np.ndarray,
+            center: int,
+            reference: np.ndarray,
+            alternate: np.ndarray,
+            orientation: str,
+        ) -> tuple[Any, Any, Any, Any, Any]:
+            reference_ids = self.tokenizer(reference.flatten())
+            alternate_ids = self.tokenizer(alternate.flatten())
+            input_ids, aux_features = msa[:, :, 0], msa[:, :, 1:]
+            require_reference_matches(
+                [self.tokenizer.vocab[int(value)] for value in input_ids[:, center]],
+                [self.tokenizer.vocab[int(value)] for value in reference_ids],
+                chromosomes,
+                positions,
+                orientation=orientation,
+            )
+            input_ids[:, center] = self.tokenizer.mask_token_id()
+            return (
+                input_ids.astype(np.int64),
+                aux_features,
+                np.full(len(input_ids), center),
+                reference_ids.astype(np.int64),
+                alternate_ids.astype(np.int64),
+            )
+
+        fwd = prepare(msa_fwd, pos_fwd, ref_fwd, alt_fwd, "forward")
+        rev = prepare(msa_rev, pos_rev, ref_rev, alt_rev, "reverse-complement")
+        return {
+            "input_ids_fwd": fwd[0],
+            "aux_features_fwd": fwd[1],
+            "pos_fwd": fwd[2],
+            "ref_fwd": fwd[3],
+            "alt_fwd": fwd[4],
+            "input_ids_rev": rev[0],
+            "aux_features_rev": rev[1],
+            "pos_rev": rev[2],
+            "ref_rev": rev[3],
+            "alt_rev": rev[4],
+        }
+
+    def postprocess(self, predictions: Any) -> pd.DataFrame:
+        return pd.DataFrame(predictions, columns=["score"])
+
+
+class LogitsInference:
+    def __init__(self, model_path: str, genome_msa: GenomeMSA, window_size: int):
+        validate_centered_window_size(window_size)
+        self.genome_msa = genome_msa
+        self.window_size = window_size
+        self.tokenizer = Tokenizer()
+        self.model = MLMforLogitsModel(model_path)
+
+    def tokenize_function(self, positions: dict[str, list[Any]]) -> dict[str, Any]:
+        chromosome_values, position_values = validate_positions_batch(
+            positions["chrom"], positions["pos"]
+        )
+        chrom = np.array(chromosome_values)
+        pos = np.array(position_values) - 1
+        start = pos - self.window_size // 2
+        end = pos + self.window_size // 2
+        msa_fwd, msa_rev = _alignment(self.genome_msa, chrom, start, end)
+        pos_fwd = self.window_size // 2
+        pos_rev = pos_fwd - 1
+
+        def prepare(msa: np.ndarray, center: int) -> tuple[Any, Any, Any]:
+            input_ids, aux_features = msa[:, :, 0], msa[:, :, 1:]
+            input_ids[:, center] = self.tokenizer.mask_token_id()
+            return (
+                input_ids.astype(np.int64),
+                aux_features,
+                np.full(len(input_ids), center),
+            )
+
+        fwd = prepare(msa_fwd, pos_fwd)
+        rev = prepare(msa_rev, pos_rev)
+        return {
+            "input_ids_fwd": fwd[0],
+            "aux_features_fwd": fwd[1],
+            "pos_fwd": fwd[2],
+            "input_ids_rev": rev[0],
+            "aux_features_rev": rev[1],
+            "pos_rev": rev[2],
+        }
+
+    def postprocess(self, predictions: Any) -> pd.DataFrame:
+        return pd.DataFrame(predictions, columns=list("ACGT"))
+
+
+class EmbeddingInference:
+    def __init__(
+        self,
+        model_path: str,
+        genome_msa: GenomeMSA,
+        window_size: int,
+        center_window_size: int,
+    ):
+        if window_size <= 0:
+            raise ValueError("window_size must be positive")
+        self.genome_msa = genome_msa
+        self.window_size = window_size
+        self.tokenizer = Tokenizer()
+        self.model = ModelCenterEmbedding(model_path, center_window_size)
+
+    def tokenize_function(self, windows: dict[str, list[Any]]) -> dict[str, Any]:
+        chrom = np.array(windows["chrom"])
+        start = np.array(windows["start"])
+        end = np.array(windows["end"])
+        msa_fwd, msa_rev = _alignment(self.genome_msa, chrom, start, end)
+
+        def prepare(msa: np.ndarray) -> tuple[Any, Any]:
+            return msa[:, :, 0].astype(np.int64), msa[:, :, 1:]
+
+        fwd = prepare(msa_fwd)
+        rev = prepare(msa_rev)
+        return {
+            "input_ids_fwd": fwd[0],
+            "aux_features_fwd": fwd[1],
+            "input_ids_rev": rev[0],
+            "aux_features_rev": rev[1],
+        }
+
+    def postprocess(self, predictions: Any) -> pd.DataFrame:
+        columns = [f"embedding_{index}" for index in range(predictions.shape[1])]
+        return pd.DataFrame(predictions, columns=columns)
+
+
+def _load_inputs(
+    input_path: str,
+    msa_path: str,
+    split: str,
+    is_file: bool,
+) -> tuple[Dataset, GenomeMSA]:
+    disable_caching()
     dataset = load_dataset_from_file_or_dir(
-        args.input_path,
-        split=args.split,
-        is_file=args.is_file,
+        input_path,
+        split=split,
+        is_file=is_file,
     )
     genome_msa = GenomeMSA(
-        args.msa_path, subset_chroms=dataset.unique("chrom"), in_memory=False
+        msa_path,
+        subset_chroms=dataset.unique("chrom"),
+        in_memory=False,
     )
-    # sorry this is hacky, should use subparsers
-    kwargs = (
-        dict(center_window_size=args.center_window_size)
-        if args.command == "embedding"
-        else {}
-    )
-    inference = class_mapping[args.command](
-        args.model_path,
-        genome_msa,
-        args.window_size,
-        disable_aux_features=args.disable_aux_features,
-        **kwargs,
-    )
-    pred = run_inference(
+    return dataset, genome_msa
+
+
+def _execute(
+    *,
+    operation: str,
+    dataset: Dataset,
+    input_path: str,
+    msa_path: str,
+    model_path: str,
+    output_path: Path,
+    split: str,
+    is_file: bool,
+    inference: Any,
+    training_arguments: TrainingArguments,
+    checkpoint_arguments: CheckpointArguments,
+    operation_arguments: dict[str, Any],
+) -> Path | None:
+    def build_signature() -> dict[str, Any]:
+        return build_run_signature(
+            family="msa",
+            operation=operation,
+            dataset=dataset,
+            input_path=input_path,
+            split=split,
+            is_file=is_file,
+            model_path=model_path,
+            inference=inference,
+            training_arguments=training_arguments,
+            checkpoint_revision=checkpoint_arguments.checkpoint_revision,
+            resources={"msa": resource_identity(msa_path)},
+            operation_arguments=operation_arguments,
+        )
+
+    return execute_inference(
         dataset,
         inference,
-        per_device_batch_size=args.per_device_batch_size,
-        dataloader_num_workers=args.dataloader_num_workers,
+        training_arguments,
+        checkpoint_arguments,
+        output_path=output_path,
+        run_signature_factory=build_signature,
+        output_prefix=f"gpn-msa-{operation}-",
     )
-    directory = os.path.dirname(args.output_path)
-    if directory != "" and not os.path.exists(directory):
-        os.makedirs(directory)
-    pred.to_parquet(args.output_path, index=False)
+
+
+def _run(
+    *,
+    operation: str,
+    input_path: str,
+    msa_path: str,
+    window_size: int,
+    model_path: str,
+    output_path: Path,
+    split: str,
+    is_file: bool,
+    center_window_size: int | None,
+    training_arguments: TrainingArguments,
+    checkpoint_arguments: CheckpointArguments,
+) -> Path | None:
+    dataset, genome_msa = _load_inputs(input_path, msa_path, split, is_file)
+    inference: Any
+    if operation == "vep":
+        inference = VEPInference(model_path, genome_msa, window_size)
+    elif operation == "logits":
+        inference = LogitsInference(model_path, genome_msa, window_size)
+    elif operation == "embedding":
+        if center_window_size is None:
+            raise ValueError("center_window_size is required for embedding")
+        inference = EmbeddingInference(
+            model_path, genome_msa, window_size, center_window_size
+        )
+    else:
+        raise ValueError(f"Unknown GPN-MSA inference operation: {operation}")
+    operation_arguments = {"window_size": window_size}
+    if center_window_size is not None:
+        operation_arguments["center_window_size"] = center_window_size
+    return _execute(
+        operation=operation,
+        dataset=dataset,
+        input_path=input_path,
+        msa_path=msa_path,
+        model_path=model_path,
+        output_path=output_path,
+        split=split,
+        is_file=is_file,
+        inference=inference,
+        training_arguments=training_arguments,
+        checkpoint_arguments=checkpoint_arguments,
+        operation_arguments=operation_arguments,
+    )
+
+
+def vep(
+    input_path: str,
+    msa_path: str,
+    window_size: int,
+    model_path: str,
+    output_path: Path,
+    *,
+    split: str,
+    is_file: bool,
+    training_arguments: TrainingArguments,
+    checkpoint_arguments: CheckpointArguments,
+) -> Path | None:
+    return _run(
+        operation="vep",
+        input_path=input_path,
+        msa_path=msa_path,
+        window_size=window_size,
+        model_path=model_path,
+        output_path=output_path,
+        split=split,
+        is_file=is_file,
+        center_window_size=None,
+        training_arguments=training_arguments,
+        checkpoint_arguments=checkpoint_arguments,
+    )
+
+
+def logits(
+    input_path: str,
+    msa_path: str,
+    window_size: int,
+    model_path: str,
+    output_path: Path,
+    *,
+    split: str,
+    is_file: bool,
+    training_arguments: TrainingArguments,
+    checkpoint_arguments: CheckpointArguments,
+) -> Path | None:
+    return _run(
+        operation="logits",
+        input_path=input_path,
+        msa_path=msa_path,
+        window_size=window_size,
+        model_path=model_path,
+        output_path=output_path,
+        split=split,
+        is_file=is_file,
+        center_window_size=None,
+        training_arguments=training_arguments,
+        checkpoint_arguments=checkpoint_arguments,
+    )
+
+
+def embedding(
+    input_path: str,
+    msa_path: str,
+    window_size: int,
+    model_path: str,
+    output_path: Path,
+    *,
+    center_window_size: int,
+    split: str,
+    is_file: bool,
+    training_arguments: TrainingArguments,
+    checkpoint_arguments: CheckpointArguments,
+) -> Path | None:
+    return _run(
+        operation="embedding",
+        input_path=input_path,
+        msa_path=msa_path,
+        window_size=window_size,
+        model_path=model_path,
+        output_path=output_path,
+        split=split,
+        is_file=is_file,
+        center_window_size=center_window_size,
+        training_arguments=training_arguments,
+        checkpoint_arguments=checkpoint_arguments,
+    )

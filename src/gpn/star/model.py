@@ -2,7 +2,6 @@ import math
 import os
 import shutil
 from dataclasses import dataclass
-from typing import Optional, Tuple
 
 import networkx as nx
 import numpy as np
@@ -815,10 +814,10 @@ class GPNStarEncoder(RoFormerEncoder):
 @dataclass
 class BaseModelOutputWithRowAndColAttentions(ModelOutput):
     last_hidden_state: torch.FloatTensor = None
-    past_key_values: Optional[Tuple[Tuple[torch.FloatTensor]]] = None
-    hidden_states: Optional[Tuple[torch.FloatTensor, ...]] = None
-    row_attentions: Optional[Tuple[torch.FloatTensor, ...]] = None
-    col_attentions: Optional[Tuple[torch.FloatTensor, ...]] = None
+    past_key_values: tuple[tuple[torch.FloatTensor]] | None = None
+    hidden_states: tuple[torch.FloatTensor, ...] | None = None
+    row_attentions: tuple[torch.FloatTensor, ...] | None = None
+    col_attentions: tuple[torch.FloatTensor, ...] | None = None
 
 
 class GPNStarPreTrainedModel(PreTrainedModel):
