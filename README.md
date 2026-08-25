@@ -61,10 +61,10 @@ API.
 The [sorghum gene-expression checkpoint](https://huggingface.co/songlab/gpn-brassicales-gxa-sorghum-v1)
 is an inference-only fine-tune of GPN, not a separate model family.
 
-The [support guide](https://github.com/songlab-cal/gpn/blob/main/docs/models/index.md) defines required inputs, compatibility
-boundaries, immutable validated revisions, and output semantics. Classification in
-a Hugging Face collection does not automatically make every historical asset part
-of the package support contract.
+The [support guide](https://github.com/songlab-cal/gpn/blob/main/docs/models/index.md)
+defines required inputs, compatibility boundaries, immutable validated revisions,
+and output semantics. Classification in a Hugging Face collection does not
+automatically make every historical asset part of the package support contract.
 
 ## Command line
 
@@ -78,9 +78,10 @@ gpn star {train,vep,logits,embedding} ...
 ```
 
 GPN-MSA has no training command. Dataset and whole-genome-alignment construction
-are outside the maintained package. See the [CLI guide](https://github.com/songlab-cal/gpn/blob/main/docs/getting-started/cli.md) for local MSA
-layouts, coordinate systems, precision controls, distributed execution, durable
-GPN-Star checkpoints, and raw LLR semantics.
+are outside the maintained package. See the
+[CLI guide](https://github.com/songlab-cal/gpn/blob/main/docs/getting-started/cli.md)
+for local MSA layouts, coordinate systems, precision controls, distributed
+execution, durable GPN-Star checkpoints, and raw LLR semantics.
 PhyloGPN and the sorghum gene-expression fine-tune are maintained through explicit
 Transformers AutoClass registration and intentionally have no dedicated CLI.
 
@@ -134,8 +135,8 @@ uv run pytest
 
 - Ask usage questions in [Discussions](https://github.com/songlab-cal/gpn/discussions).
 - Report bugs and scientific regressions in [Issues](https://github.com/songlab-cal/gpn/issues).
-- Read [CONTRIBUTING.md](https://github.com/songlab-cal/gpn/blob/main/CONTRIBUTING.md) before proposing maintained or off-main
-  research work.
+- Read [CONTRIBUTING.md](https://github.com/songlab-cal/gpn/blob/main/CONTRIBUTING.md)
+  before proposing maintained or off-main research work.
 
 ## Citation
 

@@ -67,14 +67,14 @@
       "number": 96,
       "head_ref": "codex/docs-site",
       "base_ref": "main",
-      "head_commit": "4c2fe6a1904ffb1f5b2ef679fd9f8f1654452148",
+      "head_commit": "5a9fc7e3f5b8ba4d91722f18a6f2c6bbdc28de62",
       "state": "open"
     },
     {
       "number": 98,
       "head_ref": "codex/release-governance",
       "base_ref": "codex/docs-site",
-      "head_commit": "7e5fda280fde1aedc5a814a2897580573644a616",
+      "head_commit": "288f1f968cf80775b2c2f79d25720a11f72e7057",
       "state": "open"
     }
   ],

@@ -24,7 +24,7 @@ must repeat both identifiers from the pull request body.
   but publication remains approval-gated
 - Dataset-building workflows and GPN-MSA training: unsupported and absent
 - GPN-MSA: deprecated inference only
-- Supported inference families: GPN, GPN-Star, GPN-MSA, and PhyloGPN; supported
+- Supported inference families: GPN, GPN-MSA, PhyloGPN, and GPN-Star; supported
   GPN checkpoints include the Sorghum gene-expression fine-tune
 
 ## Evidence reviewed
@@ -32,14 +32,17 @@ must repeat both identifiers from the pull request body.
 - Offline published-model fixtures cover all supported families with immutable
   model revisions and provenance.
 - Three existing model demos are retained as static, non-executed documentation;
-  their recorded outputs are not recomputed for the package-version bump. A fourth
-  executable Colab joins the pinned OMIM TraitGym regulatory-variant benchmark to
-  immutable precomputed GPN-Star scores and computes global AUPRC without
+  their recorded outputs were not recomputed for the package-version bump. A
+  fourth executable Colab was run on a Slurm CPU allocation and retains its table
+  previews and global AUPRC output. It joins the pinned OMIM TraitGym
+  regulatory-variant benchmark to immutable precomputed GPN-Star scores without
   downloading a model or MSA.
 - The TraitGym and score datasets used by the executable workflow are
   commit-pinned; institutional filesystem paths were not committed as supported
-  configuration. Hugging Face asset auditing and card updates are deferred to
-  issue #81 and absent from this milestone.
+  configuration. The repository documentation inventories the assets in each
+  model-family collection. Auditing and editing the Hub-hosted cards and
+  collection descriptions are deferred to issue #81 and absent from this
+  milestone.
 - A one-off remote lazy-Parquet validation matched all 3,380 OMIM TraitGym rows
   with no missing variants. The joined scores produced global AUPRC
   `0.764397828826`, versus `0.764514758694` from the released
