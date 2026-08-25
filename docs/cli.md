@@ -197,12 +197,26 @@ torchrun --standalone --nproc-per-node=4 --module gpn.cli \
   --model-path songlab/gpn-brassicales \
   --output-path scores.parquet \
   --per-device-eval-batch-size 64 \
+  --dataloader-num-workers 4 \
   --bf16-full-eval
 ```
 
 `--per-device-eval-batch-size` is per process, so multiply it by the number of
 processes for the nominal global batch size. Durable checkpoints use the same
 process-count-independent row ranges in single- and multi-GPU runs.
+
+`--dataloader-num-workers` is also per process and defaults to zero. In the
+example above, four local ranks each create four DataLoader workers: 16 worker
+processes in total, in addition to the four rank processes. Size the CPU
+allocation for all local ranks and workers; the flag is not a job-wide worker
+budget.
+
+`OMP_NUM_THREADS` controls CPU threading separately from the DataLoader worker
+count and is not required for correctness. When more than one local process is
+launched and the variable is unset, `torchrun` sets it to `1` to avoid CPU
+oversubscription. Keep that default unless profiling identifies a CPU compute
+bottleneck; if you tune it, account for the threads used by every local process
+within the job's CPU allocation.
 
 Distributed training uses the public module entry point as well:
 
