@@ -43,7 +43,7 @@ class MLMforVEPModel(torch.nn.Module):
     def get_llr(
         self,
         input_ids: Int[Tensor, "batch position"],
-        aux_features: Tensor,
+        aux_features: Int[Tensor, "batch position auxiliary"],
         pos: Int[Tensor, "... batch"],
         ref: Int[Tensor, "... batch"],
         alt: Int[Tensor, "... batch"],
@@ -56,12 +56,12 @@ class MLMforVEPModel(torch.nn.Module):
     def forward(
         self,
         input_ids_fwd: Int[Tensor, "batch position"] | None = None,
-        aux_features_fwd: Tensor | None = None,
+        aux_features_fwd: Int[Tensor, "batch position auxiliary"] | None = None,
         pos_fwd: Int[Tensor, "... batch"] | None = None,
         ref_fwd: Int[Tensor, "... batch"] | None = None,
         alt_fwd: Int[Tensor, "... batch"] | None = None,
         input_ids_rev: Int[Tensor, "batch position"] | None = None,
-        aux_features_rev: Tensor | None = None,
+        aux_features_rev: Int[Tensor, "batch position auxiliary"] | None = None,
         pos_rev: Int[Tensor, "... batch"] | None = None,
         ref_rev: Int[Tensor, "... batch"] | None = None,
         alt_rev: Int[Tensor, "... batch"] | None = None,
@@ -90,7 +90,7 @@ class MLMforLogitsModel(torch.nn.Module):
     def get_logits(
         self,
         input_ids: Int[Tensor, "batch position"],
-        aux_features: Tensor,
+        aux_features: Int[Tensor, "batch position auxiliary"],
         pos: Int[Tensor, "... batch"],
     ) -> Float[Tensor, "batch nucleotide"]:
         logits = self.model(input_ids=input_ids, aux_features=aux_features).logits
@@ -99,10 +99,10 @@ class MLMforLogitsModel(torch.nn.Module):
     def forward(
         self,
         input_ids_fwd: Int[Tensor, "batch position"] | None = None,
-        aux_features_fwd: Tensor | None = None,
+        aux_features_fwd: Int[Tensor, "batch position auxiliary"] | None = None,
         pos_fwd: Int[Tensor, "... batch"] | None = None,
         input_ids_rev: Int[Tensor, "batch position"] | None = None,
-        aux_features_rev: Tensor | None = None,
+        aux_features_rev: Int[Tensor, "batch position auxiliary"] | None = None,
         pos_rev: Int[Tensor, "... batch"] | None = None,
     ) -> Float[Tensor, "batch nucleotide"]:
         a, c, g, t = self.nucleotide_ids
@@ -133,7 +133,7 @@ class ModelCenterEmbedding(torch.nn.Module):
     def get_center_embedding(
         self,
         input_ids: Int[Tensor, "batch position"],
-        aux_features: Tensor,
+        aux_features: Int[Tensor, "batch position auxiliary"],
     ) -> Float[Tensor, "batch hidden"]:
         embedding = self.model(
             input_ids=input_ids, aux_features=aux_features
@@ -149,8 +149,8 @@ class ModelCenterEmbedding(torch.nn.Module):
         self,
         input_ids_fwd: Int[Tensor, "batch position"] | None = None,
         input_ids_rev: Int[Tensor, "batch position"] | None = None,
-        aux_features_fwd: Tensor | None = None,
-        aux_features_rev: Tensor | None = None,
+        aux_features_fwd: Int[Tensor, "batch position auxiliary"] | None = None,
+        aux_features_rev: Int[Tensor, "batch position auxiliary"] | None = None,
     ) -> Float[Tensor, "batch hidden"]:
         embedding_fwd = self.get_center_embedding(input_ids_fwd, aux_features_fwd)
         embedding_rev = self.get_center_embedding(input_ids_rev, aux_features_rev)

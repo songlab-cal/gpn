@@ -79,7 +79,7 @@ class GPNMSAModel(GPNMSAPreTrainedModel):
         self,
         input_ids: Int[Tensor, "... position"] | None = None,
         input_probs: Float[Tensor, "... position nucleotide"] | None = None,
-        aux_features: Tensor | None = None,
+        aux_features: Int[Tensor, "... position auxiliary"] | None = None,
         **kwargs: Any,
     ) -> BaseModelOutput:
         x = self.embedding(

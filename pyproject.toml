@@ -129,15 +129,16 @@ markers = [
 [tool.mypy]
 python_version = "3.13"
 files = ["src/gpn"]
+strict = true
+# Type-check every repository-owned module strictly, but do not attempt to check
+# the implementations of dynamic ML/data libraries. Their public stubs are
+# incomplete and several valid Transformers extension signatures are narrower
+# than the upstream annotations permit.
 follow_imports = "skip"
-check_untyped_defs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-no_implicit_optional = true
-strict_equality = true
-warn_redundant_casts = true
-warn_unused_configs = true
-warn_unused_ignores = true
+disallow_subclassing_any = false
+disallow_untyped_calls = false
+disallow_untyped_decorators = false
+warn_return_any = false
 show_error_codes = true
 pretty = true
 

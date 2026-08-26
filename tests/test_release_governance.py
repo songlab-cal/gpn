@@ -192,7 +192,16 @@ def test_transformers_version_is_pinned_to_the_validated_runtime() -> None:
 
 def test_static_quality_checks_cover_the_full_package() -> None:
     project = tomllib.loads((ROOT / "pyproject.toml").read_text())
-    assert project["tool"]["mypy"]["files"] == ["src/gpn"]
+    mypy = project["tool"]["mypy"]
+    assert mypy["files"] == ["src/gpn"]
+    assert mypy["strict"] is True
+    assert mypy["follow_imports"] == "skip"
+    assert {
+        "disallow_subclassing_any",
+        "disallow_untyped_calls",
+        "disallow_untyped_decorators",
+        "warn_return_any",
+    } == {name for name, value in mypy.items() if value is False}
 
     pre_commit = (ROOT / ".pre-commit-config.yaml").read_text()
     assert "- id: ruff-check\n" in pre_commit

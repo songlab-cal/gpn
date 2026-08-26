@@ -247,23 +247,21 @@ class GPNStarSourceModule(nn.Module):
         )
 
         # Attention pooling: per-species token -> per-clade token
-        clade_pooled_source_ids: list[Tensor] = []
+        clade_embeddings: list[Tensor] = []
         for species in clade_dict.values():
             species_indices = list(species)
             if len(species_indices) > 1:
-                clade_pooled_source_ids.append(
+                clade_embeddings.append(
                     self.attn_pool(
                         source_ids[..., species_indices].to(torch.int),  # (B, L, N_c)
                         in_clade_time_bias[..., species_indices],
                     )
                 )  # (B, L, A, 1, N_c)
             else:
-                clade_pooled_source_ids.append(
+                clade_embeddings.append(
                     self.embed(source_ids[..., species_indices[0]].to(torch.int))
                 )
-        clade_pooled_source_ids = torch.stack(
-            clade_pooled_source_ids, dim=-2
-        )  # (B, L, C, H)
+        clade_pooled_source_ids = torch.stack(clade_embeddings, dim=-2)
 
         return clade_pooled_source_ids
 
