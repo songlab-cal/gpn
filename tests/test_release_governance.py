@@ -34,10 +34,10 @@ def test_external_mutation_ledger_conforms_to_schema() -> None:
     deferred = [
         action for action in ledger["pending"] if action["disposition"] == "deferred"
     ]
-    assert ready
-    assert {action["authorization"] for action in ready} == {
-        "explicit_final_maintainer_approval"
-    }
+    if ready:
+        assert {action["authorization"] for action in ready} == {
+            "explicit_final_maintainer_approval"
+        }
     if deferred:
         assert {action["authorization"] for action in deferred} == {
             "separate_future_maintainer_approval"
@@ -50,9 +50,7 @@ def test_external_mutation_ledger_covers_release_boundary() -> None:
     pending = {action["id"]: action for action in ledger["pending"]}
     applied = {action["id"]: action for action in ledger["applied"]}
 
-    assert set(pending) == {
-        "publish-gpn-0-9-0",
-    }
+    assert not pending
     assert {
         "pypi-trusted-publisher-binding",
         "merge-modernization-pr",
@@ -60,9 +58,13 @@ def test_external_mutation_ledger_covers_release_boundary() -> None:
         "protect-main",
         "enable-security-features",
         "publish-analysis-archive",
+        "publish-gpn-0-9-0",
     } <= set(applied)
-    assert pending["publish-gpn-0-9-0"]["source"] == "release/0.9.0/review.md"
-    assert pending["publish-gpn-0-9-0"]["disposition"] == "approval_ready"
+
+    publication = applied["publish-gpn-0-9-0"]
+    assert "https://pypi.org/project/gpn/0.9.0/" in publication["targets"]
+    assert any("wheel sha256" in item for item in publication["evidence"])
+    assert any("sdist sha256" in item for item in publication["evidence"])
 
     for action in ledger["pending"]:
         source = action.get("source")
@@ -88,9 +90,7 @@ def test_final_approval_has_an_exact_bounded_action_set() -> None:
         if action["disposition"] == "approval_ready"
     }
 
-    assert ready_ids == {
-        "publish-gpn-0-9-0",
-    }
+    assert not ready_ids
 
 
 def test_hub_audit_is_outside_this_release() -> None:
@@ -223,7 +223,7 @@ def test_release_version_metadata_is_consistent() -> None:
     changelog = (ROOT / "CHANGELOG.md").read_text()
     assert version == "0.9.0"
     assert locked_project["version"] == version
-    assert f"## {version} — 2026-08-25\n" in changelog
+    assert f"## {version} — 2026-08-26\n" in changelog
 
 
 def test_release_review_records_the_modernization_boundary() -> None:
