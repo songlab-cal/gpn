@@ -31,11 +31,11 @@ repos:
   - repo: local
     hooks:
       - id: mypy
-        name: mypy maintained typed surface
+        name: mypy full package
         entry: uv run mypy
         language: system
         pass_filenames: false
-        files: ^(pyproject\.toml|src/gpn/(_registration|scoring|training|star/checkpoint)\.py)$
+        files: ^(pyproject\.toml|src/gpn/.*\.py)$
 
       - id: deptry
         name: dependency placement

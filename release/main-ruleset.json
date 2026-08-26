@@ -26,6 +26,7 @@
         ],
         "dismiss_stale_reviews_on_push": false,
         "require_code_owner_review": false,
+        "require_extra_approval_for_unattributed_changes": false,
         "require_last_push_approval": false,
         "required_approving_review_count": 0,
         "required_review_thread_resolution": true

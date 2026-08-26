@@ -149,7 +149,7 @@ class _InvariantBias(nn.Module):
         self._index_tensor: Tensor | None = None
         self._device: torch.device | None = None
 
-    def forward(self, bias: Float[Tensor, " output"]) -> Tensor:
+    def forward(self, bias: Float[Tensor, "... output"]) -> Tensor:
         if self._device != bias.device:
             self._index_tensor = torch.tensor(self._indices, device=bias.device)
             self._device = bias.device

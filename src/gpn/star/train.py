@@ -46,7 +46,12 @@ logger = logging.getLogger(__name__)
 class DataCollatorForLanguageModelingSimplified:
     """Apply clade-aware masking to equal-length GPN-Star examples."""
 
-    def __init__(self, tokenizer, clades, mlm_probability=0.15):
+    def __init__(
+        self,
+        tokenizer: Tokenizer,
+        clades: Int[np.ndarray, "... species"],
+        mlm_probability: float = 0.15,
+    ) -> None:
         self.gpn_tokenizer = tokenizer
         self.clades = clades
         self.mlm_probability = mlm_probability

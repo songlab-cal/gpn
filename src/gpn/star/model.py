@@ -1,13 +1,19 @@
+from __future__ import annotations
+
 import math
 import os
 import shutil
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from typing import Any, Self, overload
 
 import networkx as nx
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from jaxtyping import Float, Int
+from torch import Tensor
 from torch.nn import CrossEntropyLoss
 from transformers import PreTrainedModel, RoFormerConfig, apply_chunking_to_forward
 from transformers.modeling_outputs import (
@@ -27,16 +33,16 @@ class GPNStarConfig(RoFormerConfig):
 
     def __init__(
         self,
-        vocab_size=6,
-        time_enc="fire_1",
-        phylo_dist_path=None,
-        clade_thres=0.2,
-        **kwargs,
-    ):
+        vocab_size: int = 6,
+        time_enc: str = "fire_1",
+        phylo_dist_path: str | None = None,
+        clade_thres: float = 0.2,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(**kwargs)
         self.vocab_size = vocab_size
         self.time_enc = time_enc
-        self.max_evol_dist = None
+        self.max_evol_dist: float | None = None
         self.phylo_dist_path = phylo_dist_path
         self.clade_thres = clade_thres
 
@@ -44,7 +50,12 @@ class GPNStarConfig(RoFormerConfig):
 _PHYLO_DIST_FILENAMES = ("pairwise.npy", "in_clade.npy")
 
 
-def _contains_phylo_dist_files(path):
+def _parse_time_encoding(value: str) -> tuple[str, int]:
+    encoding, scale = value.split("_")
+    return encoding, int(scale)
+
+
+def _contains_phylo_dist_files(path: str | os.PathLike[str] | None) -> bool:
     return path is not None and all(
         os.path.isfile(os.path.join(path, filename))
         for filename in _PHYLO_DIST_FILENAMES
@@ -52,12 +63,12 @@ def _contains_phylo_dist_files(path):
 
 
 def _resolve_phylo_dist_path(
-    pretrained_model_name_or_path,
-    config,
+    pretrained_model_name_or_path: str | os.PathLike[str],
+    config: GPNStarConfig,
     *,
-    explicit_path=None,
-    hub_kwargs=None,
-):
+    explicit_path: str | os.PathLike[str] | None = None,
+    hub_kwargs: Mapping[str, Any] | None = None,
+) -> str:
     """Resolve local or Hub-hosted phylogenetic-distance model assets."""
     if explicit_path is not None:
         explicit_path = os.fsdecode(os.fspath(explicit_path))
@@ -72,6 +83,7 @@ def _resolve_phylo_dist_path(
     if configured_path is not None:
         configured_path = os.fsdecode(os.fspath(configured_path))
     if _contains_phylo_dist_files(configured_path):
+        assert configured_path is not None
         return configured_path
 
     model_path = os.fsdecode(os.fspath(pretrained_model_name_or_path))
@@ -88,7 +100,7 @@ def _resolve_phylo_dist_path(
     from huggingface_hub import snapshot_download
 
     asset_dir = "/".join(part for part in (subfolder, "phylo_dist") if part)
-    download_kwargs = {
+    download_kwargs: dict[str, Any] = {
         key: (hub_kwargs or {})[key]
         for key in (
             "cache_dir",
@@ -119,7 +131,7 @@ def _resolve_phylo_dist_path(
 
 
 class FIRETimeBias(nn.Module):
-    def __init__(self, max_dist, fire_hidden_size=32):
+    def __init__(self, max_dist: float, fire_hidden_size: int = 32) -> None:
         super().__init__()
         self.c = nn.Parameter(torch.tensor(100, dtype=torch.float32))
         self.mlp = nn.Sequential(
@@ -129,7 +141,9 @@ class FIRETimeBias(nn.Module):
         )
         self.max_dist = max_dist
 
-    def forward(self, rel_pos: torch.tensor) -> torch.tensor:
+    def forward(
+        self, rel_pos: Float[Tensor, "batch target source"]
+    ) -> Float[Tensor, "batch 1 1 target source"]:
         rel_pos = rel_pos[:, None, None, :, :, None].to(
             torch.float32
         )  # (B, 1 (L), 1 (A), T, C, 1)
@@ -139,19 +153,23 @@ class FIRETimeBias(nn.Module):
 
 
 class GPNStarEmbedding(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config: GPNStarConfig) -> None:
         super().__init__()
         self.vocab_size = config.vocab_size
         self.hidden_size = config.hidden_size
         self.input_embed = nn.Embedding(self.vocab_size, self.hidden_size)
 
-    def forward(self, input_ids=None):
+    def forward(
+        self, input_ids: Int[Tensor, "batch position target"] | None = None
+    ) -> Float[Tensor, "batch position target hidden"]:
+        if input_ids is None:
+            raise ValueError("input_ids are required")
         target_embeddings = self.input_embed(input_ids.to(torch.int))
         return target_embeddings  # (B, L, T, H)
 
 
 class GPNStarAttentionPool(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config: GPNStarConfig) -> None:
         super().__init__()
 
         self.num_attention_heads = config.num_attention_heads // 2
@@ -167,7 +185,7 @@ class GPNStarAttentionPool(nn.Module):
 
         self.ffn = nn.Linear(self.all_head_size, config.hidden_size)
 
-    def transpose_for_scores(self, x):
+    def transpose_for_scores(self, x: Tensor) -> Tensor:
         new_x_shape = x.size()[:-1] + (
             self.num_attention_heads,
             self.attention_head_size,
@@ -175,7 +193,11 @@ class GPNStarAttentionPool(nn.Module):
         x = x.view(*new_x_shape)
         return x.transpose(-2, -3)
 
-    def forward(self, source_ids, in_clade_time_bias):
+    def forward(
+        self,
+        source_ids: Int[Tensor, "batch position species"],
+        in_clade_time_bias: Float[Tensor, "batch 1 head 1 species"],
+    ) -> Float[Tensor, "batch position hidden"]:
         attention_scores = (
             self.attention_weights(source_ids).transpose(-1, -2).unsqueeze(-2)
         )  # (B, L, A, 1, N_c)
@@ -199,49 +221,53 @@ class GPNStarAttentionPool(nn.Module):
 
 
 class GPNStarSourceModule(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config: GPNStarConfig) -> None:
         super().__init__()
 
         self.attn_pool = GPNStarAttentionPool(config)
         self.embed = nn.Embedding(config.vocab_size, config.hidden_size)
-        self.time_enc, self.time_scale = config.time_enc.split("_")
-        self.time_scale = int(self.time_scale)
+        self.time_enc, self.time_scale = _parse_time_encoding(config.time_enc)
 
         # time embedding modules. Move to higher level?
         if self.time_enc == "fire":
+            if config.max_evol_dist is None:
+                raise ValueError("max_evol_dist must be set before model construction")
             self.embed_positions = FIRETimeBias(config.max_evol_dist)
         else:
             raise ValueError("time encoding not implemented.")
 
-    def forward(self, source_ids, clade_dict, in_clade_phylo_dist):
+    def forward(
+        self,
+        source_ids: Int[Tensor, "batch position species"],
+        clade_dict: Mapping[int, set[int]],
+        in_clade_phylo_dist: Float[Tensor, "... species"],
+    ) -> Float[Tensor, "batch position clade hidden"]:
         in_clade_time_bias = self.embed_positions(
             in_clade_phylo_dist[None, None, :] * self.time_scale
         )
 
         # Attention pooling: per-species token -> per-clade token
-        clade_pooled_source_ids = []
-        for clade, species in clade_dict.items():
-            species = list(species)
-            if len(species) > 1:
-                clade_pooled_source_ids.append(
+        clade_embeddings: list[Tensor] = []
+        for species in clade_dict.values():
+            species_indices = list(species)
+            if len(species_indices) > 1:
+                clade_embeddings.append(
                     self.attn_pool(
-                        source_ids[..., species].to(torch.int),  # (B, L, N_c)
-                        in_clade_time_bias[..., species],
+                        source_ids[..., species_indices].to(torch.int),  # (B, L, N_c)
+                        in_clade_time_bias[..., species_indices],
                     )
                 )  # (B, L, A, 1, N_c)
             else:
-                clade_pooled_source_ids.append(
-                    self.embed(source_ids[..., species[0]].to(torch.int))
+                clade_embeddings.append(
+                    self.embed(source_ids[..., species_indices[0]].to(torch.int))
                 )
-        clade_pooled_source_ids = torch.stack(
-            clade_pooled_source_ids, dim=-2
-        )  # (B, L, C, H)
+        clade_pooled_source_ids = torch.stack(clade_embeddings, dim=-2)
 
         return clade_pooled_source_ids
 
 
 class GPNStarColCrossAttention(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config: GPNStarConfig) -> None:
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(
             config, "embedding_size"
@@ -256,8 +282,7 @@ class GPNStarColCrossAttention(nn.Module):
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
         # Time encoding
-        self.time_enc, self.time_scale = config.time_enc.split("_")
-        self.time_scale = int(self.time_scale)
+        self.time_enc, self.time_scale = _parse_time_encoding(config.time_enc)
 
         self.query = nn.Linear(config.hidden_size, self.all_head_size)
         self.key = nn.Linear(config.hidden_size, self.all_head_size)
@@ -265,7 +290,7 @@ class GPNStarColCrossAttention(nn.Module):
 
         self.attention_probs_dropout_prob = config.attention_probs_dropout_prob
 
-    def transpose_for_scores(self, x):
+    def transpose_for_scores(self, x: Tensor) -> Tensor:
         new_x_shape = x.size()[:-1] + (
             self.num_attention_heads,
             self.attention_head_size,
@@ -275,12 +300,14 @@ class GPNStarColCrossAttention(nn.Module):
 
     def forward(
         self,
-        hidden_states,
-        source_embeddings,
-        attention_mask=None,
-        evol_time_bias=None,
-        output_attentions=False,
-    ):
+        hidden_states: Float[Tensor, "batch position target hidden"],
+        source_embeddings: Float[Tensor, "batch position clade hidden"],
+        attention_mask: Float[Tensor, "batch 1 1 target clade"] | None = None,
+        evol_time_bias: Float[Tensor, "batch 1 head target clade"] | None = None,
+        output_attentions: bool = False,
+    ) -> tuple[Tensor, ...]:
+        if attention_mask is None or evol_time_bias is None:
+            raise ValueError("attention_mask and evol_time_bias are required")
         query_layer = self.transpose_for_scores(self.query(hidden_states))
         key_layer = self.transpose_for_scores(self.key(source_embeddings))
         value_layer = self.transpose_for_scores(self.value(source_embeddings))
@@ -302,7 +329,7 @@ class GPNStarColCrossAttention(nn.Module):
             new_context_layer_shape = context_layer.size()[:-2] + (self.all_head_size,)
             context_layer = context_layer.view(*new_context_layer_shape)
 
-            outputs = (
+            outputs: tuple[Tensor, ...] = (
                 (context_layer, attention_probs)
                 if output_attentions
                 else (context_layer,)
@@ -333,15 +360,19 @@ class GPNStarColCrossAttention(nn.Module):
 
 
 class GPNStarColCrossOutput(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config: GPNStarConfig) -> None:
         super().__init__()
         self.dense = nn.Linear(config.hidden_size // 2, config.hidden_size)
         self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
     def forward(
-        self, hidden_states: torch.Tensor, input_tensor: torch.Tensor = None
-    ) -> torch.Tensor:
+        self,
+        hidden_states: Float[Tensor, "batch position target half_hidden"],
+        input_tensor: Float[Tensor, "batch position target hidden"] | None = None,
+    ) -> Float[Tensor, "batch position target hidden"]:
+        if input_tensor is None:
+            raise ValueError("input_tensor is required")
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
@@ -349,27 +380,30 @@ class GPNStarColCrossOutput(nn.Module):
 
 
 class GPNStarColAttention(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config: GPNStarConfig) -> None:
         super().__init__()
         self.self = GPNStarColCrossAttention(config)
         self.out = GPNStarColCrossOutput(config)
 
-        self.time_enc, self.time_scale = config.time_enc.split("_")
-        self.time_scale = int(self.time_scale)
+        self.time_enc, self.time_scale = _parse_time_encoding(config.time_enc)
 
         if self.time_enc == "fire":
+            if config.max_evol_dist is None:
+                raise ValueError("max_evol_dist must be set before model construction")
             self.embed_positions = FIRETimeBias(config.max_evol_dist)
         else:
             raise ValueError(f"Time encoding {self.time_enc} not implemented!")
 
     def forward(
         self,
-        hidden_states,
-        source_embeddings,
-        attention_mask=None,
-        phylo_dist=None,
-        output_attentions=False,
-    ):
+        hidden_states: Float[Tensor, "batch position target hidden"],
+        source_embeddings: Float[Tensor, "batch position clade hidden"],
+        attention_mask: Float[Tensor, "batch 1 1 target clade"] | None = None,
+        phylo_dist: Float[Tensor, "batch target clade"] | None = None,
+        output_attentions: bool = False,
+    ) -> tuple[Tensor, ...]:
+        if phylo_dist is None:
+            raise ValueError("phylo_dist is required")
         evol_time_bias = self.embed_positions(phylo_dist)
 
         self_outputs = self.self(
@@ -379,14 +413,14 @@ class GPNStarColAttention(nn.Module):
             evol_time_bias=evol_time_bias,
             output_attentions=output_attentions,
         )
-        output = (self.out(self_outputs[0], hidden_states),)
+        output: tuple[Tensor, ...] = (self.out(self_outputs[0], hidden_states),)
         if output_attentions:
             output = output + (self_outputs[1],)
         return output
 
 
 class GPNStarRowSelfAttention(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config: GPNStarConfig) -> None:
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(
             config, "embedding_size"
@@ -400,8 +434,7 @@ class GPNStarRowSelfAttention(nn.Module):
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.time_enc, self.time_scale = config.time_enc.split("_")
-        self.time_scale = int(self.time_scale)
+        self.time_enc, self.time_scale = _parse_time_encoding(config.time_enc)
 
         self.query = nn.Linear(config.hidden_size, self.all_head_size)
         self.key = nn.Linear(config.hidden_size, self.all_head_size)
@@ -412,7 +445,7 @@ class GPNStarRowSelfAttention(nn.Module):
 
         self.rotary_value = config.rotary_value
 
-    def transpose_for_scores(self, x):
+    def transpose_for_scores(self, x: Tensor) -> Tensor:
         new_x_shape = x.size()[:-1] + (
             self.num_attention_heads,
             self.attention_head_size,
@@ -422,11 +455,12 @@ class GPNStarRowSelfAttention(nn.Module):
 
     def forward(
         self,
-        hidden_states,
-        attention_mask=None,
-        sinusoidal_pos=None,
-        output_attentions=False,
-    ):
+        hidden_states: Float[Tensor, "batch target position hidden"],
+        attention_mask: Float[Tensor, "batch 1 head position position_key"]
+        | None = None,
+        sinusoidal_pos: Float[Tensor, "1 1 position head_dimension"] | None = None,
+        output_attentions: bool = False,
+    ) -> tuple[Tensor, ...]:
         # attention scores are only calculated wrt the human genome
         query_layer = self.transpose_for_scores(self.query(hidden_states[:, :1, ...]))
         key_layer = self.transpose_for_scores(self.key(hidden_states[:, :1, ...]))
@@ -470,7 +504,7 @@ class GPNStarRowSelfAttention(nn.Module):
             context_layer = context_layer.view(
                 *new_context_layer_shape
             )  # (B, T, L, H/2)
-            outputs = (
+            outputs: tuple[Tensor, ...] = (
                 (context_layer, attention_probs)
                 if output_attentions
                 else (context_layer,)
@@ -499,9 +533,30 @@ class GPNStarRowSelfAttention(nn.Module):
         return outputs
 
     @staticmethod
+    @overload
     def apply_rotary_position_embeddings(
-        sinusoidal_pos, query_layer, key_layer, value_layer=None
-    ):
+        sinusoidal_pos: Tensor,
+        query_layer: Tensor,
+        key_layer: Tensor,
+        value_layer: None = None,
+    ) -> tuple[Tensor, Tensor]: ...
+
+    @staticmethod
+    @overload
+    def apply_rotary_position_embeddings(
+        sinusoidal_pos: Tensor,
+        query_layer: Tensor,
+        key_layer: Tensor,
+        value_layer: Tensor,
+    ) -> tuple[Tensor, Tensor, Tensor]: ...
+
+    @staticmethod
+    def apply_rotary_position_embeddings(
+        sinusoidal_pos: Tensor,
+        query_layer: Tensor,
+        key_layer: Tensor,
+        value_layer: Tensor | None = None,
+    ) -> tuple[Tensor, Tensor] | tuple[Tensor, Tensor, Tensor]:
         # https://kexue.fm/archives/8265
         # sin [batch_size, num_heads, sequence_length, embed_size_per_head//2]
         # cos [batch_size, num_heads, sequence_length, embed_size_per_head//2]
@@ -531,15 +586,19 @@ class GPNStarRowSelfAttention(nn.Module):
 
 
 class GPNStarRowSelfOutput(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config: GPNStarConfig) -> None:
         super().__init__()
         self.dense = nn.Linear(config.hidden_size // 2, config.hidden_size)
         self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
     def forward(
-        self, hidden_states: torch.Tensor, input_tensor: torch.Tensor = None
-    ) -> torch.Tensor:
+        self,
+        hidden_states: Float[Tensor, "batch target position half_hidden"],
+        input_tensor: Float[Tensor, "batch target position hidden"] | None = None,
+    ) -> Float[Tensor, "batch target position hidden"]:
+        if input_tensor is None:
+            raise ValueError("input_tensor is required")
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
@@ -547,49 +606,49 @@ class GPNStarRowSelfOutput(nn.Module):
 
 
 class GPNStarRowAttention(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config: GPNStarConfig) -> None:
         super().__init__()
         self.self = GPNStarRowSelfAttention(config)
         self.out = GPNStarRowSelfOutput(config)
 
     def forward(
         self,
-        hidden_states,
-        attention_mask=None,
-        sinusoidal_pos=None,
-        output_attentions=False,
-    ):
+        hidden_states: Float[Tensor, "batch target position hidden"],
+        attention_mask: Tensor | None = None,
+        sinusoidal_pos: Tensor | None = None,
+        output_attentions: bool = False,
+    ) -> tuple[Tensor, ...]:
         self_outputs = self.self(
             hidden_states=hidden_states,
             attention_mask=attention_mask,
             sinusoidal_pos=sinusoidal_pos,
             output_attentions=output_attentions,
         )
-        output = (self.out(self_outputs[0], hidden_states),)
+        output: tuple[Tensor, ...] = (self.out(self_outputs[0], hidden_states),)
         if output_attentions:
             output = output + (self_outputs[1],)
         return output
 
 
 class GPNStarAttention(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config: GPNStarConfig) -> None:
         super().__init__()
         self.row_attention = GPNStarRowAttention(config)
         self.col_attention = GPNStarColAttention(config)
 
     def forward(
         self,
-        hidden_states,
-        source_embeddings,
-        attention_mask=None,
-        sinusoidal_pos=None,
-        phylo_dist=None,
-        head_mask=None,
-        encoder_hidden_states=None,
-        encoder_attention_mask=None,
-        past_key_value=None,
-        output_attentions=False,
-    ):
+        hidden_states: Float[Tensor, "batch position target hidden"],
+        source_embeddings: Float[Tensor, "batch position clade hidden"],
+        attention_mask: Tensor | None = None,
+        sinusoidal_pos: Tensor | None = None,
+        phylo_dist: Float[Tensor, "batch target clade"] | None = None,
+        head_mask: Tensor | None = None,
+        encoder_hidden_states: Tensor | None = None,
+        encoder_attention_mask: Tensor | None = None,
+        past_key_value: tuple[Tensor, ...] | None = None,
+        output_attentions: bool = False,
+    ) -> tuple[Tensor, ...]:
         row_output = self.row_attention(
             hidden_states=hidden_states.transpose(-2, -3),
             attention_mask=None,
@@ -603,7 +662,7 @@ class GPNStarAttention(nn.Module):
             phylo_dist=phylo_dist,
             output_attentions=output_attentions,
         )
-        out = (col_output[0],)
+        out: tuple[Tensor, ...] = (col_output[0],)
         if output_attentions:
             out = out + (
                 row_output[1],
@@ -613,23 +672,23 @@ class GPNStarAttention(nn.Module):
 
 
 class GPNStarLayer(RoFormerLayer):
-    def __init__(self, config):
+    def __init__(self, config: GPNStarConfig) -> None:
         super().__init__(config)
         self.attention = GPNStarAttention(config)
 
     def forward(
         self,
-        hidden_states,
-        source_embeddings,
-        attention_mask=None,
-        sinusoidal_pos=None,
-        phylo_dist=None,
-        head_mask=None,
-        encoder_hidden_states=None,
-        encoder_attention_mask=None,
-        past_key_value=None,
-        output_attentions=False,
-    ):
+        hidden_states: Tensor,
+        source_embeddings: Tensor,
+        attention_mask: Tensor | None = None,
+        sinusoidal_pos: Tensor | None = None,
+        phylo_dist: Tensor | None = None,
+        head_mask: Tensor | None = None,
+        encoder_hidden_states: Tensor | None = None,
+        encoder_attention_mask: Tensor | None = None,
+        past_key_value: tuple[Tensor, ...] | None = None,
+        output_attentions: bool = False,
+    ) -> tuple[Any, ...]:
         # decoder uni-directional self-attention cached key/values tuple is at positions 1,2
         self_attn_past_key_value = (
             past_key_value[:2] if past_key_value is not None else None
@@ -646,6 +705,8 @@ class GPNStarLayer(RoFormerLayer):
         )
         attention_output = self_attention_outputs[0]
 
+        present_key_value: Any = None
+
         # if decoder, the last output is tuple of self-attn cache
         if self.is_decoder:
             outputs = self_attention_outputs[1:-1]
@@ -655,7 +716,6 @@ class GPNStarLayer(RoFormerLayer):
                 1:
             ]  # add self attentions if we output attention weights
 
-        cross_attn_present_key_value = None
         if self.is_decoder and encoder_hidden_states is not None:
             if not hasattr(self, "crossattention"):
                 raise ValueError(
@@ -702,7 +762,7 @@ class GPNStarLayer(RoFormerLayer):
 
 
 class GPNStarEncoder(RoFormerEncoder):
-    def __init__(self, config):
+    def __init__(self, config: GPNStarConfig) -> None:
         super().__init__(config)
         self.layer = nn.ModuleList(
             [GPNStarLayer(config) for _ in range(config.num_hidden_layers)]
@@ -710,25 +770,31 @@ class GPNStarEncoder(RoFormerEncoder):
 
     def forward(
         self,
-        hidden_states,
-        source_embeddings,
-        attention_mask=None,
-        head_mask=None,
-        encoder_hidden_states=None,
-        encoder_attention_mask=None,
-        past_key_values=None,
-        use_cache=None,
-        output_attentions=False,
-        output_hidden_states=False,
-        return_dict=True,
-        phylo_dist=None,
-        **kwargs,
-    ):
+        hidden_states: Tensor,
+        source_embeddings: Tensor,
+        attention_mask: Tensor | None = None,
+        head_mask: Tensor | None = None,
+        encoder_hidden_states: Tensor | None = None,
+        encoder_attention_mask: Tensor | None = None,
+        past_key_values: tuple[tuple[Tensor, ...], ...] | None = None,
+        use_cache: bool | None = None,
+        output_attentions: bool = False,
+        output_hidden_states: bool = False,
+        return_dict: bool = True,
+        phylo_dist: Tensor | None = None,
+        **kwargs: Any,
+    ) -> BaseModelOutputWithRowAndColAttentions | tuple[Any, ...]:
         if self.gradient_checkpointing and self.training:
             use_cache = False
-        all_hidden_states = () if output_hidden_states else None
-        all_row_attentions = () if output_attentions else None
-        all_col_attentions = () if output_attentions else None
+        all_hidden_states: tuple[Tensor, ...] | None = (
+            () if output_hidden_states else None
+        )
+        all_row_attentions: tuple[Tensor, ...] | None = (
+            () if output_attentions else None
+        )
+        all_col_attentions: tuple[Tensor, ...] | None = (
+            () if output_attentions else None
+        )
 
         past_key_values_length = (
             past_key_values[0][0].shape[2] if past_key_values is not None else 0
@@ -739,9 +805,10 @@ class GPNStarEncoder(RoFormerEncoder):
             hidden_states.shape[:-1], past_key_values_length
         )[None, None, :, :]
 
-        next_decoder_cache = () if use_cache else None
+        next_decoder_cache: tuple[Any, ...] | None = () if use_cache else None
         for i, layer_module in enumerate(self.layer):
             if output_hidden_states:
+                assert all_hidden_states is not None
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
             layer_head_mask = head_mask[i] if head_mask is not None else None
@@ -749,8 +816,8 @@ class GPNStarEncoder(RoFormerEncoder):
 
             if self.gradient_checkpointing and self.training:
 
-                def create_custom_forward(module):
-                    def custom_forward(*inputs):
+                def create_custom_forward(module: nn.Module) -> Callable[..., Any]:
+                    def custom_forward(*inputs: Any) -> Any:
                         return module(*inputs, past_key_value, output_attentions)
 
                     return custom_forward
@@ -782,12 +849,16 @@ class GPNStarEncoder(RoFormerEncoder):
 
             hidden_states = layer_outputs[0]
             if use_cache:
+                assert next_decoder_cache is not None
                 next_decoder_cache += (layer_outputs[-1],)
             if output_attentions:
+                assert all_row_attentions is not None
+                assert all_col_attentions is not None
                 all_row_attentions = all_row_attentions + (layer_outputs[1],)
                 all_col_attentions = all_col_attentions + (layer_outputs[2],)
 
         if output_hidden_states:
+            assert all_hidden_states is not None
             all_hidden_states = all_hidden_states + (hidden_states,)
 
         if not return_dict:
@@ -813,18 +884,23 @@ class GPNStarEncoder(RoFormerEncoder):
 
 @dataclass
 class BaseModelOutputWithRowAndColAttentions(ModelOutput):
-    last_hidden_state: torch.FloatTensor = None
-    past_key_values: tuple[tuple[torch.FloatTensor]] | None = None
-    hidden_states: tuple[torch.FloatTensor, ...] | None = None
-    row_attentions: tuple[torch.FloatTensor, ...] | None = None
-    col_attentions: tuple[torch.FloatTensor, ...] | None = None
+    last_hidden_state: Tensor | None = None
+    past_key_values: tuple[Any, ...] | None = None
+    hidden_states: tuple[Tensor, ...] | None = None
+    row_attentions: tuple[Tensor, ...] | None = None
+    col_attentions: tuple[Tensor, ...] | None = None
 
 
 class GPNStarPreTrainedModel(PreTrainedModel):
     config_class = GPNStarConfig
     base_model_prefix = "model"
 
-    def save_pretrained(self, save_directory, *args, **kwargs):
+    def save_pretrained(
+        self,
+        save_directory: str | os.PathLike[str],
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         """Save a portable checkpoint with its required phylogenetic assets."""
         source_dir = self.config.phylo_dist_path
         if not _contains_phylo_dist_files(source_dir):
@@ -851,15 +927,15 @@ class GPNStarPreTrainedModel(PreTrainedModel):
     @classmethod
     def from_pretrained(
         cls,
-        pretrained_model_name_or_path,
-        *model_args,
-        config=None,
-        **kwargs,
-    ):
+        pretrained_model_name_or_path: str | os.PathLike[str],
+        *model_args: Any,
+        config: GPNStarConfig | None = None,
+        **kwargs: Any,
+    ) -> Self:
         """Load a checkpoint and its bundled phylogenetic-distance assets."""
         explicit_path = kwargs.pop("phylo_dist_path", None)
         if config is None:
-            hub_kwargs = {
+            hub_kwargs: dict[str, Any] = {
                 key: kwargs[key]
                 for key in (
                     "cache_dir",
@@ -872,7 +948,7 @@ class GPNStarPreTrainedModel(PreTrainedModel):
                 )
                 if key in kwargs
             }
-            config_kwargs = kwargs.copy()
+            config_kwargs: dict[str, Any] = kwargs.copy()
             for key in ("torch_dtype", "dtype"):
                 if config_kwargs.get(key) == "auto":
                     config_kwargs.pop(key)
@@ -886,7 +962,7 @@ class GPNStarPreTrainedModel(PreTrainedModel):
             for key in ("torch_dtype", "dtype", "quantization_config"):
                 if kwargs.get(key) is not None:
                     unused_kwargs[key] = kwargs[key]
-            kwargs = {**hub_kwargs, **unused_kwargs}
+            kwargs = {**hub_kwargs, **dict(unused_kwargs)}
             commit_hash = getattr(config, "_commit_hash", None)
             if commit_hash is not None:
                 kwargs["_commit_hash"] = commit_hash
@@ -904,7 +980,7 @@ class GPNStarPreTrainedModel(PreTrainedModel):
             **kwargs,
         )
 
-    def _init_weights(self, module):
+    def _init_weights(self, module: nn.Module) -> None:
         """Initialize the weights"""
         if isinstance(module, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
@@ -922,13 +998,15 @@ class GPNStarPreTrainedModel(PreTrainedModel):
             module.bias.data.zero_()
             module.weight.data.fill_(1.0)
 
-    def _set_gradient_checkpointing(self, module, value=False):
+    def _set_gradient_checkpointing(
+        self, module: nn.Module, value: bool = False
+    ) -> None:
         if isinstance(module, RoFormerEncoder):
             module.gradient_checkpointing = value
 
 
 class GPNStarPhyloInfo:
-    def __init__(self, config):
+    def __init__(self, config: GPNStarConfig) -> None:
         # Four variables extracted from the phylogenetic tree
         # Pairwise distance (N, N)
         # Distance to MRCA of the clade (N,)
@@ -936,12 +1014,15 @@ class GPNStarPhyloInfo:
         # Clade labels (N,)
 
         # Read
+        if config.phylo_dist_path is None:
+            raise ValueError("phylo_dist_path is required")
+        phylo_dist_path = config.phylo_dist_path
         self.phylo_dist_pairwise = torch.tensor(
-            np.load(config.phylo_dist_path + "/pairwise.npy"),
+            np.load(phylo_dist_path + "/pairwise.npy"),
             device="cpu",
         )
         self.in_clade_phylo_dist = torch.tensor(
-            np.load(config.phylo_dist_path + "/in_clade.npy"),
+            np.load(phylo_dist_path + "/in_clade.npy"),
             device="cpu",
         )
 
@@ -961,9 +1042,12 @@ class GPNStarPhyloInfo:
         self.max_evol_dist = self.phylo_dist_pairwise.max().item()
 
     @staticmethod
-    def cluster_clades(phylo_dist_pairwise, threshold):
+    def cluster_clades(
+        phylo_dist_pairwise: Float[Tensor, "species other_species"],
+        threshold: float,
+    ) -> dict[int, set[int]]:
         N = phylo_dist_pairwise.shape[0]
-        G = nx.Graph()
+        G: nx.Graph[int] = nx.Graph()
         G.add_nodes_from(range(N))
         for i in range(N):
             for j in range(i + 1, N):
@@ -976,7 +1060,7 @@ class GPNStarPhyloInfo:
 
 
 class GPNStarModel(GPNStarPreTrainedModel):
-    def __init__(self, config):
+    def __init__(self, config: GPNStarConfig) -> None:
         super().__init__(config)
         self.config = config
         self.phylo_info = GPNStarPhyloInfo(config)
@@ -990,12 +1074,14 @@ class GPNStarModel(GPNStarPreTrainedModel):
 
     def forward(
         self,
-        input_ids=None,
-        source_ids=None,
-        target_species=None,
-        output_attentions=False,
-        **kwargs,
-    ):
+        input_ids: Int[Tensor, "batch position target"] | None = None,
+        source_ids: Int[Tensor, "batch position species"] | None = None,
+        target_species: Int[Tensor, "batch target"] | None = None,
+        output_attentions: bool = False,
+        **kwargs: Any,
+    ) -> BaseModelOutputWithRowAndColAttentions | tuple[Any, ...]:
+        if input_ids is None or source_ids is None or target_species is None:
+            raise ValueError("input_ids, source_ids, and target_species are required")
         hidden_states = self.target_embedding(
             input_ids=input_ids,
         )  # (B, L, T, H)
@@ -1040,7 +1126,11 @@ class GPNStarModel(GPNStarPreTrainedModel):
         return x
 
     @staticmethod
-    def compute_clade_means(A, indices, C):
+    def compute_clade_means(
+        A: Float[Tensor, "batch target species"],
+        indices: Int[Tensor, "... species"],
+        C: int,
+    ) -> Float[Tensor, "batch target clade"]:
         B, T, N = A.shape
         A_flat = A.reshape(-1, N)  # Shape: (B*T, N)
         indices_expanded = indices.unsqueeze(0).expand(
@@ -1057,7 +1147,13 @@ class GPNStarModel(GPNStarPreTrainedModel):
         return means
 
 
-def compute_loss(logits, labels, output_probs, loss_weight, vocab_size):
+def compute_loss(
+    logits: Float[Tensor, "... nucleotide"],
+    labels: Int[Tensor, "..."] | None,
+    output_probs: Float[Tensor, "... nucleotide"] | None,
+    loss_weight: Float[Tensor, "..."] | None,
+    vocab_size: int,
+) -> Float[Tensor, ""] | None:
     loss = None
     if labels is not None and loss_weight is None:
         loss_fct = CrossEntropyLoss()
@@ -1074,6 +1170,8 @@ def compute_loss(logits, labels, output_probs, loss_weight, vocab_size):
         loss = (loss * loss_weight).sum() / loss_weight.sum()
 
     elif output_probs is not None:
+        if loss_weight is None:
+            raise ValueError("loss_weight is required with soft output probabilities")
         loss_fct = CrossEntropyLoss(reduction="none")
         output_probs = output_probs.view(-1, vocab_size)
         exclude = (output_probs == 0.0).all(dim=-1)
@@ -1093,7 +1191,7 @@ class GPNStarForMaskedLM(GPNStarPreTrainedModel):
         "cls.predictions.decoder.bias": "cls.predictions.bias",
     }
 
-    def __init__(self, config):
+    def __init__(self, config: GPNStarConfig) -> None:
         super().__init__(config)
 
         self.model = GPNStarModel(config)
@@ -1102,7 +1200,13 @@ class GPNStarForMaskedLM(GPNStarPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def forward(self, labels=None, output_probs=None, loss_weight=None, **kwargs):
+    def forward(
+        self,
+        labels: Int[Tensor, "..."] | None = None,
+        output_probs: Float[Tensor, "... nucleotide"] | None = None,
+        loss_weight: Float[Tensor, "..."] | None = None,
+        **kwargs: Any,
+    ) -> MaskedLMOutput:
         hidden_state = self.model(**kwargs).last_hidden_state
         logits = self.cls(hidden_state)
         loss = compute_loss(

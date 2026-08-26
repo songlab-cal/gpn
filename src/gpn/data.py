@@ -7,6 +7,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from datasets import Dataset, load_dataset
+from jaxtyping import UInt8
 
 
 def load_table(path: str) -> pd.DataFrame:
@@ -71,7 +72,9 @@ class Tokenizer:
 
     def __init__(self, vocab: str = "-ACGT?"):
         unknown = vocab.index("-")
-        self.table = np.full((256,), unknown, dtype=np.uint8)
+        self.table: UInt8[np.ndarray, "... byte"] = np.full(
+            (256,), unknown, dtype=np.uint8
+        )
         for index, character in enumerate(vocab):
             self.table[ord(character)] = index
         self.vocab = vocab
@@ -114,7 +117,7 @@ class ReverseComplementer:
             b"c": b"g",
             b"g": b"c",
         }
-        self.table = np.array(
+        self.table: np.ndarray = np.array(
             [
                 complement_mapping.get(chr(index).encode(), chr(index).encode())
                 for index in range(256)
@@ -136,7 +139,7 @@ def slice_alignment(
 
     if end <= start:
         raise ValueError("Alignment interval end must be greater than start")
-    result = np.full((end - start, n_species), b"-", dtype="|S1")
+    result: np.ndarray = np.full((end - start, n_species), b"-", dtype="|S1")
     source_start = max(start, 0)
     source_stop = min(end, array.shape[0])
     if source_start < source_stop:

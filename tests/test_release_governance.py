@@ -51,17 +51,16 @@ def test_external_mutation_ledger_covers_release_boundary() -> None:
     applied = {action["id"]: action for action in ledger["applied"]}
 
     assert set(pending) == {
-        "protect-main",
-        "enable-security-features",
-        "publish-analysis-archive",
         "publish-gpn-0-9-0",
     }
     assert {
         "pypi-trusted-publisher-binding",
         "merge-modernization-pr",
         "publish-read-the-docs",
+        "protect-main",
+        "enable-security-features",
+        "publish-analysis-archive",
     } <= set(applied)
-    assert pending["protect-main"]["source"] == "release/main-ruleset.json"
     assert pending["publish-gpn-0-9-0"]["source"] == "release/0.9.0/review.md"
     assert pending["publish-gpn-0-9-0"]["disposition"] == "approval_ready"
 
@@ -90,9 +89,6 @@ def test_final_approval_has_an_exact_bounded_action_set() -> None:
     }
 
     assert ready_ids == {
-        "protect-main",
-        "enable-security-features",
-        "publish-analysis-archive",
         "publish-gpn-0-9-0",
     }
 
@@ -106,8 +102,8 @@ def test_hub_audit_is_outside_this_release() -> None:
 
 def test_archive_mutation_identifies_tag_object_and_peeled_commit() -> None:
     ledger = _json("external-mutations.json")
-    pending = {action["id"]: action for action in ledger["pending"]}
-    archive = pending["publish-analysis-archive"]
+    applied = {action["id"]: action for action in ledger["applied"]}
+    archive = applied["publish-analysis-archive"]
 
     assert "tag object 312a6c70de6700e729bcea4c9a67ab42a72f05f7" in archive["targets"]
     assert "commit 30dee6cf45849dfdcfc043ca8baf44fd6ba51d74" in archive["targets"]
@@ -128,6 +124,7 @@ def test_proposed_main_ruleset_matches_ci_and_solo_maintenance() -> None:
     pull_request = rules["pull_request"]["parameters"]
     assert pull_request["required_approving_review_count"] == 0
     assert pull_request["require_code_owner_review"] is False
+    assert pull_request["require_extra_approval_for_unattributed_changes"] is False
     assert pull_request["require_last_push_approval"] is False
     assert pull_request["required_review_thread_resolution"] is True
     assert pull_request["allowed_merge_methods"] == ["squash"]
@@ -143,12 +140,9 @@ def test_proposed_main_ruleset_matches_ci_and_solo_maintenance() -> None:
         "Package",
     }
     protect_main = next(
-        action for action in ledger["pending"] if action["id"] == "protect-main"
+        action for action in ledger["applied"] if action["id"] == "protect-main"
     )
-    assert (
-        "the final CI workflow has reported all four required contexts named in "
-        "release/main-ruleset.json on a pull request" in protect_main["preconditions"]
-    )
+    assert "songlab-cal/gpn:ruleset:21510261" in protect_main["targets"]
     ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text()
     for context in required:
         assert f"name: {context}" in ci
@@ -166,6 +160,7 @@ def test_release_workflow_uses_locked_isolated_trusted_publishing() -> None:
     workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text()
 
     assert "permissions:\n  contents: read" in workflow
+    assert "if: startsWith(github.event.release.tag_name, 'v')" in workflow
     assert "persist-credentials: false" in workflow
     assert "--only-group release --no-install-project" in workflow
     assert "uv build --no-build-isolation" in workflow
@@ -195,6 +190,27 @@ def test_transformers_version_is_pinned_to_the_validated_runtime() -> None:
     assert '--no-deps "transformers==' not in ci
 
 
+def test_static_quality_checks_cover_the_full_package() -> None:
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text())
+    mypy = project["tool"]["mypy"]
+    assert mypy["files"] == ["src/gpn"]
+    assert mypy["strict"] is True
+    assert mypy["follow_imports"] == "skip"
+    assert {
+        "disallow_subclassing_any",
+        "disallow_untyped_calls",
+        "disallow_untyped_decorators",
+        "warn_return_any",
+    } == {name for name, value in mypy.items() if value is False}
+
+    pre_commit = (ROOT / ".pre-commit-config.yaml").read_text()
+    assert "- id: ruff-check\n" in pre_commit
+    assert "- id: ruff-format\n" in pre_commit
+    assert "name: mypy full package" in pre_commit
+    assert "pass_filenames: false" in pre_commit
+    assert "files: ^(pyproject\\.toml|src/gpn/.*\\.py)$" in pre_commit
+
+
 def test_release_version_metadata_is_consistent() -> None:
     project = tomllib.loads((ROOT / "pyproject.toml").read_text())
     lock = tomllib.loads((ROOT / "uv.lock").read_text())
@@ -207,10 +223,10 @@ def test_release_version_metadata_is_consistent() -> None:
     changelog = (ROOT / "CHANGELOG.md").read_text()
     assert version == "0.9.0"
     assert locked_project["version"] == version
-    assert f"## {version} — Unreleased\n" in changelog
+    assert f"## {version} — 2026-08-25\n" in changelog
 
 
-def test_release_review_uses_one_pull_request() -> None:
+def test_release_review_records_the_modernization_boundary() -> None:
     review = (RELEASE_DIR / "0.9.0" / "review.md").read_text()
     runbook = (ROOT / "docs" / "development" / "release.md").read_text()
     release_readme = (RELEASE_DIR / "README.md").read_text()
@@ -222,7 +238,7 @@ def test_release_review_uses_one_pull_request() -> None:
     )
 
     assert "pull/100" in review
-    assert "690557d949309cf4f4234554888bb5421c49aede" in review
+    assert "305c29a1db9bf327c7d2bc049b8800d8dc131fdb" in review
     assert "pull/96" not in review
     assert "pull/98" not in review
     assert "pull/99" not in review
