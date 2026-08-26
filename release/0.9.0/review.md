@@ -18,7 +18,7 @@ release binding.
 - Release version: `0.9.0`
 - Release-PR base `main`: `305c29a1db9bf327c7d2bc049b8800d8dc131fdb`
 - Review PR: [#100](https://github.com/songlab-cal/gpn/pull/100)
-- Final release PR: assigned after the initial candidate commit
+- Final release PR: [#110](https://github.com/songlab-cal/gpn/pull/110)
 - Modernization merge: `ebb3df3548fc8f364c339f0e5ddad86330c1f949`
 - Reviewed modernization tree: `aebc93d290f5d202511827be724cec70acefe07a`
 - Maintained package: `src/gpn`
