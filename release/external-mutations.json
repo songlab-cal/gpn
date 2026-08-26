@@ -109,13 +109,15 @@
     {
       "id": "enable-security-features",
       "system": "github",
-      "operation": "enabled the reviewed repository security features",
+      "operation": "enabled the reviewed repository security features and private vulnerability reporting",
       "targets": [
-        "songlab-cal/gpn:security-and-analysis"
+        "songlab-cal/gpn:security-and-analysis",
+        "songlab-cal/gpn:private-vulnerability-reporting"
       ],
       "evidence": [
         "Dependabot security updates are enabled",
         "secret scanning, non-provider patterns, validity checks, and push protection are enabled",
+        "private vulnerability reporting is enabled",
         "the repository API returned no open Dependabot alerts after the historical manifest left main"
       ]
     },
