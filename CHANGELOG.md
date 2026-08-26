@@ -11,7 +11,8 @@ Hugging Face model revisions.
   supported model family and the Sorghum GPN fine-tune.
 - Canonical prepared-data training recipes for GPN and GPN-Star.
 - Explicit AutoClass registration, a stable `gpn` CLI, uv-managed development,
-  Ruff, mypy coverage and jaxtyping, offline CI, and built-wheel checks.
+  package-wide Ruff linting and formatting, strict mypy and semantic jaxtyping,
+  offline CI, and built-wheel checks.
 - A consistent family-first CLI for GPN, GPN-MSA, and GPN-Star inference.
 - Hosted Sphinx/MyST documentation on Read the Docs.
 - A maintainer release runbook, reviewable GitHub ruleset proposal, external-

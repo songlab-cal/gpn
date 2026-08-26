@@ -10,6 +10,8 @@ import pandas as pd
 import torch
 from Bio.Seq import Seq
 from datasets import Dataset, disable_caching
+from jaxtyping import Float, Int
+from torch import Tensor
 from transformers import (
     AutoModel,
     AutoModelForMaskedLM,
@@ -66,11 +68,11 @@ class MLMforVEPModel(torch.nn.Module):
 
     def get_llr(
         self,
-        input_ids: torch.Tensor,
-        pos: torch.Tensor,
-        ref: torch.Tensor,
-        alt: torch.Tensor,
-    ) -> torch.Tensor:
+        input_ids: Int[Tensor, "batch position"],
+        pos: Int[Tensor, "... batch"],
+        ref: Int[Tensor, "... batch"],
+        alt: Int[Tensor, "... batch"],
+    ) -> Float[Tensor, "... batch"]:
         logits = self.model(input_ids=input_ids).logits
         logits = logits[torch.arange(len(pos), device=pos.device), pos]
         row = torch.arange(len(ref), device=ref.device)
@@ -78,15 +80,15 @@ class MLMforVEPModel(torch.nn.Module):
 
     def forward(
         self,
-        input_ids_fwd: torch.Tensor | None = None,
-        pos_fwd: torch.Tensor | None = None,
-        ref_fwd: torch.Tensor | None = None,
-        alt_fwd: torch.Tensor | None = None,
-        input_ids_rev: torch.Tensor | None = None,
-        pos_rev: torch.Tensor | None = None,
-        ref_rev: torch.Tensor | None = None,
-        alt_rev: torch.Tensor | None = None,
-    ) -> torch.Tensor:
+        input_ids_fwd: Int[Tensor, "batch position"] | None = None,
+        pos_fwd: Int[Tensor, "... batch"] | None = None,
+        ref_fwd: Int[Tensor, "... batch"] | None = None,
+        alt_fwd: Int[Tensor, "... batch"] | None = None,
+        input_ids_rev: Int[Tensor, "batch position"] | None = None,
+        pos_rev: Int[Tensor, "... batch"] | None = None,
+        ref_rev: Int[Tensor, "... batch"] | None = None,
+        alt_rev: Int[Tensor, "... batch"] | None = None,
+    ) -> Float[Tensor, "... batch"]:
         llr_fwd = self.get_llr(input_ids_fwd, pos_fwd, ref_fwd, alt_fwd)
         llr_rev = self.get_llr(input_ids_rev, pos_rev, ref_rev, alt_rev)
         return (llr_fwd + llr_rev) / 2
@@ -112,19 +114,19 @@ class MLMforLogitsModel(torch.nn.Module):
 
     def get_logits(
         self,
-        input_ids: torch.Tensor,
-        pos: torch.Tensor,
-    ) -> torch.Tensor:
+        input_ids: Int[Tensor, "batch position"],
+        pos: Int[Tensor, "... batch"],
+    ) -> Float[Tensor, "batch nucleotide"]:
         logits = self.model(input_ids=input_ids).logits
         return logits[torch.arange(len(pos), device=pos.device), pos]
 
     def forward(
         self,
-        input_ids_fwd: torch.Tensor | None = None,
-        pos_fwd: torch.Tensor | None = None,
-        input_ids_rev: torch.Tensor | None = None,
-        pos_rev: torch.Tensor | None = None,
-    ) -> torch.Tensor:
+        input_ids_fwd: Int[Tensor, "batch position"] | None = None,
+        pos_fwd: Int[Tensor, "... batch"] | None = None,
+        input_ids_rev: Int[Tensor, "batch position"] | None = None,
+        pos_rev: Int[Tensor, "... batch"] | None = None,
+    ) -> Float[Tensor, "batch nucleotide"]:
         a, c, g, t = self.nucleotide_ids
         logits_fwd = self.get_logits(input_ids_fwd, pos_fwd)[:, [a, c, g, t]]
         logits_rev = self.get_logits(input_ids_rev, pos_rev)[:, [t, g, c, a]]
@@ -148,7 +150,9 @@ class ModelCenterEmbedding(torch.nn.Module):
         self.model.eval()
         self.center_window_size = center_window_size
 
-    def get_center_embedding(self, input_ids: torch.Tensor) -> torch.Tensor:
+    def get_center_embedding(
+        self, input_ids: Int[Tensor, "batch position"]
+    ) -> Float[Tensor, "batch hidden"]:
         embedding = self.model(input_ids=input_ids).last_hidden_state
         center = embedding.shape[1] // 2
         left = center - self.center_window_size // 2
@@ -159,9 +163,9 @@ class ModelCenterEmbedding(torch.nn.Module):
 
     def forward(
         self,
-        input_ids_fwd: torch.Tensor | None = None,
-        input_ids_rev: torch.Tensor | None = None,
-    ) -> torch.Tensor:
+        input_ids_fwd: Int[Tensor, "batch position"] | None = None,
+        input_ids_rev: Int[Tensor, "batch position"] | None = None,
+    ) -> Float[Tensor, "batch hidden"]:
         embedding_fwd = self.get_center_embedding(input_ids_fwd)
         embedding_rev = self.get_center_embedding(input_ids_rev)
         return (embedding_fwd + embedding_rev) / 2

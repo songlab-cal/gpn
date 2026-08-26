@@ -1,6 +1,11 @@
+from __future__ import annotations
+
+from typing import Any
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from jaxtyping import Float, Int
 from torch import Tensor
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from transformers import (
@@ -24,7 +29,9 @@ from ..embeddings import OneHotAuxEmbedding
 from ..losses import masked_lm_loss
 from .modules import CNN, MLP, ByteNetEncoder, ConvNetEncoder
 
-ENCODER_CLASS = {
+ENCODER_CLASS: dict[
+    str, type[ByteNetEncoder] | type[ConvNetEncoder] | type[RoFormerEncoder]
+] = {
     "bytenet": ByteNetEncoder,
     "convnet": ConvNetEncoder,
     "roformer": RoFormerEncoder,
@@ -37,17 +44,21 @@ class TransposeLinear(nn.Linear):
 
 
 class GPNEmbedding2(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config: GPNConfig) -> None:
         super().__init__()
         self.word_embeddings = nn.Embedding(
             config.vocab_size, config.hidden_size, padding_idx=0
         )
 
-    def forward(self, input_ids, **kwargs):
+    def forward(
+        self,
+        input_ids: Int[Tensor, "... position"],
+        **kwargs: Any,
+    ) -> Float[Tensor, "... position hidden"]:
         return self.word_embeddings(input_ids)
 
 
-EMBEDDING_CLASS = {
+EMBEDDING_CLASS: dict[str, type[OneHotAuxEmbedding] | type[GPNEmbedding2]] = {
     "one_hot": OneHotAuxEmbedding,
     "embedding": GPNEmbedding2,
 }
@@ -56,8 +67,8 @@ EMBEDDING_CLASS = {
 class MLMHead(nn.Module):
     def __init__(
         self,
-        config,
-    ):
+        config: GPNConfig,
+    ) -> None:
         super().__init__()
         self.config = config
         if config.mlm_head_transform:
@@ -72,7 +83,9 @@ class MLMHead(nn.Module):
             config.hidden_size, config.vocab_size, bias=config.bias
         )
 
-    def forward(self, hidden_states):
+    def forward(
+        self, hidden_states: Float[Tensor, "... position hidden"]
+    ) -> Float[Tensor, "... position nucleotide"]:
         hidden_states = self.transform(hidden_states)
         hidden_states = self.decoder(hidden_states)
         return hidden_states
@@ -81,7 +94,7 @@ class MLMHead(nn.Module):
 class StandardClassificationHead(nn.Module):
     """Head for sentence-level classification tasks."""
 
-    def __init__(self, config):
+    def __init__(self, config: GPNConfig) -> None:
         super().__init__()
         self.ln = nn.LayerNorm(config.hidden_size, bias=config.bias)
         self.dense = nn.Linear(config.hidden_size, config.hidden_size, bias=config.bias)
@@ -92,7 +105,11 @@ class StandardClassificationHead(nn.Module):
 
         self.config = config
 
-    def forward(self, features, **kwargs):
+    def forward(
+        self,
+        features: Float[Tensor, "batch position hidden"],
+        **kwargs: Any,
+    ) -> Float[Tensor, "batch label"]:
         x = features.mean(axis=1)  # mean pooling
         x = self.ln(x)
         x = self.dropout(x)
@@ -106,7 +123,7 @@ class StandardClassificationHead(nn.Module):
 class LightweightCNNClassificationHead(nn.Module):
     """Head for sentence-level classification tasks."""
 
-    def __init__(self, config):
+    def __init__(self, config: GPNConfig) -> None:
         super().__init__()
         intermediate_size = 64
         kernel_size = 3
@@ -130,7 +147,11 @@ class LightweightCNNClassificationHead(nn.Module):
         self.ln = nn.LayerNorm(intermediate_size, bias=False)
         self.final = nn.Linear(intermediate_size, config.num_labels, bias=False)
 
-    def forward(self, x, **kwargs):
+    def forward(
+        self,
+        x: Float[Tensor, "batch position hidden"],
+        **kwargs: Any,
+    ) -> Float[Tensor, "batch label"]:
         x = self.conv1(x)
         x = self.conv2(x)
         x = x.mean(axis=1)
@@ -143,7 +164,7 @@ class LightweightCNNClassificationHead(nn.Module):
 class LightweightMLPClassificationHead(nn.Module):
     """Head for sentence-level classification tasks."""
 
-    def __init__(self, config):
+    def __init__(self, config: GPNConfig) -> None:
         super().__init__()
         intermediate_size = 64
         self.mlp1 = MLP(
@@ -159,7 +180,11 @@ class LightweightMLPClassificationHead(nn.Module):
         self.ln = nn.LayerNorm(intermediate_size, bias=False)
         self.final = nn.Linear(intermediate_size, config.num_labels, bias=False)
 
-    def forward(self, x, **kwargs):
+    def forward(
+        self,
+        x: Float[Tensor, "batch position hidden"],
+        **kwargs: Any,
+    ) -> Float[Tensor, "batch label"]:
         x = self.mlp1(x)
         x = x.mean(axis=1)
         x = self.mlp2(x)
@@ -168,7 +193,12 @@ class LightweightMLPClassificationHead(nn.Module):
         return x
 
 
-CLASSIFICATION_HEAD_CLASS = {
+CLASSIFICATION_HEAD_CLASS: dict[
+    str,
+    type[StandardClassificationHead]
+    | type[LightweightMLPClassificationHead]
+    | type[LightweightCNNClassificationHead],
+] = {
     "standard": StandardClassificationHead,
     "lightweight_mlp": LightweightMLPClassificationHead,
     "lightweight_cnn": LightweightCNNClassificationHead,
@@ -180,34 +210,34 @@ class GPNConfig(RoFormerConfig):
 
     def __init__(
         self,
-        vocab_size=7,  # ss: 7, msa: 6
-        aux_features_vocab_size=5,
-        n_aux_features=0,
-        embedding="one_hot",  # one_hot, embedding
-        encoder="convnet",  # convnet, roformer, bytenet
-        num_hidden_layers=25,  # roformer: 12
-        hidden_size=512,  # roformer: 768
-        intermediate_size=2048,  # roformer: 3072 (usually 4 * hidden_size)
-        hidden_dropout_prob=0.0,
-        bias=False,
-        tie_word_embeddings=False,
-        mlm_head_transform=True,
+        vocab_size: int = 7,  # ss: 7, msa: 6
+        aux_features_vocab_size: int | None = 5,
+        n_aux_features: int = 0,
+        embedding: str = "one_hot",  # one_hot, embedding
+        encoder: str = "convnet",  # convnet, roformer, bytenet
+        num_hidden_layers: int = 25,  # roformer: 12
+        hidden_size: int = 512,  # roformer: 768
+        intermediate_size: int = 2048,  # roformer: 3072
+        hidden_dropout_prob: float = 0.0,
+        bias: bool = False,
+        tie_word_embeddings: bool = False,
+        mlm_head_transform: bool = True,
         # bytenet-specific
-        slim=False,
+        slim: bool = False,
         # convnet-specific
-        first_kernel_size=9,
-        rest_kernel_size=5,
-        dilation_double_every=1,
-        dilation_max=9999,
-        dilation_cycle=8,
-        dilation_base=2,
-        depthwise=False,
+        first_kernel_size: int = 9,
+        rest_kernel_size: int = 5,
+        dilation_double_every: int = 1,
+        dilation_max: int = 9999,
+        dilation_cycle: int = 8,
+        dilation_base: int = 2,
+        depthwise: bool = False,
         # specific to head for downstream classification/regression task
-        classification_head="standard",
-        pos_weight=None,
-        regression_softplus=False,
-        **kwargs,
-    ):
+        classification_head: str = "standard",
+        pos_weight: float | list[float] | None = None,
+        regression_softplus: bool = False,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(**kwargs)
         self.vocab_size = vocab_size
         self.aux_features_vocab_size = aux_features_vocab_size
@@ -240,7 +270,7 @@ class GPNPreTrainedModel(PreTrainedModel):
     # GB: won't try to support this for now
     # supports_gradient_checkpointing = True
 
-    def _init_weights(self, module):
+    def _init_weights(self, module: nn.Module) -> None:
         """Initialize the weights"""
         if isinstance(module, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
@@ -268,17 +298,23 @@ class GPNPreTrainedModel(PreTrainedModel):
             if not getattr(module.weight, "_is_hf_initialized", False):
                 module.weight.data.fill_(1.0)
 
-    def _set_gradient_checkpointing(self, module, value=False):
+    def _set_gradient_checkpointing(
+        self, module: nn.Module, value: bool = False
+    ) -> None:
         if isinstance(module, RoFormerEncoder):
             module.gradient_checkpointing = value
 
 
 class GPNModel(GPNPreTrainedModel):
-    def __init__(self, config):
+    def __init__(self, config: GPNConfig) -> None:
         super().__init__(config)
         self.config = config
-        self.embeddings = EMBEDDING_CLASS[config.embedding](config)
-        self.encoder = ENCODER_CLASS[config.encoder](config)
+        self.embeddings: OneHotAuxEmbedding | GPNEmbedding2 = EMBEDDING_CLASS[
+            config.embedding
+        ](config)
+        self.encoder: ConvNetEncoder | ByteNetEncoder | RoFormerEncoder = ENCODER_CLASS[
+            config.encoder
+        ](config)
         self.ln_f = nn.LayerNorm(config.hidden_size, bias=config.bias)
 
         # Fix: https://github.com/huggingface/transformers/issues/40564
@@ -287,7 +323,13 @@ class GPNModel(GPNPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def forward(self, input_ids=None, input_probs=None, aux_features=None, **kwargs):
+    def forward(
+        self,
+        input_ids: Int[Tensor, "... position"] | None = None,
+        input_probs: Float[Tensor, "... position nucleotide"] | None = None,
+        aux_features: Tensor | None = None,
+        **kwargs: Any,
+    ) -> BaseModelOutput:
         x = self.embeddings(
             input_ids=input_ids, input_probs=input_probs, aux_features=aux_features
         )
@@ -299,15 +341,15 @@ class GPNModel(GPNPreTrainedModel):
 
         return x
 
-    def get_input_embeddings(self):
+    def get_input_embeddings(self) -> nn.Module | None:
         return self.embeddings.word_embeddings
 
-    def set_input_embeddings(self, value):
+    def set_input_embeddings(self, value: nn.Module | None) -> None:
         self.embeddings.word_embeddings = value
 
 
 class GPNForMaskedLM(GPNPreTrainedModel):
-    def __init__(self, config):
+    def __init__(self, config: GPNConfig) -> None:
         super().__init__(config)
         self.model = GPNModel(config)
         self.cls = MLMHead(config)
@@ -318,7 +360,13 @@ class GPNForMaskedLM(GPNPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    def forward(self, labels=None, output_probs=None, loss_weight=None, **kwargs):
+    def forward(
+        self,
+        labels: Int[Tensor, "..."] | None = None,
+        output_probs: Float[Tensor, "... nucleotide"] | None = None,
+        loss_weight: Float[Tensor, "..."] | None = None,
+        **kwargs: Any,
+    ) -> MaskedLMOutput:
         hidden_state = self.model(**kwargs).last_hidden_state
         logits = self.cls(hidden_state)
         loss = masked_lm_loss(
@@ -329,21 +377,26 @@ class GPNForMaskedLM(GPNPreTrainedModel):
             logits=logits,
         )
 
-    def get_output_embeddings(self):
+    def get_output_embeddings(self) -> nn.Module | None:
         # we want to prevent tying weights to None
         if self.model.get_input_embeddings() is not None:
             return self.cls.decoder
+        return None
 
-    def set_output_embeddings(self, new_embeddings):
+    def set_output_embeddings(self, new_embeddings: nn.Module) -> None:
         self.cls.decoder = new_embeddings
 
 
 class GPNForSequenceClassification(GPNPreTrainedModel):
-    def __init__(self, config):
+    def __init__(self, config: GPNConfig) -> None:
         super().__init__(config)
         self.num_labels = config.num_labels
         self.model = GPNModel(config)
-        self.classifier = CLASSIFICATION_HEAD_CLASS[config.classification_head](config)
+        self.classifier: (
+            StandardClassificationHead
+            | LightweightMLPClassificationHead
+            | LightweightCNNClassificationHead
+        ) = CLASSIFICATION_HEAD_CLASS[config.classification_head](config)
         self.regression_softplus = config.regression_softplus
 
         # Initialize weights and apply final processing
@@ -351,10 +404,10 @@ class GPNForSequenceClassification(GPNPreTrainedModel):
 
     def forward(
         self,
-        input_ids: torch.LongTensor | None = None,
-        aux_features=None,
-        labels: torch.LongTensor | None = None,
-    ) -> SequenceClassifierOutput | tuple[torch.Tensor]:
+        input_ids: Int[Tensor, "batch position"] | None = None,
+        aux_features: Tensor | None = None,
+        labels: Tensor | None = None,
+    ) -> SequenceClassifierOutput:
         r"""
         labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
             Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
@@ -403,7 +456,7 @@ class GPNForSequenceClassification(GPNPreTrainedModel):
 
 
 class GPNForTokenClassification(GPNPreTrainedModel):
-    def __init__(self, config):
+    def __init__(self, config: GPNConfig) -> None:
         super().__init__(config)
         self.num_labels = config.num_labels
         self.pos_weight = config.pos_weight
@@ -421,9 +474,9 @@ class GPNForTokenClassification(GPNPreTrainedModel):
 
     def forward(
         self,
-        input_ids: torch.LongTensor | None = None,
-        aux_features=None,
-        labels: torch.LongTensor | None = None,
+        input_ids: Int[Tensor, "batch position"] | None = None,
+        aux_features: Tensor | None = None,
+        labels: Tensor | None = None,
     ) -> TokenClassifierOutput:
         x = self.model(input_ids=input_ids, aux_features=aux_features).last_hidden_state
         x = self.dropout(x)
@@ -442,7 +495,7 @@ class GPNForTokenClassification(GPNPreTrainedModel):
 
 
 class ConvNetMLMHead(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config: ConvNetConfig) -> None:
         super().__init__()
         self.decoder = nn.Sequential(
             nn.Linear(config.hidden_size, config.hidden_size),
@@ -451,21 +504,27 @@ class ConvNetMLMHead(nn.Module):
             nn.Linear(config.hidden_size, config.vocab_size),
         )
 
-    def forward(self, hidden_state):
+    def forward(
+        self, hidden_state: Float[Tensor, "... position hidden"]
+    ) -> Float[Tensor, "... position nucleotide"]:
         return self.decoder(hidden_state)
 
 
 class ConvNetClassificationHead(nn.Module):
     """Head used by the published sorghum sequence-classification models."""
 
-    def __init__(self, config):
+    def __init__(self, config: ConvNetConfig) -> None:
         super().__init__()
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.out_proj = nn.Linear(config.hidden_size, config.num_labels)
         self.config = config
 
-    def forward(self, features, **kwargs):
+    def forward(
+        self,
+        features: Float[Tensor, "batch position hidden"],
+        **kwargs: Any,
+    ) -> Float[Tensor, "batch label"]:
         x = features.mean(axis=1)
         x = self.dropout(x)
         x = self.dense(x)
@@ -481,22 +540,22 @@ class ConvNetConfig(PretrainedConfig):
 
     def __init__(
         self,
-        vocab_size=7,
-        hidden_size=512,
-        n_layers=25,
-        kernel_size=9,
-        dilation_double_every=1,
-        dilation_max=32,
-        dilation_cycle=6,
-        dilation_base=2,
-        initializer_range=0.02,
-        n_aux_features=0,
-        aux_features_vocab_size=5,
-        hidden_dropout_prob=0.1,
-        hidden_act="gelu",
-        regression_softplus=False,
-        **kwargs,
-    ):
+        vocab_size: int = 7,
+        hidden_size: int = 512,
+        n_layers: int = 25,
+        kernel_size: int = 9,
+        dilation_double_every: int = 1,
+        dilation_max: int = 32,
+        dilation_cycle: int = 6,
+        dilation_base: int = 2,
+        initializer_range: float = 0.02,
+        n_aux_features: int = 0,
+        aux_features_vocab_size: int | None = 5,
+        hidden_dropout_prob: float = 0.1,
+        hidden_act: str = "gelu",
+        regression_softplus: bool = False,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(**kwargs)
         self.vocab_size = vocab_size
         self.n_layers = n_layers
@@ -519,7 +578,7 @@ class ConvNetPreTrainedModel(PreTrainedModel):
     base_model_prefix = "model"
     _keys_to_ignore_on_load_missing = [r"position_ids"]
 
-    def _init_weights(self, module):
+    def _init_weights(self, module: nn.Module) -> None:
         if isinstance(module, nn.Linear):
             module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
             if module.bias is not None:
@@ -534,13 +593,17 @@ class ConvNetPreTrainedModel(PreTrainedModel):
 
 
 class _TransposeLayer(nn.Module):
-    def forward(self, x):
+    def forward(
+        self, x: Float[Tensor, "batch first second"]
+    ) -> Float[Tensor, "batch second first"]:
         return torch.transpose(x, 1, 2)
 
 
 class _ConvLayer(nn.Module):
-    def __init__(self, hidden_size=None, **kwargs):
+    def __init__(self, hidden_size: int | None = None, **kwargs: Any) -> None:
         super().__init__()
+        if hidden_size is None:
+            raise ValueError("hidden_size is required")
         self.conv = nn.Sequential(
             _TransposeLayer(),
             nn.Conv1d(
@@ -559,12 +622,14 @@ class _ConvLayer(nn.Module):
             nn.LayerNorm(hidden_size),
         )
 
-    def forward(self, x):
+    def forward(
+        self, x: Float[Tensor, "... position hidden"]
+    ) -> Float[Tensor, "... position hidden"]:
         x = x + self.conv(x)
         return x + self.ffn(x)
 
 
-def _get_dilation_schedule(config):
+def _get_dilation_schedule(config: ConvNetConfig) -> list[int]:
     return [
         min(
             config.dilation_base ** (i // config.dilation_double_every),
@@ -575,7 +640,7 @@ def _get_dilation_schedule(config):
 
 
 class ConvNetModel(ConvNetPreTrainedModel):
-    def __init__(self, config, **kwargs):
+    def __init__(self, config: ConvNetConfig, **kwargs: Any) -> None:
         super().__init__(config)
         self.config = config
         self.embedding = OneHotAuxEmbedding(config)
@@ -592,7 +657,13 @@ class ConvNetModel(ConvNetPreTrainedModel):
         )
         self.post_init()
 
-    def forward(self, input_ids=None, input_probs=None, aux_features=None, **kwargs):
+    def forward(
+        self,
+        input_ids: Int[Tensor, "... position"] | None = None,
+        input_probs: Float[Tensor, "... position nucleotide"] | None = None,
+        aux_features: Tensor | None = None,
+        **kwargs: Any,
+    ) -> BaseModelOutput:
         x = self.embedding(
             input_ids=input_ids,
             input_probs=input_probs,
@@ -602,14 +673,20 @@ class ConvNetModel(ConvNetPreTrainedModel):
 
 
 class ConvNetForMaskedLM(ConvNetPreTrainedModel):
-    def __init__(self, config):
+    def __init__(self, config: ConvNetConfig) -> None:
         super().__init__(config)
         self.config = config
         self.model = ConvNetModel(config)
         self.cls = ConvNetMLMHead(config)
         self.post_init()
 
-    def forward(self, labels=None, output_probs=None, loss_weight=None, **kwargs):
+    def forward(
+        self,
+        labels: Int[Tensor, "..."] | None = None,
+        output_probs: Float[Tensor, "... nucleotide"] | None = None,
+        loss_weight: Float[Tensor, "..."] | None = None,
+        **kwargs: Any,
+    ) -> MaskedLMOutput:
         hidden_state = self.model(**kwargs).last_hidden_state
         logits = self.cls(hidden_state)
         loss = masked_lm_loss(
@@ -619,7 +696,7 @@ class ConvNetForMaskedLM(ConvNetPreTrainedModel):
 
 
 class ConvNetForSequenceClassification(ConvNetPreTrainedModel):
-    def __init__(self, config):
+    def __init__(self, config: ConvNetConfig) -> None:
         super().__init__(config)
         self.num_labels = config.num_labels
         self.model = ConvNetModel(config)
@@ -629,10 +706,10 @@ class ConvNetForSequenceClassification(ConvNetPreTrainedModel):
 
     def forward(
         self,
-        input_ids: torch.LongTensor | None = None,
-        labels: torch.LongTensor | None = None,
-        **kwargs,
-    ) -> SequenceClassifierOutput | tuple[torch.Tensor]:
+        input_ids: Int[Tensor, "batch position"] | None = None,
+        labels: Tensor | None = None,
+        **kwargs: Any,
+    ) -> SequenceClassifierOutput:
         hidden_state = self.model(input_ids=input_ids).last_hidden_state
         logits = self.classifier(hidden_state)
         if self.regression_softplus:

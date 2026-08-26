@@ -1,18 +1,40 @@
+from typing import Any, Protocol
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from jaxtyping import Float, Int
+from torch import Tensor
 from transformers.modeling_outputs import (
     BaseModelOutput,
 )
 
 
+class EncoderConfig(Protocol):
+    """GPN configuration fields consumed by convolutional encoders."""
+
+    dilation_max: int
+    dilation_base: int
+    dilation_cycle: int
+    dilation_double_every: int
+    num_hidden_layers: int
+    hidden_size: int
+    intermediate_size: int
+    first_kernel_size: int
+    rest_kernel_size: int
+    hidden_dropout_prob: float
+    bias: bool
+    depthwise: bool
+    slim: bool
+
+
 class TransposeLayer(nn.Module):
-    def __init__(
-        self,
-    ):
+    def __init__(self) -> None:
         super().__init__()
 
-    def forward(self, x):
+    def forward(
+        self, x: Float[Tensor, "batch first second"]
+    ) -> Float[Tensor, "batch second first"]:
         x = torch.transpose(x, 1, 2)
         return x
 
@@ -85,13 +107,17 @@ class TransposeLayer(nn.Module):
 class ConvLayer(nn.Module):
     def __init__(
         self,
-        hidden_size=None,
-        intermediate_size=None,
-        hidden_dropout_prob=None,
-        bias=None,
-        **kwargs,
-    ):
+        hidden_size: int | None = None,
+        intermediate_size: int | None = None,
+        hidden_dropout_prob: float | None = None,
+        bias: bool | None = None,
+        **kwargs: Any,
+    ) -> None:
         super().__init__()
+        if hidden_size is None or intermediate_size is None:
+            raise ValueError("hidden_size and intermediate_size are required")
+        if hidden_dropout_prob is None:
+            raise ValueError("hidden_dropout_prob is required")
         self.conv = nn.Sequential(
             nn.LayerNorm(hidden_size, bias=bias),
             TransposeLayer(),
@@ -115,7 +141,9 @@ class ConvLayer(nn.Module):
             nn.Dropout(hidden_dropout_prob),
         )
 
-    def forward(self, x):
+    def forward(
+        self, x: Float[Tensor, "... position hidden"]
+    ) -> Float[Tensor, "... position hidden"]:
         x = x + self.conv(x)
         x = x + self.ffn(x)
         return x
@@ -124,12 +152,14 @@ class ConvLayer(nn.Module):
 class ByteNetLayer(nn.Module):
     def __init__(
         self,
-        hidden_size=None,
-        slim=False,
-        bias=None,
-        **kwargs,
-    ):
+        hidden_size: int | None = None,
+        slim: bool = False,
+        bias: bool | None = None,
+        **kwargs: Any,
+    ) -> None:
         super().__init__()
+        if hidden_size is None:
+            raise ValueError("hidden_size is required")
         intermediate_size = hidden_size // 2 if slim else hidden_size
         self.layer = nn.Sequential(
             nn.LayerNorm(hidden_size, bias=bias),
@@ -151,7 +181,9 @@ class ByteNetLayer(nn.Module):
             nn.Linear(intermediate_size, hidden_size, bias=bias),
         )
 
-    def forward(self, x):
+    def forward(
+        self, x: Float[Tensor, "... position hidden"]
+    ) -> Float[Tensor, "... position hidden"]:
         x = x + self.layer(x)
         return x
 
@@ -159,16 +191,20 @@ class ByteNetLayer(nn.Module):
 class OneHotEmbedding(nn.Module):
     def __init__(
         self,
-        hidden_size=None,
-    ):
+        hidden_size: int | None = None,
+    ) -> None:
         super().__init__()
+        if hidden_size is None:
+            raise ValueError("hidden_size is required")
         self.hidden_size = hidden_size
 
-    def forward(self, x):
+    def forward(
+        self, x: Int[Tensor, "... position"]
+    ) -> Float[Tensor, "... position hidden"]:
         return F.one_hot(x, num_classes=self.hidden_size).float()
 
 
-def get_dilation_schedule(config):
+def get_dilation_schedule(config: EncoderConfig) -> list[int]:
     return [
         min(
             config.dilation_max,
@@ -180,7 +216,7 @@ def get_dilation_schedule(config):
 
 
 class ConvNetEncoder(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config: EncoderConfig) -> None:
         super().__init__()
         dilation_schedule = get_dilation_schedule(config)
         print(f"{dilation_schedule=}")
@@ -203,13 +239,15 @@ class ConvNetEncoder(nn.Module):
             ]
         )
 
-    def forward(self, hidden_states):
+    def forward(
+        self, hidden_states: Float[Tensor, "... position hidden"]
+    ) -> BaseModelOutput:
         hidden_states = self.layer(hidden_states)
         return BaseModelOutput(last_hidden_state=hidden_states)
 
 
 class ByteNetEncoder(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config: EncoderConfig) -> None:
         super().__init__()
         dilation_schedule = get_dilation_schedule(config)
         print(f"{dilation_schedule=}")
@@ -231,13 +269,15 @@ class ByteNetEncoder(nn.Module):
             ]
         )
 
-    def forward(self, hidden_states):
+    def forward(
+        self, hidden_states: Float[Tensor, "... position hidden"]
+    ) -> BaseModelOutput:
         hidden_states = self.layer(hidden_states)
         return BaseModelOutput(last_hidden_state=hidden_states)
 
 
 class MLP(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size):
+    def __init__(self, input_size: int, hidden_size: int, output_size: int) -> None:
         super().__init__()
         self.layer = nn.Sequential(
             nn.LayerNorm(input_size, bias=False),
@@ -250,15 +290,22 @@ class MLP(nn.Module):
         else:
             self.shortcut = nn.Identity()
 
-    def forward(self, x):
+    def forward(self, x: Float[Tensor, "... input"]) -> Float[Tensor, "... output"]:
         return self.shortcut(x) + self.layer(x)
 
 
 class CNN(nn.Module):
     def __init__(
-        self, input_size, hidden_size, output_size, kernel_size=None, **kwargs
-    ):
+        self,
+        input_size: int,
+        hidden_size: int,
+        output_size: int,
+        kernel_size: int | None = None,
+        **kwargs: Any,
+    ) -> None:
         super().__init__()
+        if kernel_size is None:
+            raise ValueError("kernel_size is required")
         self.layer = nn.Sequential(
             nn.LayerNorm(input_size, bias=False),
             TransposeLayer(),
@@ -279,5 +326,7 @@ class CNN(nn.Module):
         else:
             self.shortcut = nn.Identity()
 
-    def forward(self, x):
+    def forward(
+        self, x: Float[Tensor, "... position input"]
+    ) -> Float[Tensor, "... position output"]:
         return self.shortcut(x) + self.layer(x)

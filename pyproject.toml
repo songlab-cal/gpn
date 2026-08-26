@@ -90,6 +90,7 @@ dev = [
   "pre-commit>=4.2",
   "pytest>=8.3",
   "ruff>=0.16.3",
+  "types-networkx>=3.6",
   "types-pyyaml>=6.0.12.20250915",
   "twine>=6",
 ]
@@ -127,21 +128,7 @@ markers = [
 
 [tool.mypy]
 python_version = "3.13"
-files = [
-  "src/gpn/cli.py",
-  "src/gpn/_registration.py",
-  "src/gpn/arguments.py",
-  "src/gpn/checkpoint.py",
-  "src/gpn/inference.py",
-  "src/gpn/ss/data.py",
-  "src/gpn/ss/inference.py",
-  "src/gpn/msa/data.py",
-  "src/gpn/msa/inference.py",
-  "src/gpn/star/data.py",
-  "src/gpn/star/inference.py",
-  "src/gpn/scoring.py",
-  "src/gpn/training.py",
-]
+files = ["src/gpn"]
 follow_imports = "skip"
 check_untyped_defs = true
 disallow_untyped_defs = true
@@ -189,12 +176,21 @@ extend-exclude = ["*.ipynb"]
 select = ["E4", "E7", "E9", "F", "I"]
 
 [tool.ruff.lint.per-file-ignores]
-# Legacy checkpoint classes are intentionally re-exported after their replacements.
-"src/gpn/model.py" = ["E402"]
 # Pyflakes parses jaxtyping's runtime shape strings as forward annotations.
+"src/gpn/data.py" = ["F722"]
+"src/gpn/embeddings.py" = ["F722"]
+"src/gpn/losses.py" = ["F722"]
+"src/gpn/msa/inference.py" = ["F722"]
+"src/gpn/msa/model.py" = ["F722"]
 "src/gpn/phylo/model.py" = ["F722"]
 "src/gpn/scoring.py" = ["F722"]
+"src/gpn/ss/inference.py" = ["F722"]
+"src/gpn/ss/model.py" = ["F722"]
+"src/gpn/ss/modules.py" = ["F722"]
+"src/gpn/star/inference.py" = ["F722"]
+"src/gpn/star/model.py" = ["F722"]
 "src/gpn/star/train.py" = ["F722"]
+"src/gpn/star/utils.py" = ["F722"]
 
 [tool.uv]
 default-groups = []

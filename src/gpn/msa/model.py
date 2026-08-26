@@ -1,8 +1,12 @@
 """Deprecated GPN-MSA model definitions for inference compatibility."""
 
+from typing import Any
+
 import torch.nn as nn
+from jaxtyping import Float, Int
+from torch import Tensor
 from transformers import PreTrainedModel, RoFormerConfig
-from transformers.modeling_outputs import MaskedLMOutput
+from transformers.modeling_outputs import BaseModelOutput, MaskedLMOutput
 from transformers.models.roformer.modeling_roformer import (
     RoFormerEncoder,
     RoFormerOnlyMLMHead,
@@ -24,12 +28,12 @@ class GPNMSAConfig(RoFormerConfig):
 
     def __init__(
         self,
-        vocab_size=6,
-        aux_features_vocab_size=5,
-        n_aux_features=0,
-        group_tokens=1,
-        **kwargs,
-    ):
+        vocab_size: int = 6,
+        aux_features_vocab_size: int | None = 5,
+        n_aux_features: int = 0,
+        group_tokens: int = 1,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(**kwargs)
         self.vocab_size = vocab_size
         self.aux_features_vocab_size = aux_features_vocab_size
@@ -41,7 +45,7 @@ class GPNMSAPreTrainedModel(PreTrainedModel):
     config_class = GPNMSAConfig
     base_model_prefix = "model"
 
-    def _init_weights(self, module):
+    def _init_weights(self, module: nn.Module) -> None:
         if isinstance(module, nn.Linear):
             module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
             if module.bias is not None:
@@ -56,20 +60,28 @@ class GPNMSAPreTrainedModel(PreTrainedModel):
             module.bias.data.zero_()
             module.weight.data.fill_(1.0)
 
-    def _set_gradient_checkpointing(self, module, value=False):
+    def _set_gradient_checkpointing(
+        self, module: nn.Module, value: bool = False
+    ) -> None:
         if isinstance(module, RoFormerEncoder):
             module.gradient_checkpointing = value
 
 
 class GPNMSAModel(GPNMSAPreTrainedModel):
-    def __init__(self, config):
+    def __init__(self, config: GPNMSAConfig) -> None:
         super().__init__(config)
         self.config = config
         self.embedding = OneHotAuxEmbedding(config)
         self.encoder = RoFormerEncoder(config)
         self.post_init()
 
-    def forward(self, input_ids=None, input_probs=None, aux_features=None, **kwargs):
+    def forward(
+        self,
+        input_ids: Int[Tensor, "... position"] | None = None,
+        input_probs: Float[Tensor, "... position nucleotide"] | None = None,
+        aux_features: Tensor | None = None,
+        **kwargs: Any,
+    ) -> BaseModelOutput:
         x = self.embedding(
             input_ids=input_ids,
             input_probs=input_probs,
@@ -85,13 +97,19 @@ class GPNMSAForMaskedLM(GPNMSAPreTrainedModel):
         "cls.predictions.decoder.bias": "cls.predictions.bias",
     }
 
-    def __init__(self, config):
+    def __init__(self, config: GPNMSAConfig) -> None:
         super().__init__(config)
         self.model = GPNMSAModel(config)
         self.cls = RoFormerOnlyMLMHead(config)
         self.post_init()
 
-    def forward(self, labels=None, output_probs=None, loss_weight=None, **kwargs):
+    def forward(
+        self,
+        labels: Int[Tensor, "..."] | None = None,
+        output_probs: Float[Tensor, "... nucleotide"] | None = None,
+        loss_weight: Float[Tensor, "..."] | None = None,
+        **kwargs: Any,
+    ) -> MaskedLMOutput:
         hidden_state = self.model(**kwargs).last_hidden_state
         logits = self.cls(hidden_state)
         loss = masked_lm_loss(

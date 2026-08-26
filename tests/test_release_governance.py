@@ -190,6 +190,18 @@ def test_transformers_version_is_pinned_to_the_validated_runtime() -> None:
     assert '--no-deps "transformers==' not in ci
 
 
+def test_static_quality_checks_cover_the_full_package() -> None:
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text())
+    assert project["tool"]["mypy"]["files"] == ["src/gpn"]
+
+    pre_commit = (ROOT / ".pre-commit-config.yaml").read_text()
+    assert "- id: ruff-check\n" in pre_commit
+    assert "- id: ruff-format\n" in pre_commit
+    assert "name: mypy full package" in pre_commit
+    assert "pass_filenames: false" in pre_commit
+    assert "files: ^(pyproject\\.toml|src/gpn/.*\\.py)$" in pre_commit
+
+
 def test_release_version_metadata_is_consistent() -> None:
     project = tomllib.loads((ROOT / "pyproject.toml").read_text())
     lock = tomllib.loads((ROOT / "uv.lock").read_text())

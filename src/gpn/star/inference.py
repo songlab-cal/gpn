@@ -9,6 +9,8 @@ import numpy as np
 import pandas as pd
 import torch
 from datasets import Dataset, disable_caching
+from jaxtyping import Float, Int
+from torch import Tensor
 from transformers import AutoModel, AutoModelForMaskedLM, TrainingArguments
 
 from gpn import register_auto_classes
@@ -45,13 +47,13 @@ class MLMforVEPModel(torch.nn.Module):
 
     def get_llr(
         self,
-        input_ids: torch.Tensor,
-        source_ids: torch.Tensor,
-        target_species: torch.Tensor,
-        pos: torch.Tensor,
-        ref: torch.Tensor,
-        alt: torch.Tensor,
-    ) -> torch.Tensor:
+        input_ids: Int[Tensor, "batch position target"],
+        source_ids: Int[Tensor, "batch position species"],
+        target_species: Int[Tensor, "batch target"],
+        pos: Int[Tensor, "... batch"],
+        ref: Int[Tensor, "... batch"],
+        alt: Int[Tensor, "... batch"],
+    ) -> Float[Tensor, "... batch"]:
         logits = self.model(
             input_ids=input_ids,
             source_ids=source_ids,
@@ -63,18 +65,18 @@ class MLMforVEPModel(torch.nn.Module):
 
     def forward(
         self,
-        input_ids_fwd: torch.Tensor | None = None,
-        source_ids_fwd: torch.Tensor | None = None,
-        pos_fwd: torch.Tensor | None = None,
-        ref_fwd: torch.Tensor | None = None,
-        alt_fwd: torch.Tensor | None = None,
-        input_ids_rev: torch.Tensor | None = None,
-        source_ids_rev: torch.Tensor | None = None,
-        pos_rev: torch.Tensor | None = None,
-        ref_rev: torch.Tensor | None = None,
-        alt_rev: torch.Tensor | None = None,
-        target_species: torch.Tensor | None = None,
-    ) -> torch.Tensor:
+        input_ids_fwd: Int[Tensor, "batch position target"] | None = None,
+        source_ids_fwd: Int[Tensor, "batch position species"] | None = None,
+        pos_fwd: Int[Tensor, "... batch"] | None = None,
+        ref_fwd: Int[Tensor, "... batch"] | None = None,
+        alt_fwd: Int[Tensor, "... batch"] | None = None,
+        input_ids_rev: Int[Tensor, "batch position target"] | None = None,
+        source_ids_rev: Int[Tensor, "batch position species"] | None = None,
+        pos_rev: Int[Tensor, "... batch"] | None = None,
+        ref_rev: Int[Tensor, "... batch"] | None = None,
+        alt_rev: Int[Tensor, "... batch"] | None = None,
+        target_species: Int[Tensor, "batch target"] | None = None,
+    ) -> Float[Tensor, "... batch"]:
         llr_fwd = self.get_llr(
             input_ids_fwd,
             source_ids_fwd,
@@ -114,11 +116,11 @@ class MLMforLogitsModel(torch.nn.Module):
 
     def get_logits(
         self,
-        input_ids: torch.Tensor,
-        source_ids: torch.Tensor,
-        target_species: torch.Tensor,
-        pos: torch.Tensor,
-    ) -> torch.Tensor:
+        input_ids: Int[Tensor, "batch position target"],
+        source_ids: Int[Tensor, "batch position species"],
+        target_species: Int[Tensor, "batch target"],
+        pos: Int[Tensor, "... batch"],
+    ) -> Float[Tensor, "batch nucleotide"]:
         logits = self.model(
             input_ids=input_ids,
             source_ids=source_ids,
@@ -128,14 +130,14 @@ class MLMforLogitsModel(torch.nn.Module):
 
     def forward(
         self,
-        input_ids_fwd: torch.Tensor | None = None,
-        source_ids_fwd: torch.Tensor | None = None,
-        pos_fwd: torch.Tensor | None = None,
-        input_ids_rev: torch.Tensor | None = None,
-        source_ids_rev: torch.Tensor | None = None,
-        pos_rev: torch.Tensor | None = None,
-        target_species: torch.Tensor | None = None,
-    ) -> torch.Tensor:
+        input_ids_fwd: Int[Tensor, "batch position target"] | None = None,
+        source_ids_fwd: Int[Tensor, "batch position species"] | None = None,
+        pos_fwd: Int[Tensor, "... batch"] | None = None,
+        input_ids_rev: Int[Tensor, "batch position target"] | None = None,
+        source_ids_rev: Int[Tensor, "batch position species"] | None = None,
+        pos_rev: Int[Tensor, "... batch"] | None = None,
+        target_species: Int[Tensor, "batch target"] | None = None,
+    ) -> Float[Tensor, "batch nucleotide"]:
         a, c, g, t = self.nucleotide_ids
         logits_fwd = self.get_logits(
             input_ids_fwd, source_ids_fwd, target_species, pos_fwd
@@ -163,10 +165,10 @@ class ModelCenterEmbedding(torch.nn.Module):
 
     def get_center_embedding(
         self,
-        input_ids: torch.Tensor,
-        source_ids: torch.Tensor,
-        target_species: torch.Tensor,
-    ) -> torch.Tensor:
+        input_ids: Int[Tensor, "batch position target"],
+        source_ids: Int[Tensor, "batch position species"],
+        target_species: Int[Tensor, "batch target"],
+    ) -> Float[Tensor, "batch target hidden"]:
         embedding = self.model(
             input_ids=input_ids,
             source_ids=source_ids,
@@ -181,12 +183,12 @@ class ModelCenterEmbedding(torch.nn.Module):
 
     def forward(
         self,
-        input_ids_fwd: torch.Tensor | None = None,
-        input_ids_rev: torch.Tensor | None = None,
-        source_ids_fwd: torch.Tensor | None = None,
-        source_ids_rev: torch.Tensor | None = None,
-        target_species: torch.Tensor | None = None,
-    ) -> torch.Tensor:
+        input_ids_fwd: Int[Tensor, "batch position target"] | None = None,
+        input_ids_rev: Int[Tensor, "batch position target"] | None = None,
+        source_ids_fwd: Int[Tensor, "batch position species"] | None = None,
+        source_ids_rev: Int[Tensor, "batch position species"] | None = None,
+        target_species: Int[Tensor, "batch target"] | None = None,
+    ) -> Float[Tensor, "batch target hidden"]:
         embedding_fwd = self.get_center_embedding(
             input_ids_fwd, source_ids_fwd, target_species
         )

@@ -1,13 +1,18 @@
+from collections.abc import Sequence
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn.functional as F
+from jaxtyping import Bool, Float, Int, Num
 from numpy.lib.stride_tricks import sliding_window_view
+from torch import Tensor
 
 
-def max_smooth(arr, window_size):
+def max_smooth(
+    arr: Num[np.ndarray, "batch position"], window_size: int
+) -> Num[np.ndarray, "batch position"]:
     # assert window_size is odd
     assert window_size % 2 == 1
 
@@ -26,7 +31,10 @@ def max_smooth(arr, window_size):
     return np.max(windowed_arr, axis=-1).reshape(arr.shape)
 
 
-def calculate_clade_avg_nuc_freq(T, labels):
+def calculate_clade_avg_nuc_freq(
+    T: Int[Tensor, "batch position species nucleotide"],
+    labels: Int[Tensor, "... species"],
+) -> Float[Tensor, "batch position nucleotide"]:
     C = labels.unique().size(0)
 
     labels_onehot = F.one_hot(labels, num_classes=C).float()
@@ -39,7 +47,9 @@ def calculate_clade_avg_nuc_freq(T, labels):
     return avg_freqs
 
 
-def sample_nuc_from_freq(avg_freqs, N):
+def sample_nuc_from_freq(
+    avg_freqs: Float[Tensor, "batch position nucleotide"], N: int
+) -> Int[Tensor, "batch position sample"]:
     probs = avg_freqs / avg_freqs.sum(dim=2, keepdim=True)  # Shape: (B, L, V)
     B, L, V = probs.shape
 
@@ -52,7 +62,11 @@ def sample_nuc_from_freq(avg_freqs, N):
     return samples
 
 
-def get_all_species_mask(clade_mask, clade_indices, species_clade_indices):
+def get_all_species_mask(
+    clade_mask: Bool[Tensor, "batch position selected_clade"],
+    clade_indices: Int[Tensor, "batch selected_clade"],
+    species_clade_indices: Int[Tensor, "... species"],
+) -> Bool[Tensor, "batch position species"]:
     N = species_clade_indices.shape[0]
 
     clade_indices_expanded = clade_indices.unsqueeze(2)  # Shape: (B, C, 1)
@@ -77,7 +91,7 @@ def get_all_species_mask(clade_mask, clade_indices, species_clade_indices):
     return species_mask
 
 
-def find_directory_sum_paths(path_str):
+def find_directory_sum_paths(path_str: str | Path) -> dict[int, str]:
     # Preserve the logical directory name: SCF layouts commonly use a `100`
     # symlink whose target is named `99` (99 aligned species plus the target).
     root = Path(path_str).expanduser().absolute()
@@ -111,7 +125,7 @@ def find_directory_sum_paths(path_str):
     }
 
 
-def normalize_logits(logits):
+def normalize_logits(logits: pd.DataFrame) -> pd.DataFrame:
     logits_array = logits.values
 
     exp_logits = np.exp(logits_array)
@@ -122,7 +136,7 @@ def normalize_logits(logits):
     return pd.DataFrame(normalized_logits, columns=logits.columns, index=logits.index)
 
 
-def get_entropy(logits):
+def get_entropy(logits: pd.DataFrame) -> np.ndarray:
     logits_array = logits.values
 
     probs = np.exp(logits_array)
@@ -131,7 +145,11 @@ def get_entropy(logits):
     return entropy
 
 
-def get_llr(logits, ref, alt):
+def get_llr(
+    logits: pd.DataFrame,
+    ref: Sequence[str],
+    alt: Sequence[str],
+) -> np.ndarray:
     ref_logits = logits.values[
         np.arange(len(ref)), [logits.columns.get_loc(r) for r in ref]
     ]
