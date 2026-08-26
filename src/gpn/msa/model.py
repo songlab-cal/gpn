@@ -3,7 +3,7 @@
 from typing import Any
 
 import torch.nn as nn
-from jaxtyping import Float, Int
+from jaxtyping import Float, Int, Num
 from torch import Tensor
 from transformers import PreTrainedModel, RoFormerConfig
 from transformers.modeling_outputs import BaseModelOutput, MaskedLMOutput
@@ -79,7 +79,7 @@ class GPNMSAModel(GPNMSAPreTrainedModel):
         self,
         input_ids: Int[Tensor, "... position"] | None = None,
         input_probs: Float[Tensor, "... position nucleotide"] | None = None,
-        aux_features: Int[Tensor, "... position auxiliary"] | None = None,
+        aux_features: Num[Tensor, "... position auxiliary"] | None = None,
         **kwargs: Any,
     ) -> BaseModelOutput:
         x = self.embedding(

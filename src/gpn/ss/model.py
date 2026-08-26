@@ -5,7 +5,7 @@ from typing import Any
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from jaxtyping import Float, Int
+from jaxtyping import Float, Int, Num
 from torch import Tensor
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from transformers import (
@@ -327,7 +327,7 @@ class GPNModel(GPNPreTrainedModel):
         self,
         input_ids: Int[Tensor, "... position"] | None = None,
         input_probs: Float[Tensor, "... position nucleotide"] | None = None,
-        aux_features: Int[Tensor, "... position auxiliary"] | None = None,
+        aux_features: Num[Tensor, "... position auxiliary"] | None = None,
         **kwargs: Any,
     ) -> BaseModelOutput:
         x = self.embeddings(
@@ -405,7 +405,7 @@ class GPNForSequenceClassification(GPNPreTrainedModel):
     def forward(
         self,
         input_ids: Int[Tensor, "batch position"] | None = None,
-        aux_features: Int[Tensor, "batch position auxiliary"] | None = None,
+        aux_features: Num[Tensor, "batch position auxiliary"] | None = None,
         labels: Tensor | None = None,
     ) -> SequenceClassifierOutput:
         r"""
@@ -475,7 +475,7 @@ class GPNForTokenClassification(GPNPreTrainedModel):
     def forward(
         self,
         input_ids: Int[Tensor, "batch position"] | None = None,
-        aux_features: Int[Tensor, "batch position auxiliary"] | None = None,
+        aux_features: Num[Tensor, "batch position auxiliary"] | None = None,
         labels: Tensor | None = None,
     ) -> TokenClassifierOutput:
         x = self.model(input_ids=input_ids, aux_features=aux_features).last_hidden_state
@@ -661,7 +661,7 @@ class ConvNetModel(ConvNetPreTrainedModel):
         self,
         input_ids: Int[Tensor, "... position"] | None = None,
         input_probs: Float[Tensor, "... position nucleotide"] | None = None,
-        aux_features: Int[Tensor, "... position auxiliary"] | None = None,
+        aux_features: Num[Tensor, "... position auxiliary"] | None = None,
         **kwargs: Any,
     ) -> BaseModelOutput:
         x = self.embedding(

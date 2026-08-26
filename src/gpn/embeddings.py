@@ -4,7 +4,7 @@ from typing import Protocol
 
 import torch.nn as nn
 import torch.nn.functional as F
-from jaxtyping import Float, Int
+from jaxtyping import Float, Int, Num
 from torch import Tensor
 
 
@@ -30,7 +30,7 @@ class OneHotAuxEmbedding(nn.Module):
         self,
         input_ids: Int[Tensor, "... position"] | None = None,
         input_probs: Float[Tensor, "... position nucleotide"] | None = None,
-        aux_features: Int[Tensor, "... position auxiliary"] | None = None,
+        aux_features: Num[Tensor, "... position auxiliary"] | None = None,
     ) -> Float[Tensor, "... position hidden"]:
         if input_ids is not None:
             result = F.one_hot(input_ids, num_classes=self.config.hidden_size).float()
