@@ -3,7 +3,7 @@
 GPN follows Semantic Versioning. Package releases are distinct from immutable
 Hugging Face model revisions.
 
-## 0.9.0 — 2026-08-25
+## 0.9.0 — 2026-08-26
 
 ### Added
 

@@ -1,8 +1,6 @@
 # GPN 0.9.0 review packet
 
-Status: **final release candidate; version 0.9.0 remains unreleased. Publishing
-the release still requires explicit approval of the exact final PR head and
-tree.**
+Status: **published on 2026-08-26 from the exact approved final PR tree.**
 
 The single pull request, [#100](https://github.com/songlab-cal/gpn/pull/100), was
 the binding review surface for the complete modernization. It was squash-merged
@@ -28,6 +26,24 @@ release binding.
 - GPN-MSA: deprecated inference only
 - Supported inference families: GPN, GPN-MSA, PhyloGPN, and GPN-Star; supported
   GPN checkpoints include the Sorghum gene-expression fine-tune
+
+## Publication result
+
+- Release commit: `007768a31618fa76c2c3db953e69cc2013f5a79c`
+- Release tree: `8595b87d599c3e7fcbfc599352b5c6ab9e2f8350`
+- Annotated tag object: `37ac68ce7b1d8b7365380401aa89993017864024`
+- GitHub Release: <https://github.com/songlab-cal/gpn/releases/tag/v0.9.0>
+- PyPI release: <https://pypi.org/project/gpn/0.9.0/>
+- Trusted Publishing workflow: <https://github.com/songlab-cal/gpn/actions/runs/32965467513>
+- Wheel SHA-256: `7a175368577a851593bacca774caa80da3185aea375a0ab25fcf12147ecddd47`
+- Source distribution SHA-256: `ad3c4ed9cc1013b26675b55f9f81b14329b5c4ef2344db1dd5d7725b52442316`
+
+The remote annotated tag object peels to the release commit above, whose tree is
+the exact approved release tree. The two published distributions match the
+immutable workflow artifact and pass PyPI attestation verification against
+`songlab-cal/gpn`. A clean Python 3.13 CPU installation from PyPI reports version
+`0.9.0`; the CLI and explicit AutoClass registration smoke tests pass. The hosted
+documentation remains available at <https://gpn.readthedocs.io/en/latest/>.
 
 ## Evidence reviewed
 

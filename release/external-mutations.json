@@ -1,7 +1,7 @@
 {
   "$schema": "./external-mutations.schema.json",
   "schema_version": 1,
-  "recorded_at": "2026-08-25",
+  "recorded_at": "2026-08-26",
   "repository": "songlab-cal/gpn",
   "applied": [
     {
@@ -135,39 +135,26 @@
         "the tag peels to commit 30dee6cf45849dfdcfc043ca8baf44fd6ba51d74",
         "the public release states that the archived code is historical and unsupported"
       ]
-    }
-  ],
-  "pending": [
+    },
     {
       "id": "publish-gpn-0-9-0",
-      "system": "github",
-      "authorization": "explicit_final_maintainer_approval",
-      "disposition": "approval_ready",
-      "operation": "publish GitHub Release v0.9.0 from the exact approved main commit, triggering the Trusted Publishing workflow",
+      "system": "pypi",
+      "operation": "published GPN 0.9.0 through the approved GitHub Release and PyPI Trusted Publishing workflow",
       "targets": [
-        "songlab-cal/gpn@v0.9.0",
-        "https://pypi.org/project/gpn/0.9.0/"
+        "https://github.com/songlab-cal/gpn/releases/tag/v0.9.0",
+        "https://pypi.org/project/gpn/0.9.0/",
+        "tag object 37ac68ce7b1d8b7365380401aa89993017864024",
+        "commit 007768a31618fa76c2c3db953e69cc2013f5a79c"
       ],
-      "source": "release/0.9.0/review.md",
-      "depends_on": [
-        "merge-modernization-pr",
-        "protect-main",
-        "publish-analysis-archive"
-      ],
-      "preconditions": [
-        "the final release PR body records the exact approved head and tree and the maintainer approves that candidate",
-        "the resulting main commit is recorded after squash-merging the final release PR and has exactly the approved tree",
-        "the package version is exactly 0.9.0 and the tag target is the approved main commit",
-        "the final review packet records a clean Python 3.13 install plus wheel and sdist hashes",
-        "the release workflow and pypi environment are unchanged from the reviewed versions"
-      ],
-      "verification": [
-        "the workflow publishes exactly one wheel and one source distribution with PyPI attestations",
-        "a clean CPU install on Python 3.13 reproduces the documented package and model-registration smoke tests"
-      ],
-      "failure_response": [
-        "never overwrite artifacts or reuse the version; stop downstream writes, document the incident, yank if appropriate, and prepare a patch release"
+      "evidence": [
+        "the remote annotated tag object 37ac68ce7b1d8b7365380401aa89993017864024 peels to commit 007768a31618fa76c2c3db953e69cc2013f5a79c, whose tree is the approved tree 8595b87d599c3e7fcbfc599352b5c6ab9e2f8350",
+        "release workflow 32965467513 completed successfully from refs/tags/v0.9.0",
+        "wheel sha256 7a175368577a851593bacca774caa80da3185aea375a0ab25fcf12147ecddd47",
+        "sdist sha256 ad3c4ed9cc1013b26675b55f9f81b14329b5c4ef2344db1dd5d7725b52442316",
+        "both published files matched the immutable workflow artifact and passed PyPI attestation verification for songlab-cal/gpn",
+        "a clean Python 3.13 CPU installation from PyPI reported version 0.9.0 and passed CLI and explicit AutoClass-registration smoke tests"
       ]
     }
-  ]
+  ],
+  "pending": []
 }
