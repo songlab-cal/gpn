@@ -43,8 +43,8 @@ release binding.
   commit-pinned; institutional filesystem paths were not committed as supported
   configuration. The repository documentation inventories the assets in each
   model-family collection. Auditing and editing the Hub-hosted cards and
-  collection descriptions are deferred to issue #81 and absent from this
-  milestone.
+  collection descriptions are deferred to post-release issue #81 and are
+  intentionally outside this release candidate.
 - The historical-versus-current PhyloGPN output discrepancy is documented in
   issue #108. The current immutable 2026 checkpoint is reproducible through both
   the pinned Hub implementation and maintained local implementation; determining

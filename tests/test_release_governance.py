@@ -160,6 +160,7 @@ def test_release_workflow_uses_locked_isolated_trusted_publishing() -> None:
     workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text()
 
     assert "permissions:\n  contents: read" in workflow
+    assert "if: startsWith(github.event.release.tag_name, 'v')" in workflow
     assert "persist-credentials: false" in workflow
     assert "--only-group release --no-install-project" in workflow
     assert "uv build --no-build-isolation" in workflow

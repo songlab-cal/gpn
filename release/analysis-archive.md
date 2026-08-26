@@ -37,7 +37,7 @@ The `analysis/` count consists of 30 Brassicales files, 15 animal-promoter files
 60 GPN-MSA files, 83 GPN-Star files, 19 Sorghum-expression files, and the archive
 README.
 
-After the tag is published, inspect or check out the snapshot with:
+Inspect or check out the published snapshot with:
 
 ```bash
 git show analysis-archive-2026-08-18:analysis/ARCHIVE.md
