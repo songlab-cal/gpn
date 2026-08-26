@@ -6,9 +6,10 @@ operation, not the supported package.
 
 The historical research tree is preserved at commit
 `30dee6cf45849dfdcfc043ca8baf44fd6ba51d74` by the annotated tag
-`analysis-archive-2026-08-18`. The tag exists locally in the modernization candidate
-but must not be pushed or published as a GitHub release until final maintainer
-approval.
+`analysis-archive-2026-08-18`. The exact tag object
+`312a6c70de6700e729bcea4c9a67ab42a72f05f7` and its lightweight
+[GitHub Release](https://github.com/songlab-cal/gpn/releases/tag/analysis-archive-2026-08-18)
+were published and verified on 2026-08-25.
 
 ## Snapshot manifest
 
@@ -49,7 +50,7 @@ assets, and historical environments. Maintained replacements are the GPN and
 GPN-Star prepared-data recipes, published-model fixtures, and the supported
 model inference code. GPN-MSA training is intentionally not maintained.
 
-## Proposed GitHub release
+## Published GitHub release
 
 Title: `Historical GPN analysis archive (2026-08-18)`
 

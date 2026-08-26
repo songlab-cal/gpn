@@ -3,7 +3,7 @@
 GPN follows Semantic Versioning. Package releases are distinct from immutable
 Hugging Face model revisions.
 
-## 0.9.0 — Unreleased
+## 0.9.0 — 2026-08-25
 
 ### Added
 
@@ -13,7 +13,7 @@ Hugging Face model revisions.
 - Explicit AutoClass registration, a stable `gpn` CLI, uv-managed development,
   Ruff, package-wide mypy and jaxtyping, offline CI, and built-wheel checks.
 - A consistent family-first CLI for GPN, GPN-MSA, and GPN-Star inference.
-- Sphinx/MyST documentation prepared for Read the Docs.
+- Hosted Sphinx/MyST documentation on Read the Docs.
 - A maintainer release runbook, reviewable GitHub ruleset proposal, external-
   mutation manifest, and pull-request checklist.
 
@@ -39,8 +39,8 @@ Hugging Face model revisions.
 ### Removed
 
 - Historical paper analyses, dataset-building workflows, GPN-MSA training, and
-  retired notebooks from `main`. They remain available at the prepared
-  `analysis-archive-2026-08-18` tag, pending final publication approval.
+  retired notebooks from `main`. They remain available at the published
+  `analysis-archive-2026-08-18` tag.
 - The unsupported auxiliary-feature disabling flag, which represented an ablation
   rather than a maintained inference mode.
 

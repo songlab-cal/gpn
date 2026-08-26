@@ -92,88 +92,50 @@
         "the live root, model, tutorial, and citation pages returned HTTP 200",
         "the build used the committed .readthedocs.yaml and did not execute notebooks"
       ]
-    }
-  ],
-  "pending": [
+    },
     {
       "id": "protect-main",
       "system": "github",
-      "authorization": "explicit_final_maintainer_approval",
-      "disposition": "approval_ready",
-      "operation": "create the active repository ruleset after its required contexts exist on main",
+      "operation": "created the active Protect main repository ruleset",
       "targets": [
-        "songlab-cal/gpn:ruleset:Protect main"
+        "songlab-cal/gpn:ruleset:21510261"
       ],
-      "source": "release/main-ruleset.json",
-      "depends_on": [
-        "merge-modernization-pr"
-      ],
-      "preconditions": [
-        "the final CI workflow has reported all four required contexts named in release/main-ruleset.json on a pull request",
-        "squash merging remains enabled",
-        "no approval count or CODEOWNERS rule is added while there is one active maintainer"
-      ],
-      "verification": [
-        "the ruleset targets only the default branch and has no bypass actors",
-        "a direct push, force push, and branch deletion are blocked",
-        "a green up-to-date PR with resolved conversations can be squash-merged by the maintainer"
-      ],
-      "failure_response": [
-        "disable the ruleset through repository administration, record the reason, correct the payload through review, and re-enable it"
+      "evidence": [
+        "the active ruleset targets only the default branch and requires the four GitHub Actions contexts",
+        "squash is the only merge method; zero approvals are required; resolved conversations are required",
+        "require_extra_approval_for_unattributed_changes is explicitly false"
       ]
     },
     {
       "id": "enable-security-features",
       "system": "github",
-      "authorization": "explicit_final_maintainer_approval",
-      "disposition": "approval_ready",
-      "operation": "enable Dependabot security updates, secret scanning, secret-scanning validity checks, and push protection",
+      "operation": "enabled the reviewed repository security features",
       "targets": [
         "songlab-cal/gpn:security-and-analysis"
       ],
-      "source": "release/governance-audit-2026-08-19.md",
-      "depends_on": [
-        "merge-modernization-pr"
-      ],
-      "preconditions": [
-        "the merged tree removes the historical vulnerable manifest and pins the validated Transformers 5.15.0 runtime",
-        "the repository plan supports the selected public-repository security features"
-      ],
-      "verification": [
-        "the repository API reports each available feature enabled",
-        "the three historical Transformers alerts close without manual dismissal"
-      ],
-      "failure_response": [
-        "leave unavailable features documented and do not assume partial enablement"
+      "evidence": [
+        "Dependabot security updates are enabled",
+        "secret scanning, non-provider patterns, validity checks, and push protection are enabled",
+        "the repository API returned no open Dependabot alerts after the historical manifest left main"
       ]
     },
     {
       "id": "publish-analysis-archive",
       "system": "github",
-      "authorization": "explicit_final_maintainer_approval",
-      "disposition": "approval_ready",
-      "operation": "push the annotated historical archive tag and publish its lightweight GitHub Release",
+      "operation": "published the annotated historical archive tag and lightweight GitHub Release",
       "targets": [
-        "songlab-cal/gpn@analysis-archive-2026-08-18",
+        "https://github.com/songlab-cal/gpn/releases/tag/analysis-archive-2026-08-18",
         "tag object 312a6c70de6700e729bcea4c9a67ab42a72f05f7",
         "commit 30dee6cf45849dfdcfc043ca8baf44fd6ba51d74"
       ],
-      "source": "release/analysis-archive.md",
-      "depends_on": [
-        "merge-modernization-pr"
-      ],
-      "preconditions": [
-        "the archive manifest, annotated tag object 312a6c70de6700e729bcea4c9a67ab42a72f05f7, and peeled commit match the reviewed removal boundary",
-        "the release text states that the archived code is historical and unsupported"
-      ],
-      "verification": [
-        "the remote ref is object type tag with object ID 312a6c70de6700e729bcea4c9a67ab42a72f05f7 and peels to 30dee6cf45849dfdcfc043ca8baf44fd6ba51d74",
-        "the GitHub Release links the maintained replacement recipes and documentation"
-      ],
-      "failure_response": [
-        "do not rewrite a published archive tag; stop and request review before any corrective tag"
+      "evidence": [
+        "the remote ref is an annotated tag with object ID 312a6c70de6700e729bcea4c9a67ab42a72f05f7",
+        "the tag peels to commit 30dee6cf45849dfdcfc043ca8baf44fd6ba51d74",
+        "the public release states that the archived code is historical and unsupported"
       ]
-    },
+    }
+  ],
+  "pending": [
     {
       "id": "publish-gpn-0-9-0",
       "system": "github",
@@ -191,8 +153,8 @@
         "publish-analysis-archive"
       ],
       "preconditions": [
-        "the body of PR 100 records the exact approved tree and the maintainer repeats it in the approval",
-        "the resulting main commit is recorded after squash-merging PR 100 and has exactly the approved tree",
+        "the final release PR body records the exact approved head and tree and the maintainer approves that candidate",
+        "the resulting main commit is recorded after squash-merging the final release PR and has exactly the approved tree",
         "the package version is exactly 0.9.0 and the tag target is the approved main commit",
         "the final review packet records a clean Python 3.13 install plus wheel and sdist hashes",
         "the release workflow and pypi environment are unchanged from the reviewed versions"
