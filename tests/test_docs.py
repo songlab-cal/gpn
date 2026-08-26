@@ -29,3 +29,12 @@ def test_public_docs_are_attributed_to_song_lab():
 
     assert 'author = "Song Lab at UC Berkeley"' in sphinx_config
     assert "By Gonzalo Benegas" not in sphinx_config
+
+
+def test_public_documentation_links_use_read_the_docs():
+    readme = (ROOT / "README.md").read_text()
+    project = (ROOT / "pyproject.toml").read_text()
+
+    assert "https://gpn.readthedocs.io/" in readme
+    assert "github.com/songlab-cal/gpn/blob/main/docs" not in readme
+    assert 'Documentation = "https://gpn.readthedocs.io/"' in project
