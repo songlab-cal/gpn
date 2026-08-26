@@ -65,6 +65,13 @@ def test_external_mutation_ledger_covers_release_boundary() -> None:
     assert "https://pypi.org/project/gpn/0.9.0/" in publication["targets"]
     assert any("wheel sha256" in item for item in publication["evidence"])
     assert any("sdist sha256" in item for item in publication["evidence"])
+    assert (
+        "the remote annotated tag object "
+        "37ac68ce7b1d8b7365380401aa89993017864024 peels to commit "
+        "007768a31618fa76c2c3db953e69cc2013f5a79c, whose tree is the "
+        "approved tree 8595b87d599c3e7fcbfc599352b5c6ab9e2f8350"
+        in publication["evidence"]
+    )
 
     for action in ledger["pending"]:
         source = action.get("source")

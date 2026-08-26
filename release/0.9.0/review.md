@@ -38,11 +38,12 @@ release binding.
 - Wheel SHA-256: `7a175368577a851593bacca774caa80da3185aea375a0ab25fcf12147ecddd47`
 - Source distribution SHA-256: `ad3c4ed9cc1013b26675b55f9f81b14329b5c4ef2344db1dd5d7725b52442316`
 
-The two published distributions match the immutable workflow artifact and pass
-PyPI attestation verification against `songlab-cal/gpn`. A clean Python 3.13 CPU
-installation from PyPI reports version `0.9.0`; the CLI and explicit AutoClass
-registration smoke tests pass. The hosted documentation remains available at
-<https://gpn.readthedocs.io/en/latest/>.
+The remote annotated tag object peels to the release commit above, whose tree is
+the exact approved release tree. The two published distributions match the
+immutable workflow artifact and pass PyPI attestation verification against
+`songlab-cal/gpn`. A clean Python 3.13 CPU installation from PyPI reports version
+`0.9.0`; the CLI and explicit AutoClass registration smoke tests pass. The hosted
+documentation remains available at <https://gpn.readthedocs.io/en/latest/>.
 
 ## Evidence reviewed
 
