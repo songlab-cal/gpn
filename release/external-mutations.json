@@ -1,7 +1,7 @@
 {
   "$schema": "./external-mutations.schema.json",
   "schema_version": 1,
-  "recorded_at": "2026-08-19",
+  "recorded_at": "2026-08-25",
   "repository": "songlab-cal/gpn",
   "applied": [
     {
@@ -65,33 +65,36 @@
       "evidence": [
         "the 2026-08-19 repository API audit returned true"
       ]
-    }
-  ],
-  "pending": [
+    },
     {
       "id": "merge-modernization-pr",
       "system": "github",
-      "authorization": "explicit_final_maintainer_approval",
-      "disposition": "approval_ready",
-      "operation": "squash-merge the single approved modernization pull request",
+      "operation": "squash-merged the approved modernization pull request",
       "targets": [
-        "songlab-cal/gpn:main",
-        "songlab-cal/gpn#100"
+        "https://github.com/songlab-cal/gpn/pull/100",
+        "songlab-cal/gpn@ebb3df3548fc8f364c339f0e5ddad86330c1f949"
       ],
-      "source": "release/0.9.0/review.md",
-      "preconditions": [
-        "the body of PR 100 records the exact approved head and tree and the maintainer repeats both identifiers in the approval",
-        "all required checks pass on the exact PR head",
-        "the maintainer explicitly approves the complete diff and this ledger"
-      ],
-      "verification": [
-        "main has the same tree as the approved PR tip",
-        "PR 100 is merged without any additional code or configuration change"
-      ],
-      "failure_response": [
-        "stop at the first conflict or changed tree and return the revised complete diff for review"
+      "evidence": [
+        "the merge commit tree aebc93d290f5d202511827be724cec70acefe07a matched the reviewed PR tree",
+        "all four required GitHub Actions contexts passed on the approved head"
       ]
     },
+    {
+      "id": "publish-read-the-docs",
+      "system": "readthedocs",
+      "operation": "imported the repository and published the reviewed Sphinx site",
+      "targets": [
+        "https://app.readthedocs.org/projects/gpn/",
+        "https://gpn.readthedocs.io/en/latest/"
+      ],
+      "evidence": [
+        "Read the Docs build 34233153 succeeded for main commit ebb3df3548fc8f364c339f0e5ddad86330c1f949",
+        "the live root, model, tutorial, and citation pages returned HTTP 200",
+        "the build used the committed .readthedocs.yaml and did not execute notebooks"
+      ]
+    }
+  ],
+  "pending": [
     {
       "id": "protect-main",
       "system": "github",
@@ -200,34 +203,6 @@
       ],
       "failure_response": [
         "never overwrite artifacts or reuse the version; stop downstream writes, document the incident, yank if appropriate, and prepare a patch release"
-      ]
-    },
-    {
-      "id": "publish-read-the-docs",
-      "system": "readthedocs",
-      "authorization": "separate_future_maintainer_approval",
-      "disposition": "deferred",
-      "operation": "import the repository and publish the reviewed Sphinx site after onboarding details are fixed",
-      "targets": [
-        "songlab-cal/gpn"
-      ],
-      "source": ".readthedocs.yaml",
-      "depends_on": [
-        "publish-gpn-0-9-0"
-      ],
-      "blocked_by": [
-        "the maintainer must connect Read the Docs and select the exact public project slug"
-      ],
-      "preconditions": [
-        "the final strict offline Sphinx build passes",
-        "the exact public project slug is added to this ledger and reviewed"
-      ],
-      "verification": [
-        "the public site renders the model, demo, API, research, citation, and release pages",
-        "Read the Docs does not execute notebooks or download model/MSA assets"
-      ],
-      "failure_response": [
-        "leave repository Markdown canonical and correct previews through a pull request"
       ]
     }
   ]

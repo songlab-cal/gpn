@@ -66,6 +66,7 @@ train = [
 tracking = ["wandb>=0.18"]
 
 [project.urls]
+Documentation = "https://gpn.readthedocs.io/"
 Issues = "https://github.com/songlab-cal/gpn/issues"
 Repository = "https://github.com/songlab-cal/gpn"
 Changelog = "https://github.com/songlab-cal/gpn/blob/main/CHANGELOG.md"

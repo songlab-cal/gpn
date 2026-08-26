@@ -1,20 +1,23 @@
 # GPN 0.9.0 review packet
 
-Status: **review candidate; no merge, release, tag, setting change, deployment,
-or Hugging Face write is authorized by this file.**
+Status: **the modernization was merged to `main`; version 0.9.0 remains
+unreleased. No release, tag, repository-setting change, or Hugging Face write is
+authorized by this file.**
 
-The single pull request, [#100](https://github.com/songlab-cal/gpn/pull/100),
-against `main` is the binding review surface for the complete modernization. Its
-body records the exact head commit and Git tree after this packet is committed.
-Because a Git object cannot contain its own hash, those two identifiers cannot be
-embedded in this file; final maintainer approval must repeat both identifiers
-from the pull request body.
+The single pull request, [#100](https://github.com/songlab-cal/gpn/pull/100), was
+the binding review surface for the complete modernization. It was squash-merged
+as `ebb3df3548fc8f364c339f0e5ddad86330c1f949`; the resulting tree
+`aebc93d290f5d202511827be724cec70acefe07a` matched the approved PR tree. The
+subsequent documentation-hosting follow-up is reviewed separately and does not
+authorize the remaining release actions.
 
 ## Candidate boundary
 
 - Release version: `0.9.0`
 - Base `main`: `690557d949309cf4f4234554888bb5421c49aede`
 - Review PR: [#100](https://github.com/songlab-cal/gpn/pull/100)
+- Modernization merge: `ebb3df3548fc8f364c339f0e5ddad86330c1f949`
+- Reviewed modernization tree: `aebc93d290f5d202511827be724cec70acefe07a`
 - Maintained package: `src/gpn`
 - Historical analysis: removed from `main`; local annotated archive tag prepared,
   but publication remains approval-gated
@@ -65,12 +68,13 @@ contains this review packet and cannot contain its own stable hash.
 
 [`../external-mutations.json`](../external-mutations.json) is authoritative. Only
 entries marked `approval_ready` may be included in the final maintainer decision.
-Entries marked `deferred` remain unauthorized and require separate future review.
-Before asking for approval, the PR body must state:
+Entries marked `deferred`, if any, remain unauthorized and require separate
+future review. Before asking for approval for the remaining actions, the review
+surface must state:
 
-1. its exact head commit and tree;
+1. the exact current `main` commit and tree;
 2. the exact `approval_ready` action IDs requested; and
-3. that every `deferred` action is excluded.
+3. that every deferred action is excluded.
 
 Squash merging creates a new commit ID. After merging the single PR, verify that
 the resulting `main` tree equals the approved tree, record the new `main` commit,

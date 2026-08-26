@@ -34,13 +34,14 @@ def test_external_mutation_ledger_conforms_to_schema() -> None:
     deferred = [
         action for action in ledger["pending"] if action["disposition"] == "deferred"
     ]
-    assert ready and deferred
+    assert ready
     assert {action["authorization"] for action in ready} == {
         "explicit_final_maintainer_approval"
     }
-    assert {action["authorization"] for action in deferred} == {
-        "separate_future_maintainer_approval"
-    }
+    if deferred:
+        assert {action["authorization"] for action in deferred} == {
+            "separate_future_maintainer_approval"
+        }
     assert all(action["blocked_by"] for action in deferred)
 
 
@@ -50,17 +51,18 @@ def test_external_mutation_ledger_covers_release_boundary() -> None:
     applied = {action["id"]: action for action in ledger["applied"]}
 
     assert set(pending) == {
-        "merge-modernization-pr",
         "protect-main",
         "enable-security-features",
         "publish-analysis-archive",
         "publish-gpn-0-9-0",
-        "publish-read-the-docs",
     }
-    assert "pypi-trusted-publisher-binding" in applied
+    assert {
+        "pypi-trusted-publisher-binding",
+        "merge-modernization-pr",
+        "publish-read-the-docs",
+    } <= set(applied)
     assert pending["protect-main"]["source"] == "release/main-ruleset.json"
     assert pending["publish-gpn-0-9-0"]["source"] == "release/0.9.0/review.md"
-    assert pending["merge-modernization-pr"]["disposition"] == "approval_ready"
     assert pending["publish-gpn-0-9-0"]["disposition"] == "approval_ready"
 
     for action in ledger["pending"]:
@@ -88,7 +90,6 @@ def test_final_approval_has_an_exact_bounded_action_set() -> None:
     }
 
     assert ready_ids == {
-        "merge-modernization-pr",
         "protect-main",
         "enable-security-features",
         "publish-analysis-archive",
@@ -216,7 +217,7 @@ def test_release_review_uses_one_pull_request() -> None:
     ledger = _json("external-mutations.json")
     merge = next(
         action
-        for action in ledger["pending"]
+        for action in ledger["applied"]
         if action["id"] == "merge-modernization-pr"
     )
 
@@ -228,13 +229,10 @@ def test_release_review_uses_one_pull_request() -> None:
     assert "component-prs.json" not in review
     assert not (RELEASE_DIR / "0.9.0" / "component-prs.json").exists()
     assert merge["operation"] == (
-        "squash-merge the single approved modernization pull request"
+        "squash-merged the approved modernization pull request"
     )
-    assert merge["targets"] == ["songlab-cal/gpn:main", "songlab-cal/gpn#100"]
-    assert any(
-        "exact approved head and tree" in item for item in merge["preconditions"]
-    )
-    assert any("exact PR head" in item for item in merge["preconditions"])
+    assert "https://github.com/songlab-cal/gpn/pull/100" in merge["targets"]
+    assert any("matched the reviewed PR tree" in item for item in merge["evidence"])
 
     governance_text = "\n".join(
         (review, runbook, release_readme, json.dumps(ledger))

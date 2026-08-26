@@ -1,12 +1,13 @@
 # GPN — Genomic Pretrained Network
 
 [![CI](https://github.com/songlab-cal/gpn/actions/workflows/ci.yml/badge.svg)](https://github.com/songlab-cal/gpn/actions/workflows/ci.yml)
+[![Documentation](https://readthedocs.org/projects/gpn/badge/?version=latest)](https://gpn.readthedocs.io/)
 [![PyPI](https://img.shields.io/pypi/v/gpn)](https://pypi.org/project/gpn/)
 [![Python 3.13](https://img.shields.io/badge/Python-3.13-blue)](https://www.python.org/downloads/release/python-3130/)
 [![License](https://img.shields.io/github/license/songlab-cal/gpn)](https://github.com/songlab-cal/gpn/blob/main/LICENSE)
 
 [**Quick start**](#quick-start) · [**Model families**](#model-families) ·
-[**Demos**](#demos) · [**Documentation**](https://github.com/songlab-cal/gpn/blob/main/docs/index.md)
+[**Demos**](#demos) · [**Documentation**](https://gpn.readthedocs.io/)
 
 ![GPN-Star architecture, evolutionary scales, and genomic prediction tasks](docs/_static/gpn_star_overview.png)
 
@@ -28,16 +29,16 @@ register_auto_classes("star")
 model = AutoModelForMaskedLM.from_pretrained("songlab/gpn-star-hg38-v100-200m")
 ```
 
-Explore the [GPN-Star models, alignments, scores, and benchmark datasets](https://github.com/songlab-cal/gpn/blob/main/docs/models/gpn-star.md#published-assets).
+Explore the [GPN-Star models, alignments, scores, and benchmark datasets](https://gpn.readthedocs.io/en/latest/models/gpn-star/#published-assets).
 
 ## Model families
 
 | Model | Paper | Notes |
 | --- | --- | --- |
-| [GPN](https://github.com/songlab-cal/gpn/blob/main/docs/models/gpn.md) | [Benegas et al. 2023](https://doi.org/10.1073/pnas.2311219120) | Requires unaligned genomes |
-| [GPN-MSA](https://github.com/songlab-cal/gpn/blob/main/docs/models/gpn-msa.md) | [Benegas et al. 2025](https://www.nature.com/articles/s41587-024-02511-w) | Requires aligned genomes for training and inference; deprecated in favor of GPN-Star |
-| [PhyloGPN](https://github.com/songlab-cal/gpn/blob/main/docs/models/phylogpn.md) | [Albors et al. 2025](https://link.springer.com/chapter/10.1007/978-3-031-90252-9_7) | Uses an alignment during training, but does not require it for inference or fine-tuning |
-| [GPN-Star](https://github.com/songlab-cal/gpn/blob/main/docs/models/gpn-star.md) | [Ye et al. 2025](https://doi.org/10.1101/2025.09.21.677619) | Requires aligned genomes for training and inference |
+| [GPN](https://gpn.readthedocs.io/en/latest/models/gpn/) | [Benegas et al. 2023](https://doi.org/10.1073/pnas.2311219120) | Requires unaligned genomes |
+| [GPN-MSA](https://gpn.readthedocs.io/en/latest/models/gpn-msa/) | [Benegas et al. 2025](https://www.nature.com/articles/s41587-024-02511-w) | Requires aligned genomes for training and inference; deprecated in favor of GPN-Star |
+| [PhyloGPN](https://gpn.readthedocs.io/en/latest/models/phylogpn/) | [Albors et al. 2025](https://link.springer.com/chapter/10.1007/978-3-031-90252-9_7) | Uses an alignment during training, but does not require it for inference or fine-tuning |
+| [GPN-Star](https://gpn.readthedocs.io/en/latest/models/gpn-star/) | [Ye et al. 2025](https://doi.org/10.1101/2025.09.21.677619) | Requires aligned genomes for training and inference |
 
 ## Command line
 
@@ -49,7 +50,7 @@ gpn msa {vep,logits,embedding} ...
 gpn star {train,vep,logits,embedding} ...
 ```
 
-See the [CLI guide](https://github.com/songlab-cal/gpn/blob/main/docs/getting-started/cli.md) for inputs, outputs, and multi-GPU inference.
+See the [CLI guide](https://gpn.readthedocs.io/en/latest/getting-started/cli/) for inputs, outputs, and multi-GPU inference.
 
 ## Training
 
@@ -68,7 +69,7 @@ The paper analyses and retired research workflows are preserved in the [`analysi
 
 ## Development and help
 
-See the [documentation](https://github.com/songlab-cal/gpn/blob/main/docs/index.md), ask questions in [Discussions](https://github.com/songlab-cal/gpn/discussions), or report problems in [Issues](https://github.com/songlab-cal/gpn/issues).
+See the [documentation](https://gpn.readthedocs.io/), ask questions in [Discussions](https://github.com/songlab-cal/gpn/discussions), or report problems in [Issues](https://github.com/songlab-cal/gpn/issues).
 
 GPN is developed in the [Song Lab at UC Berkeley](https://people.eecs.berkeley.edu/~yss/group.html) and distributed under the [MIT License](https://github.com/songlab-cal/gpn/blob/main/LICENSE).
 
