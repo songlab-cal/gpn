@@ -38,7 +38,7 @@ dependencies = [
   "networkx>=3.2",
   "numpy>=1.26",
   "torch>=2.5",
-  "transformers==5.15.0",
+  "transformers==5.16.1",
 ]
 
 [project.scripts]
