@@ -43,16 +43,16 @@ Please cite the paper for each model or fine-tuned application you use.
 }
 ```
 
-## [GPN-Star](https://doi.org/10.1101/2025.09.21.677619)
+## [GPN-Star](https://www.nature.com/articles/s41586-026-11005-5)
 
 ```bibtex
-@article{ye2025predicting,
-  title={Predicting functional constraints across evolutionary timescales with phylogeny-informed genomic language models},
+@article{ye2026predicting,
+  title={Predicting genome-wide functional constraints with GPN-Star},
   author={Ye, Chengzhong and Benegas, Gonzalo and Albors, Carlos and Li, Jianan Canal and Prillo, Sebastian and Fields, Peter D and Clarke, Brian and Song, Yun S},
-  journal={bioRxiv},
-  pages={2025--09},
-  year={2025},
-  publisher={Cold Spring Harbor Laboratory}
+  journal={Nature},
+  pages={1--10},
+  year={2026},
+  publisher={Nature Publishing Group}
 }
 ```
 

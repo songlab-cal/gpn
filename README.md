@@ -11,7 +11,7 @@
 
 ![GPN-Star architecture, evolutionary scales, and genomic prediction tasks](docs/_static/gpn_star_overview.png)
 
-Code and resources for genomic language models [GPN](https://doi.org/10.1073/pnas.2311219120), [GPN-MSA](https://www.nature.com/articles/s41587-024-02511-w), [PhyloGPN](https://link.springer.com/chapter/10.1007/978-3-031-90252-9_7) and [GPN-Star](https://doi.org/10.1101/2025.09.21.677619).
+Code and resources for genomic language models [GPN](https://doi.org/10.1073/pnas.2311219120), [GPN-MSA](https://www.nature.com/articles/s41587-024-02511-w), [PhyloGPN](https://link.springer.com/chapter/10.1007/978-3-031-90252-9_7) and [GPN-Star](https://www.nature.com/articles/s41586-026-11005-5).
 
 ## Quick start
 
@@ -38,7 +38,7 @@ Explore the [GPN-Star models, alignments, scores, and benchmark datasets](https:
 | [GPN](https://gpn.readthedocs.io/en/latest/models/gpn/) | [Benegas et al. 2023](https://doi.org/10.1073/pnas.2311219120) | Requires unaligned genomes |
 | [GPN-MSA](https://gpn.readthedocs.io/en/latest/models/gpn-msa/) | [Benegas et al. 2025](https://www.nature.com/articles/s41587-024-02511-w) | Requires aligned genomes for training and inference; deprecated in favor of GPN-Star |
 | [PhyloGPN](https://gpn.readthedocs.io/en/latest/models/phylogpn/) | [Albors et al. 2025](https://link.springer.com/chapter/10.1007/978-3-031-90252-9_7) | Uses an alignment during training, but does not require it for inference or fine-tuning |
-| [GPN-Star](https://gpn.readthedocs.io/en/latest/models/gpn-star/) | [Ye et al. 2025](https://doi.org/10.1101/2025.09.21.677619) | Requires aligned genomes for training and inference |
+| [GPN-Star](https://gpn.readthedocs.io/en/latest/models/gpn-star/) | [Ye et al. 2026](https://www.nature.com/articles/s41586-026-11005-5) | Requires aligned genomes for training and inference |
 
 ## Command line
 
@@ -116,16 +116,16 @@ GPN is developed in the [Song Lab at UC Berkeley](https://people.eecs.berkeley.e
 }
 ```
 
-[GPN-Star](https://doi.org/10.1101/2025.09.21.677619):
+[GPN-Star](https://www.nature.com/articles/s41586-026-11005-5):
 
 ```bibtex
-@article{ye2025predicting,
-  title={Predicting functional constraints across evolutionary timescales with phylogeny-informed genomic language models},
+@article{ye2026predicting,
+  title={Predicting genome-wide functional constraints with GPN-Star},
   author={Ye, Chengzhong and Benegas, Gonzalo and Albors, Carlos and Li, Jianan Canal and Prillo, Sebastian and Fields, Peter D and Clarke, Brian and Song, Yun S},
-  journal={bioRxiv},
-  pages={2025--09},
-  year={2025},
-  publisher={Cold Spring Harbor Laboratory}
+  journal={Nature},
+  pages={1--10},
+  year={2026},
+  publisher={Nature Publishing Group}
 }
 ```
 

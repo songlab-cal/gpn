@@ -24,7 +24,7 @@ recipe lives in
 ## Published assets
 
 The [GPN-Star collection](https://huggingface.co/collections/songlab/gpn-star-68c0c055acc2ee51d5c4f129)
-accompanies the [bioRxiv paper](https://doi.org/10.1101/2025.09.21.677619).
+accompanies the [Nature paper](https://www.nature.com/articles/s41586-026-11005-5).
 
 ### Alignments and scores
 
