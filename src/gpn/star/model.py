@@ -265,6 +265,37 @@ class GPNStarSourceModule(nn.Module):
 
         return clade_pooled_source_ids
 
+    def split_info(
+        self,
+        source_ids: Int[Tensor, "batch position species"],
+        clade_dict: Mapping[int, set[int]],
+    ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+        """Singleton clades embed to embed[token], one of vocab_size rows.
+
+        Returns (multi_idx, single_idx, single_ids, embed_weight): the clade
+        positions that are pooled, the clade positions that are singletons,
+        the token ids of the singletons (B, L, n_single) and the table.
+        """
+        device = source_ids.device
+        key = (device.type, device.index)
+        cache = self.__dict__.setdefault("_split_cache", {})
+        sizes = [len(v) for v in clade_dict.values()]
+        hit = cache.get(key)
+        if hit is None or hit[0] != sizes:
+            multi = [i for i, n in enumerate(sizes) if n > 1]
+            single = [i for i, n in enumerate(sizes) if n == 1]
+            species = [list(v)[0] for v in clade_dict.values() if len(v) == 1]
+            hit = (
+                sizes,
+                torch.tensor(multi, dtype=torch.long, device=device),
+                torch.tensor(single, dtype=torch.long, device=device),
+                torch.tensor(species, dtype=torch.long, device=device),
+            )
+            cache[key] = hit
+        _, multi_idx, single_idx, species_idx = hit
+        single_ids = source_ids.index_select(-1, species_idx).to(torch.long)
+        return multi_idx, single_idx, single_ids, self.embed.weight
+
 
 class GPNStarColCrossAttention(nn.Module):
     def __init__(self, config: GPNStarConfig) -> None:
@@ -298,6 +329,29 @@ class GPNStarColCrossAttention(nn.Module):
         x = x.view(*new_x_shape)
         return x.transpose(-2, -3)
 
+    @staticmethod
+    def _project(
+        linear: nn.Linear,
+        source_embeddings: Tensor,
+        source_split: tuple[Tensor, Tensor, Tensor, Tensor] | None,
+    ) -> Tensor:
+        """linear(source_embeddings), running the GEMM on pooled clades only.
+
+        Singleton-clade rows are one of vocab_size vectors, so their output is
+        a gather from linear(embedding table).
+        """
+        if source_split is None:
+            return linear(source_embeddings)
+        multi_idx, single_idx, single_ids, embed_weight = source_split
+        pooled = linear(source_embeddings.index_select(2, multi_idx))
+        singles = F.embedding(single_ids, linear(embed_weight))
+        out = pooled.new_empty(
+            source_embeddings.shape[:-1] + (pooled.shape[-1],)
+        )
+        out.index_copy_(2, multi_idx, pooled)
+        out.index_copy_(2, single_idx, singles.to(out.dtype))
+        return out
+
     def forward(
         self,
         hidden_states: Float[Tensor, "batch position target hidden"],
@@ -305,12 +359,17 @@ class GPNStarColCrossAttention(nn.Module):
         attention_mask: Float[Tensor, "batch 1 1 target clade"] | None = None,
         evol_time_bias: Float[Tensor, "batch 1 head target clade"] | None = None,
         output_attentions: bool = False,
+        source_split: tuple[Tensor, Tensor, Tensor, Tensor] | None = None,
     ) -> tuple[Tensor, ...]:
         if attention_mask is None or evol_time_bias is None:
             raise ValueError("attention_mask and evol_time_bias are required")
         query_layer = self.transpose_for_scores(self.query(hidden_states))
-        key_layer = self.transpose_for_scores(self.key(source_embeddings))
-        value_layer = self.transpose_for_scores(self.value(source_embeddings))
+        key_layer = self.transpose_for_scores(
+            self._project(self.key, source_embeddings, source_split)
+        )
+        value_layer = self.transpose_for_scores(
+            self._project(self.value, source_embeddings, source_split)
+        )
 
         attention_mask = attention_mask + evol_time_bias.to(query_layer.dtype)
         # shape (B, L, A, T, D) x (B, L, A, D, C) -> (B, L, A, T, C)
@@ -401,6 +460,7 @@ class GPNStarColAttention(nn.Module):
         attention_mask: Float[Tensor, "batch 1 1 target clade"] | None = None,
         phylo_dist: Float[Tensor, "batch target clade"] | None = None,
         output_attentions: bool = False,
+        source_split: tuple[Tensor, Tensor, Tensor, Tensor] | None = None,
     ) -> tuple[Tensor, ...]:
         if phylo_dist is None:
             raise ValueError("phylo_dist is required")
@@ -412,6 +472,7 @@ class GPNStarColAttention(nn.Module):
             attention_mask=attention_mask,
             evol_time_bias=evol_time_bias,
             output_attentions=output_attentions,
+            source_split=source_split,
         )
         output: tuple[Tensor, ...] = (self.out(self_outputs[0], hidden_states),)
         if output_attentions:
@@ -680,6 +741,7 @@ class GPNStarAttention(nn.Module):
         past_key_value: tuple[Tensor, ...] | None = None,
         output_attentions: bool = False,
         query_positions: Tensor | None = None,
+        source_split: tuple[Tensor, Tensor, Tensor, Tensor] | None = None,
     ) -> tuple[Tensor, ...]:
         row_output = self.row_attention(
             hidden_states=hidden_states.transpose(-2, -3),
@@ -693,12 +755,14 @@ class GPNStarAttention(nn.Module):
                 -1, 1, source_embeddings.shape[-2], source_embeddings.shape[-1]
             )
             source_embeddings = source_embeddings.gather(1, idx)
+            source_split = None
         col_output = self.col_attention(
             hidden_states=row_output[0].transpose(-2, -3),
             source_embeddings=source_embeddings,
             attention_mask=attention_mask,
             phylo_dist=phylo_dist,
             output_attentions=output_attentions,
+            source_split=source_split,
         )
         out: tuple[Tensor, ...] = (col_output[0],)
         if output_attentions:
@@ -727,6 +791,7 @@ class GPNStarLayer(RoFormerLayer):
         past_key_value: tuple[Tensor, ...] | None = None,
         output_attentions: bool = False,
         query_positions: Tensor | None = None,
+        source_split: tuple[Tensor, Tensor, Tensor, Tensor] | None = None,
     ) -> tuple[Any, ...]:
         # decoder uni-directional self-attention cached key/values tuple is at positions 1,2
         self_attn_past_key_value = (
@@ -742,6 +807,7 @@ class GPNStarLayer(RoFormerLayer):
             output_attentions=output_attentions,
             past_key_value=self_attn_past_key_value,
             query_positions=query_positions,
+            source_split=source_split,
         )
         attention_output = self_attention_outputs[0]
 
@@ -823,6 +889,7 @@ class GPNStarEncoder(RoFormerEncoder):
         return_dict: bool = True,
         phylo_dist: Tensor | None = None,
         query_positions: Tensor | None = None,
+        source_split: tuple[Tensor, Tensor, Tensor, Tensor] | None = None,
         **kwargs: Any,
     ) -> BaseModelOutputWithRowAndColAttentions | tuple[Any, ...]:
         if output_attentions:
@@ -903,6 +970,7 @@ class GPNStarEncoder(RoFormerEncoder):
                     encoder_attention_mask,
                     past_key_value,
                     output_attentions,
+                    source_split=source_split,
                 )
 
             hidden_states = layer_outputs[0]
@@ -1158,6 +1226,9 @@ class GPNStarModel(GPNStarPreTrainedModel):
         source_embeddings = self.source_embedding(
             source_ids, clade_dict, in_clade_phylo_dist
         )  # (B, L, C, H)
+        source_split = None
+        if not (self.training and getattr(self.encoder, "gradient_checkpointing", False)):
+            source_split = self.source_embedding.split_info(source_ids, clade_dict)
 
         # Source-target phylo distance
         phylo_dist = phylo_dist_pairwise[target_species]  # (B, T, N)
@@ -1181,6 +1252,7 @@ class GPNStarModel(GPNStarPreTrainedModel):
             attention_mask=attention_mask,
             output_attentions=output_attentions,
             query_positions=query_positions,
+            source_split=source_split,
             **kwargs,
         )
         return x
