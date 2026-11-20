@@ -460,13 +460,36 @@ class GPNStarRowSelfAttention(nn.Module):
         | None = None,
         sinusoidal_pos: Float[Tensor, "1 1 position head_dimension"] | None = None,
         output_attentions: bool = False,
+        query_positions: Tensor | None = None,
     ) -> tuple[Tensor, ...]:
         # attention scores are only calculated wrt the human genome
-        query_layer = self.transpose_for_scores(self.query(hidden_states[:, :1, ...]))
+        if query_positions is not None:
+            # queries only at one position per batch element; keys and values
+            # still cover every position
+            idx = query_positions.view(-1, 1, 1, 1).expand(
+                -1, 1, 1, hidden_states.shape[-1]
+            )
+            query_input = hidden_states[:, :1, ...].gather(2, idx)
+        else:
+            query_input = hidden_states[:, :1, ...]
+        query_layer = self.transpose_for_scores(self.query(query_input))
         key_layer = self.transpose_for_scores(self.key(hidden_states[:, :1, ...]))
         value_layer = self.transpose_for_scores(self.value(hidden_states))
 
-        if sinusoidal_pos is not None:
+        if sinusoidal_pos is not None and query_positions is not None:
+            sin_q = sinusoidal_pos[0, 0][query_positions][:, None, None, None, :]
+            query_layer = self.apply_rotary_position_embeddings(
+                sin_q, query_layer, query_layer
+            )[0]
+            if self.rotary_value:
+                _, key_layer, value_layer = self.apply_rotary_position_embeddings(
+                    sinusoidal_pos, key_layer, key_layer, value_layer
+                )
+            else:
+                _, key_layer = self.apply_rotary_position_embeddings(
+                    sinusoidal_pos, key_layer, key_layer
+                )
+        elif sinusoidal_pos is not None:
             if self.rotary_value:
                 query_layer, key_layer, value_layer = (
                     self.apply_rotary_position_embeddings(
@@ -617,14 +640,22 @@ class GPNStarRowAttention(nn.Module):
         attention_mask: Tensor | None = None,
         sinusoidal_pos: Tensor | None = None,
         output_attentions: bool = False,
+        query_positions: Tensor | None = None,
     ) -> tuple[Tensor, ...]:
         self_outputs = self.self(
             hidden_states=hidden_states,
             attention_mask=attention_mask,
             sinusoidal_pos=sinusoidal_pos,
             output_attentions=output_attentions,
+            query_positions=query_positions,
         )
-        output: tuple[Tensor, ...] = (self.out(self_outputs[0], hidden_states),)
+        residual = hidden_states
+        if query_positions is not None:
+            idx = query_positions.view(-1, 1, 1, 1).expand(
+                -1, hidden_states.shape[1], 1, hidden_states.shape[-1]
+            )
+            residual = hidden_states.gather(2, idx)
+        output: tuple[Tensor, ...] = (self.out(self_outputs[0], residual),)
         if output_attentions:
             output = output + (self_outputs[1],)
         return output
@@ -648,13 +679,20 @@ class GPNStarAttention(nn.Module):
         encoder_attention_mask: Tensor | None = None,
         past_key_value: tuple[Tensor, ...] | None = None,
         output_attentions: bool = False,
+        query_positions: Tensor | None = None,
     ) -> tuple[Tensor, ...]:
         row_output = self.row_attention(
             hidden_states=hidden_states.transpose(-2, -3),
             attention_mask=None,
             sinusoidal_pos=sinusoidal_pos,
             output_attentions=output_attentions,
+            query_positions=query_positions,
         )
+        if query_positions is not None:
+            idx = query_positions.view(-1, 1, 1, 1).expand(
+                -1, 1, source_embeddings.shape[-2], source_embeddings.shape[-1]
+            )
+            source_embeddings = source_embeddings.gather(1, idx)
         col_output = self.col_attention(
             hidden_states=row_output[0].transpose(-2, -3),
             source_embeddings=source_embeddings,
@@ -688,6 +726,7 @@ class GPNStarLayer(RoFormerLayer):
         encoder_attention_mask: Tensor | None = None,
         past_key_value: tuple[Tensor, ...] | None = None,
         output_attentions: bool = False,
+        query_positions: Tensor | None = None,
     ) -> tuple[Any, ...]:
         # decoder uni-directional self-attention cached key/values tuple is at positions 1,2
         self_attn_past_key_value = (
@@ -702,6 +741,7 @@ class GPNStarLayer(RoFormerLayer):
             head_mask,
             output_attentions=output_attentions,
             past_key_value=self_attn_past_key_value,
+            query_positions=query_positions,
         )
         attention_output = self_attention_outputs[0]
 
@@ -782,8 +822,11 @@ class GPNStarEncoder(RoFormerEncoder):
         output_hidden_states: bool = False,
         return_dict: bool = True,
         phylo_dist: Tensor | None = None,
+        query_positions: Tensor | None = None,
         **kwargs: Any,
     ) -> BaseModelOutputWithRowAndColAttentions | tuple[Any, ...]:
+        if output_attentions:
+            query_positions = None
         if self.gradient_checkpointing and self.training:
             use_cache = False
         all_hidden_states: tuple[Tensor, ...] | None = (
@@ -814,7 +857,22 @@ class GPNStarEncoder(RoFormerEncoder):
             layer_head_mask = head_mask[i] if head_mask is not None else None
             past_key_value = past_key_values[i] if past_key_values is not None else None
 
-            if self.gradient_checkpointing and self.training:
+            if query_positions is not None and i == len(self.layer) - 1:
+                # last layer: only the requested position is computed
+                layer_outputs = layer_module(
+                    hidden_states,
+                    source_embeddings,
+                    attention_mask,
+                    sinusoidal_pos,
+                    phylo_dist,
+                    layer_head_mask,
+                    encoder_hidden_states,
+                    encoder_attention_mask,
+                    past_key_value,
+                    output_attentions,
+                    query_positions=query_positions,
+                )
+            elif self.gradient_checkpointing and self.training:
 
                 def create_custom_forward(module: nn.Module) -> Callable[..., Any]:
                     def custom_forward(*inputs: Any) -> Any:
@@ -1078,6 +1136,7 @@ class GPNStarModel(GPNStarPreTrainedModel):
         source_ids: Int[Tensor, "batch position species"] | None = None,
         target_species: Int[Tensor, "batch target"] | None = None,
         output_attentions: bool = False,
+        query_positions: Tensor | None = None,
         **kwargs: Any,
     ) -> BaseModelOutputWithRowAndColAttentions | tuple[Any, ...]:
         if input_ids is None or source_ids is None or target_species is None:
@@ -1121,6 +1180,7 @@ class GPNStarModel(GPNStarPreTrainedModel):
             phylo_dist=phylo_dist,
             attention_mask=attention_mask,
             output_attentions=output_attentions,
+            query_positions=query_positions,
             **kwargs,
         )
         return x

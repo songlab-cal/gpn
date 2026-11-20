@@ -58,8 +58,10 @@ class MLMforVEPModel(torch.nn.Module):
             input_ids=input_ids,
             source_ids=source_ids,
             target_species=target_species,
+            query_positions=pos.long(),
         ).logits
-        logits = logits[torch.arange(len(pos), device=pos.device), pos, 0]
+        # only the position ``pos`` is computed: (batch, 1, target, vocab)
+        logits = logits[torch.arange(len(pos), device=pos.device), 0, 0]
         row = torch.arange(len(ref), device=ref.device)
         return logits[row, alt] - logits[row, ref]
 
@@ -125,8 +127,9 @@ class MLMforLogitsModel(torch.nn.Module):
             input_ids=input_ids,
             source_ids=source_ids,
             target_species=target_species,
+            query_positions=pos.long(),
         ).logits
-        return logits[torch.arange(len(pos), device=pos.device), pos].squeeze(-2)
+        return logits[torch.arange(len(pos), device=pos.device), 0].squeeze(-2)
 
     def forward(
         self,
