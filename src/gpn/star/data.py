@@ -18,6 +18,13 @@ class GenomeMSA:
     ):
         self.reverse_complementer = ReverseComplementer()
         self.tokenizer = Tokenizer()
+        # Token-id complement permutation (A<->T, C<->G, others fixed).
+        vocab = self.tokenizer.vocab
+        complement_ids = np.arange(len(vocab), dtype=np.uint8)
+        for a, b in (("A", "T"), ("C", "G")):
+            complement_ids[vocab.index(a)] = vocab.index(b)
+            complement_ids[vocab.index(b)] = vocab.index(a)
+        self._complement_ids = complement_ids
         self.n_species = n_species
         store = zarr.open(path, mode="r")
         chroms = list(store.keys())
@@ -51,10 +58,11 @@ class GenomeMSA:
         tokenize: bool = False,
     ) -> tuple[Any, Any]:
         forward = self.get_msa(chrom, start, end)
-        reverse = self.reverse_complementer(forward, position_axis=0)
         if tokenize:
             forward = self.tokenizer(forward)
-            reverse = self.tokenizer(reverse)
+            reverse = self._complement_ids[np.flip(forward, axis=0)]
+            return forward, reverse
+        reverse = self.reverse_complementer(forward, position_axis=0)
         return forward, reverse
 
     def _normalize_batch(
