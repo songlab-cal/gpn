@@ -1446,6 +1446,25 @@ class GPNStarModel(GPNStarPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
+    def _drop_stale_weight_caches(self) -> None:
+        """Drop weight-derived caches when any parameter's values changed.
+
+        The caches key on tensor _version, which param.data edits do not bump;
+        a per-tensor L1 fingerprint of all parameters catches those edits.
+        """
+        params = self.__dict__.get("_fp_params")
+        if params is None:
+            params = self.__dict__["_fp_params"] = list(self.parameters())
+        with torch.no_grad():
+            fp = torch.stack(torch._foreach_norm(params, 1)).cpu()
+        old = self.__dict__.get("_fp_value")
+        self.__dict__["_fp_value"] = fp
+        if old is not None and not torch.equal(old, fp):
+            for module in self.modules():
+                module.__dict__.pop("_composed_cache", None)
+                if isinstance(module, nn.Linear):
+                    module.__dict__.pop("_split_cache", None)
+
     def forward(
         self,
         input_ids: Int[Tensor, "batch position target"] | None = None,
@@ -1457,6 +1476,8 @@ class GPNStarModel(GPNStarPreTrainedModel):
     ) -> BaseModelOutputWithRowAndColAttentions | tuple[Any, ...]:
         if input_ids is None or source_ids is None or target_species is None:
             raise ValueError("input_ids, source_ids, and target_species are required")
+        if not self.training and not torch.is_grad_enabled():
+            self._drop_stale_weight_caches()
         hidden_states = self.target_embedding(
             input_ids=input_ids,
         )  # (B, L, T, H)
