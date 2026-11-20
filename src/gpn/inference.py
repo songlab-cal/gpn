@@ -19,6 +19,7 @@ from datasets import Dataset
 import torch
 from torch import nn
 from transformers import Trainer, TrainingArguments
+from transformers.trainer_pt_utils import AcceleratorConfig
 
 from gpn.arguments import CheckpointArguments
 from gpn.checkpoint import (
@@ -67,8 +68,7 @@ def inference_training_arguments(
     output_dir = arguments.output_dir or temporary_output_dir
     if output_dir is None:
         raise ValueError("An inference output directory could not be determined")
-    return replace(
-        arguments,
+    changes = dict(
         output_dir=output_dir,
         do_train=False,
         do_eval=False,
@@ -78,6 +78,16 @@ def inference_training_arguments(
         remove_unused_columns=False,
         prediction_loss_only=False,
     )
+    config = arguments.accelerator_config
+    if (
+        isinstance(config, AcceleratorConfig)
+        and config == AcceleratorConfig()
+        and arguments.dataloader_pin_memory
+        and torch.cuda.is_available()
+    ):
+        # Default config only: an explicit user config stays untouched.
+        changes["accelerator_config"] = AcceleratorConfig(non_blocking=True)
+    return replace(arguments, **changes)
 
 
 def prediction_arguments_signature(arguments: TrainingArguments) -> dict[str, Any]:
