@@ -418,7 +418,8 @@ class GPNStarSourceModule(nn.Module):
 
         Returns (multi_idx, single_idx, single_ids, embed_weight): the clade
         positions that are pooled, the clade positions that are singletons,
-        the token ids of the singletons (B, L, n_single) and the table.
+        the token ids of the singletons (B, L, n_single) and the table (detached
+        when there are no singletons).
         """
         device = source_ids.device
         key = (device.type, device.index)
@@ -438,7 +439,11 @@ class GPNStarSourceModule(nn.Module):
             cache[key] = hit
         _, multi_idx, single_idx, species_idx = hit
         single_ids = source_ids.index_select(-1, species_idx).to(torch.long)
-        return multi_idx, single_idx, single_ids, self.embed.weight
+        table = self.embed.weight
+        if species_idx.numel() == 0:
+            # no singleton reads the table: keep it out of the autograd graph
+            table = table.detach()
+        return multi_idx, single_idx, single_ids, table
 
     def deferred_split(
         self,
