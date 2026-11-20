@@ -1504,16 +1504,23 @@ class GPNStarModel(GPNStarPreTrainedModel):
         """
         params = self.__dict__.get("_fp_params")
         if params is None:
-            params = self.__dict__["_fp_params"] = list(self.parameters())
-        with torch.no_grad():
-            fp = torch.stack(torch._foreach_norm(params, 1)).cpu()
-        old = self.__dict__.get("_fp_value")
-        self.__dict__["_fp_value"] = fp
-        if old is not None and not torch.equal(old, fp):
-            for module in self.modules():
-                module.__dict__.pop("_composed_cache", None)
-                if isinstance(module, nn.Linear):
-                    module.__dict__.pop("_split_cache", None)
+            params = list(self.parameters())
+            if params:
+                self.__dict__["_fp_params"] = params
+        if params:
+            with torch.no_grad():
+                fp = torch.stack(torch._foreach_norm(params, 1)).cpu()
+            old = self.__dict__.get("_fp_value")
+            self.__dict__["_fp_value"] = fp
+            if old is None or torch.equal(old, fp):
+                return
+        # A DataParallel replica holds its weights as plain tensor attributes, so it has
+        # nothing to fingerprint; it is rebuilt every forward, and the caches it copied
+        # from the original module are dropped instead.
+        for module in self.modules():
+            module.__dict__.pop("_composed_cache", None)
+            if isinstance(module, nn.Linear):
+                module.__dict__.pop("_split_cache", None)
 
     def forward(
         self,

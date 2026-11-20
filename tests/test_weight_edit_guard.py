@@ -107,3 +107,56 @@ def test_fused_qkv_cache_is_dropped_after_param_data_edit(tmp_path):
 		module.__dict__.pop("_composed_cache", None)
 		module.__dict__.pop("_split_cache", None)
 	torch.testing.assert_close(logits(model), logits(fresh), rtol=0, atol=1e-5)
+
+
+def _replica(module):
+	"""Mimic torch.nn.parallel.replicate on CPU: parameters become plain tensor attributes."""
+	copy_ = module._replicate_for_data_parallel()
+	for name, child in module._modules.items():
+		if child is not None:
+			copy_._modules[name] = _replica(child)
+	for name, parameter in module._parameters.items():
+		copy_._parameters.pop(name, None)
+		copy_.__dict__[name] = parameter
+	return copy_
+
+
+def test_data_parallel_replica_of_a_model_that_never_ran_does_not_crash(tmp_path):
+	model, species = _tiny_model(tmp_path)
+	source_ids = torch.randint(0, 5, (2, 8, species))
+	input_ids = source_ids[:, :, :1].clone()
+	replica = _replica(model)
+	assert len(list(replica.model.parameters())) == 0
+	assert "_fp_params" not in replica.model.__dict__
+	torch.testing.assert_close(
+		_logits(replica, source_ids, input_ids),
+		_logits(model, source_ids, input_ids),
+		rtol=0,
+		atol=1e-5,
+	)
+
+
+def test_data_parallel_replica_drops_caches_copied_from_the_original(tmp_path):
+	model, species = _tiny_model(tmp_path)
+	source_ids = torch.randint(0, 5, (2, 8, species))
+	input_ids = source_ids[:, :, :1].clone()
+	_logits(model, source_ids, input_ids)
+
+	with torch.no_grad():
+		for parameter in model.parameters():
+			if parameter.ndim == 2:
+				parameter.data.add_(0.05)
+	replica = _replica(model)
+	replica.model.__dict__.pop("_fp_params", None)
+	replica.model.__dict__.pop("_fp_value", None)
+	fresh = copy.deepcopy(model)
+	for module in fresh.modules():
+		module.__dict__.pop("_composed_cache", None)
+		module.__dict__.pop("_split_cache", None)
+
+	torch.testing.assert_close(
+		_logits(replica, source_ids, input_ids),
+		_logits(fresh, source_ids, input_ids),
+		rtol=0,
+		atol=1e-5,
+	)
