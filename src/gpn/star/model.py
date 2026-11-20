@@ -438,12 +438,20 @@ class GPNStarColCrossAttention(nn.Module):
         if attention_mask is None or evol_time_bias is None:
             raise ValueError("attention_mask and evol_time_bias are required")
         query_layer = self.transpose_for_scores(self.query(hidden_states))
-        key_layer = self.transpose_for_scores(
-            self._project(self.key, source_embeddings, source_split)
-        )
-        value_layer = self.transpose_for_scores(
-            self._project(self.value, source_embeddings, source_split)
-        )
+        key_proj = self._project(self.key, source_embeddings, source_split)
+        value_proj = self._project(self.value, source_embeddings, source_split)
+        fused = not output_attentions and not self.training
+        if fused:
+            # (B, L, C, A, D): contracted in place, no transpose copy
+            kv_shape = key_proj.shape[:-1] + (
+                self.num_attention_heads,
+                self.attention_head_size,
+            )
+            key_layer = key_proj.view(kv_shape)
+            value_layer = value_proj.view(kv_shape)
+        else:
+            key_layer = self.transpose_for_scores(key_proj)
+            value_layer = self.transpose_for_scores(value_proj)
 
         attention_mask = attention_mask + evol_time_bias.to(query_layer.dtype)
         # shape (B, L, A, T, D) x (B, L, A, D, C) -> (B, L, A, T, C)
@@ -467,6 +475,17 @@ class GPNStarColCrossAttention(nn.Module):
                 if output_attentions
                 else (context_layer,)
             )
+
+        elif fused:
+            scores = torch.einsum("blatd,blcad->blatc", query_layer, key_layer)
+            scores = scores * (1 / math.sqrt(self.attention_head_size)) + attention_mask
+            probs = torch.softmax(scores, dim=-1)
+            context_layer = torch.einsum("blatc,blcad->blatd", probs, value_layer)
+            context_layer = context_layer.transpose(-2, -3).contiguous()
+            new_context_layer_shape = context_layer.size()[:-2] + (self.all_head_size,)
+            context_layer = context_layer.view(*new_context_layer_shape)
+
+            outputs = (context_layer,)
 
         else:
             with torch.backends.cuda.sdp_kernel(
