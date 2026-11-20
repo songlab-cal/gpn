@@ -130,6 +130,54 @@ def _resolve_phylo_dist_path(
     return hub_fallback
 
 
+_HI_MASK = -8192  # int32 0xFFFFE000: keeps sign, exponent and 10 mantissa bits
+
+
+def _split_hi_lo(t: Tensor) -> tuple[Tensor, Tensor]:
+	hi = (t.contiguous().view(torch.int32) & _HI_MASK).view(torch.float32)
+	return hi, t - hi
+
+
+def _split_weight(linear: nn.Linear) -> tuple[Tensor, Tensor]:
+	"""hi/lo halves of linear.weight, cached while the weight is unchanged."""
+	w = linear.weight
+	stamp = (w._version, w.data_ptr(), w.device)
+	hit = linear.__dict__.get("_split_cache")
+	if hit is None or hit[0] != stamp:
+		with torch.no_grad():
+			hit = (stamp, _split_hi_lo(w))
+		linear.__dict__["_split_cache"] = hit
+	return hit[1]
+
+
+def compensated_linear(linear: nn.Linear, x: Tensor) -> Tensor:
+	"""linear(x) as three TF32 tensor-core GEMMs (hi*hi + hi*lo + lo*hi).
+
+	Each operand is split into a 10-bit-mantissa part and the remainder, so the
+	result is within about 1e-6 relative of fp32. Plain fp32 on CPU, below
+	compute capability 8, with grad, or for non-fp32 inputs.
+	"""
+	if (
+		x.dtype != torch.float32
+		or not x.is_cuda
+		or torch.is_grad_enabled()
+		or linear.weight.dtype != torch.float32
+		or torch.cuda.get_device_capability(x.device)[0] < 8
+	):
+		return linear(x)
+	w_hi, w_lo = _split_weight(linear)
+	x_hi, x_lo = _split_hi_lo(x)
+	prev = torch.backends.cuda.matmul.allow_tf32
+	torch.backends.cuda.matmul.allow_tf32 = True
+	try:
+		out = F.linear(x_hi, w_hi, linear.bias)
+		out = out + F.linear(x_hi, w_lo)
+		out = out + F.linear(x_lo, w_hi)
+	finally:
+		torch.backends.cuda.matmul.allow_tf32 = prev
+	return out
+
+
 class FIRETimeBias(nn.Module):
     def __init__(self, max_dist: float, fire_hidden_size: int = 32) -> None:
         super().__init__()
@@ -677,7 +725,7 @@ class GPNStarRowSelfAttention(nn.Module):
             query_input = hidden_states[:, :1, ...]
         query_layer = self.transpose_for_scores(self.query(query_input))
         key_layer = self.transpose_for_scores(self.key(hidden_states[:, :1, ...]))
-        value_layer = self.transpose_for_scores(self.value(hidden_states))
+        value_layer = self.transpose_for_scores(compensated_linear(self.value, hidden_states))
 
         if sinusoidal_pos is not None and query_positions is not None:
             sin_q = sinusoidal_pos[0, 0][query_positions][:, None, None, None, :]
@@ -825,7 +873,7 @@ class GPNStarRowSelfOutput(nn.Module):
     ) -> Float[Tensor, "batch target position hidden"]:
         if input_tensor is None:
             raise ValueError("input_tensor is required")
-        hidden_states = self.dense(hidden_states)
+        hidden_states = compensated_linear(self.dense, hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
         return hidden_states
@@ -924,6 +972,13 @@ class GPNStarLayer(RoFormerLayer):
     def __init__(self, config: GPNStarConfig) -> None:
         super().__init__(config)
         self.attention = GPNStarAttention(config)
+
+    def feed_forward_chunk(self, attention_output: Tensor) -> Tensor:
+        inter = self.intermediate
+        h = inter.intermediate_act_fn(compensated_linear(inter.dense, attention_output))
+        out = self.output
+        h = out.dropout(compensated_linear(out.dense, h))
+        return out.LayerNorm(h + attention_output)
 
     def forward(
         self,
