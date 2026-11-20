@@ -712,9 +712,24 @@ class GPNStarRowSelfAttention(nn.Module):
         sinusoidal_pos: Float[Tensor, "1 1 position head_dimension"] | None = None,
         output_attentions: bool = False,
         query_positions: Tensor | None = None,
+        embed_lookup: tuple[Tensor, Tensor] | None = None,
     ) -> tuple[Tensor, ...]:
+        if embed_lookup is not None and query_positions is None:
+            # hidden_states are rows of the embedding table: project the table once
+            ids, table = embed_lookup  # (B, T, L), (V, H)
+            ids = ids.to(torch.int)
+            query_layer = self.transpose_for_scores(
+                F.embedding(ids[:, :1], self.query(table))
+            )
+            key_layer = self.transpose_for_scores(
+                F.embedding(ids[:, :1], self.key(table))
+            )
+            value_layer = self.transpose_for_scores(
+                F.embedding(ids, self.value(table))
+            )
+            hidden_states = None
         # attention scores are only calculated wrt the human genome
-        if query_positions is not None:
+        elif query_positions is not None:
             # queries only at one position per batch element; keys and values
             # still cover every position
             idx = query_positions.view(-1, 1, 1, 1).expand(
@@ -723,9 +738,10 @@ class GPNStarRowSelfAttention(nn.Module):
             query_input = hidden_states[:, :1, ...].gather(2, idx)
         else:
             query_input = hidden_states[:, :1, ...]
-        query_layer = self.transpose_for_scores(self.query(query_input))
-        key_layer = self.transpose_for_scores(self.key(hidden_states[:, :1, ...]))
-        value_layer = self.transpose_for_scores(compensated_linear(self.value, hidden_states))
+        if hidden_states is not None:
+            query_layer = self.transpose_for_scores(self.query(query_input))
+            key_layer = self.transpose_for_scores(self.key(hidden_states[:, :1, ...]))
+            value_layer = self.transpose_for_scores(compensated_linear(self.value, hidden_states))
 
         if sinusoidal_pos is not None and query_positions is not None:
             sin_q = sinusoidal_pos[0, 0][query_positions][:, None, None, None, :]
@@ -892,6 +908,7 @@ class GPNStarRowAttention(nn.Module):
         sinusoidal_pos: Tensor | None = None,
         output_attentions: bool = False,
         query_positions: Tensor | None = None,
+        embed_lookup: tuple[Tensor, Tensor] | None = None,
     ) -> tuple[Tensor, ...]:
         self_outputs = self.self(
             hidden_states=hidden_states,
@@ -899,6 +916,7 @@ class GPNStarRowAttention(nn.Module):
             sinusoidal_pos=sinusoidal_pos,
             output_attentions=output_attentions,
             query_positions=query_positions,
+            embed_lookup=embed_lookup,
         )
         residual = hidden_states
         if query_positions is not None:
@@ -932,6 +950,7 @@ class GPNStarAttention(nn.Module):
         output_attentions: bool = False,
         query_positions: Tensor | None = None,
         source_split: tuple[Tensor, Tensor, Tensor, Tensor] | None = None,
+        embed_lookup: tuple[Tensor, Tensor] | None = None,
     ) -> tuple[Tensor, ...]:
         row_output = self.row_attention(
             hidden_states=hidden_states.transpose(-2, -3),
@@ -939,6 +958,7 @@ class GPNStarAttention(nn.Module):
             sinusoidal_pos=sinusoidal_pos,
             output_attentions=output_attentions,
             query_positions=query_positions,
+            embed_lookup=embed_lookup,
         )
         if query_positions is not None:
             if source_embeddings is None:
@@ -994,6 +1014,7 @@ class GPNStarLayer(RoFormerLayer):
         output_attentions: bool = False,
         query_positions: Tensor | None = None,
         source_split: tuple[Tensor, Tensor, Tensor, Tensor] | None = None,
+        embed_lookup: tuple[Tensor, Tensor] | None = None,
     ) -> tuple[Any, ...]:
         # decoder uni-directional self-attention cached key/values tuple is at positions 1,2
         self_attn_past_key_value = (
@@ -1010,6 +1031,7 @@ class GPNStarLayer(RoFormerLayer):
             past_key_value=self_attn_past_key_value,
             query_positions=query_positions,
             source_split=source_split,
+            embed_lookup=embed_lookup,
         )
         attention_output = self_attention_outputs[0]
 
@@ -1092,6 +1114,7 @@ class GPNStarEncoder(RoFormerEncoder):
         phylo_dist: Tensor | None = None,
         query_positions: Tensor | None = None,
         source_split: tuple[Tensor, Tensor, Tensor, Tensor] | None = None,
+        embed_lookup: tuple[Tensor, Tensor] | None = None,
         **kwargs: Any,
     ) -> BaseModelOutputWithRowAndColAttentions | tuple[Any, ...]:
         if output_attentions:
@@ -1174,6 +1197,7 @@ class GPNStarEncoder(RoFormerEncoder):
                     past_key_value,
                     output_attentions,
                     source_split=source_split,
+                    embed_lookup=embed_lookup if i == 0 else None,
                 )
 
             hidden_states = layer_outputs[0]
@@ -1455,6 +1479,17 @@ class GPNStarModel(GPNStarPreTrainedModel):
         )  # (B, T, C)
         attention_mask = attention_mask[:, None, None, :, :]
 
+        embed_lookup = None
+        embed = self.target_embedding.input_embed
+        if (
+            not self.training
+            and not torch.is_grad_enabled()
+            and not output_attentions
+            and input_ids.shape[-1] == hidden_states.shape[-2]
+        ):
+            # layer 0's row Q/K/V read rows of the embedding table
+            embed_lookup = (input_ids.transpose(-1, -2), embed.weight)
+
         x = self.encoder(
             hidden_states,
             source_embeddings,
@@ -1463,6 +1498,7 @@ class GPNStarModel(GPNStarPreTrainedModel):
             output_attentions=output_attentions,
             query_positions=query_positions,
             source_split=source_split,
+            embed_lookup=embed_lookup,
             **kwargs,
         )
         return x
