@@ -15,6 +15,7 @@ from typing import Any, Protocol
 import pandas as pd
 from accelerate.utils import broadcast_object_list
 from datasets import Dataset
+import torch
 from torch import nn
 from transformers import Trainer, TrainingArguments
 
@@ -103,6 +104,37 @@ def prediction_arguments_signature(arguments: TrainingArguments) -> dict[str, An
     return values
 
 
+_P2P_PATCHED = False
+
+
+def _skip_single_gpu_p2p_probe() -> None:
+    """Answer accelerate's P2P/IB probe in process when at most one GPU is visible.
+
+    The probe spawns nvidia-smi on every Trainer creation but only matters with
+    several GPUs; with several visible, the original function still decides.
+    """
+    global _P2P_PATCHED
+    if _P2P_PATCHED:
+        return
+    try:
+        import accelerate.state as accelerate_state
+
+        original = accelerate_state.check_cuda_p2p_ib_support
+    except (ImportError, AttributeError):
+        return
+
+    def check_cuda_p2p_ib_support() -> bool:
+        try:
+            if torch.cuda.device_count() <= 1:
+                return True
+        except Exception:
+            pass
+        return original()
+
+    accelerate_state.check_cuda_p2p_ib_support = check_cuda_p2p_ib_support
+    _P2P_PATCHED = True
+
+
 def create_inference_runner(
     model: nn.Module,
     arguments: TrainingArguments,
@@ -120,6 +152,7 @@ def create_inference_runner(
         arguments,
         temporary_output_dir=output_dir,
     )
+    _skip_single_gpu_p2p_probe()
     return InferenceRunner(
         trainer=Trainer(model=model, args=prediction_arguments),
         temporary_output_dir=temporary_output_dir,
