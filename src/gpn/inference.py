@@ -7,16 +7,16 @@ import importlib.metadata
 import json
 import os
 import tempfile
-from concurrent.futures import ThreadPoolExecutor
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Protocol
 
 import pandas as pd
+import torch
 from accelerate.utils import broadcast_object_list
 from datasets import Dataset
-import torch
 from torch import nn
 from transformers import Trainer, TrainingArguments
 from transformers.trainer_pt_utils import AcceleratorConfig
@@ -213,7 +213,10 @@ class _Lookahead:
         self.cursor += size
         stop = min(self.cursor + size, len(self.raw))
         if self.cursor < stop:
-            self.pending = (self.cursor, self.executor.submit(self._build, self.cursor, stop))
+            self.pending = (
+                self.cursor,
+                self.executor.submit(self._build, self.cursor, stop),
+            )
         else:
             self.executor.shutdown(wait=False)
         return result
