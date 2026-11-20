@@ -489,16 +489,31 @@ class GPNStarColCrossAttention(nn.Module):
         """
         multi_idx, single_idx, single_ids, embed_weight, pre, ffn = source_split
         heads, size = self.num_attention_heads, self.attention_head_size
-        pooled_k = F.linear(pre, *self._composed(self.key, ffn))
-        pooled_v = F.linear(pre, *self._composed(self.value, ffn))
-        batch, length, n_multi = pooled_k.shape[:3]
-        pooled_k = pooled_k.view(batch, length, n_multi, heads, size)
-        pooled_v = pooled_v.view(batch, length, n_multi, heads, size)
+        reassociate = not torch.is_grad_enabled()
+        if reassociate:
+            wk, bk = self._composed(self.key, ffn)
+            wv, bv = self._composed(self.value, ffn)
+            n_multi = pre.shape[2]
+            wk = wk.view(heads, size, -1)
+            wv = wv.view(heads, size, -1)
+            bk = bk.view(heads, size)
+            bv = bv.view(heads, size)
+        else:
+            pooled_k = F.linear(pre, *self._composed(self.key, ffn))
+            pooled_v = F.linear(pre, *self._composed(self.value, ffn))
+            batch, length, n_multi = pooled_k.shape[:3]
+            pooled_k = pooled_k.view(batch, length, n_multi, heads, size)
+            pooled_v = pooled_v.view(batch, length, n_multi, heads, size)
         k_tab = self.key(embed_weight).view(-1, heads, size)
         v_tab = self.value(embed_weight).view(-1, heads, size)
         vocab = k_tab.shape[0]
 
-        score_multi = torch.einsum("blatd,blcad->blatc", query_layer, pooled_k)
+        if reassociate:
+            q_pre = torch.einsum("blatd,adk->blatk", query_layer, wk)
+            score_multi = torch.einsum("blatk,blck->blatc", q_pre, pre)
+            score_multi = score_multi + torch.einsum("blatd,ad->blat", query_layer, bk)[..., None]
+        else:
+            score_multi = torch.einsum("blatd,blcad->blatc", query_layer, pooled_k)
         score_tab = torch.einsum("blatd,vad->blatv", query_layer, k_tab)
         index = single_ids[:, :, None, None, :].expand(-1, -1, heads, score_tab.shape[3], -1)
         score_single = score_tab.gather(-1, index)
@@ -509,7 +524,13 @@ class GPNStarColCrossAttention(nn.Module):
         scores = scores * (1 / math.sqrt(size)) + attention_mask
         probs = torch.softmax(scores, dim=-1)
 
-        context = torch.einsum("blatc,blcad->blatd", probs.index_select(-1, multi_idx), pooled_v)
+        probs_multi = probs.index_select(-1, multi_idx)
+        if reassociate:
+            pooled = torch.einsum("blatc,blck->blatk", probs_multi, pre)
+            context = torch.einsum("blatk,adk->blatd", pooled, wv)
+            context = context + probs_multi.sum(-1, keepdim=True) * bv[:, None, :]
+        else:
+            context = torch.einsum("blatc,blcad->blatd", probs_multi, pooled_v)
         onehot = F.one_hot(single_ids, vocab).to(probs.dtype)
         mass = torch.einsum("blatc,blcv->blatv", probs.index_select(-1, single_idx), onehot)
         context = context + torch.einsum("blatv,vad->blatd", mass, v_tab)
