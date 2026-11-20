@@ -126,6 +126,28 @@ def create_inference_runner(
     )
 
 
+def _noop_transform(batch):
+    return batch
+
+
+def _set_transform(dataset: Dataset, transform: Callable) -> None:
+    """Install a custom format transform without dill-hashing it.
+
+    Dataset.set_transform fingerprints the transform by pickling it, which
+    serialises the bound inference object (model, MSA handles). The fingerprint
+    is unused here, so hash a stub and swap the real callable in afterwards.
+    """
+    kwargs = getattr(dataset, "_format_kwargs", None)
+    if not isinstance(dataset, Dataset) or not isinstance(kwargs, dict):
+        dataset.set_transform(transform)
+        return
+    dataset.set_transform(_noop_transform)
+    if dataset._format_kwargs.get("transform") is not _noop_transform:
+        dataset.set_transform(transform)
+        return
+    dataset._format_kwargs["transform"] = transform
+
+
 def _validate_dataset(dataset: Dataset) -> None:
     if len(dataset) == 0:
         raise ValueError("Inference dataset must contain at least one row")
@@ -141,7 +163,7 @@ def run_inference(
     """Run one prediction pass and return a frame on the main process."""
 
     _validate_dataset(dataset)
-    dataset.set_transform(inference.tokenize_function)
+    _set_transform(dataset, inference.tokenize_function)
     runner = create_inference_runner(
         inference.model,
         training_arguments,
@@ -226,7 +248,7 @@ def run_inference_with_checkpoints(
     )
     store = CheckpointStore(checkpoint_dir, manifest)
 
-    dataset.set_transform(inference.tokenize_function)
+    _set_transform(dataset, inference.tokenize_function)
     runner = create_inference_runner(
         inference.model,
         training_arguments,
