@@ -7,6 +7,7 @@ import importlib.metadata
 import json
 import os
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -163,6 +164,51 @@ def _noop_transform(batch):
     return batch
 
 
+class _Lookahead:
+    """Build the next consecutive batch on one worker thread.
+
+    Sits below the Trainer's dataloader, in the dataset transform, so the CPU
+    tokenization of batch i + 1 overlaps the forward of batch i. A call whose
+    rows differ from the submitted ones is built inline.
+    """
+
+    def __init__(self, transform: Callable, raw: Dataset, columns: tuple[str, ...]):
+        self.transform = transform
+        self.raw = raw
+        self.columns = columns
+        self.executor = ThreadPoolExecutor(max_workers=1)
+        self.cursor = 0
+        self.pending = None
+
+    def _build(self, start: int, stop: int):
+        rows = self.raw[start:stop]
+        return rows, self.transform(rows)
+
+    def __call__(self, batch):
+        size = len(batch[self.columns[0]])
+        result = None
+        if self.pending is not None:
+            _, future = self.pending
+            self.pending = None
+            try:
+                rows, built = future.result()
+            except BaseException:
+                rows = None
+            if rows is not None and all(
+                list(rows[c]) == list(batch[c]) for c in self.columns
+            ):
+                result = built
+        if result is None:
+            result = self.transform(batch)
+        self.cursor += size
+        stop = min(self.cursor + size, len(self.raw))
+        if self.cursor < stop:
+            self.pending = (self.cursor, self.executor.submit(self._build, self.cursor, stop))
+        else:
+            self.executor.shutdown(wait=False)
+        return result
+
+
 def _set_transform(dataset: Dataset, transform: Callable) -> None:
     """Install a custom format transform without dill-hashing it.
 
@@ -174,11 +220,14 @@ def _set_transform(dataset: Dataset, transform: Callable) -> None:
     if not isinstance(dataset, Dataset) or not isinstance(kwargs, dict):
         dataset.set_transform(transform)
         return
+    raw = dataset.with_format(None)
     dataset.set_transform(_noop_transform)
     if dataset._format_kwargs.get("transform") is not _noop_transform:
         dataset.set_transform(transform)
         return
-    dataset._format_kwargs["transform"] = transform
+    dataset._format_kwargs["transform"] = _Lookahead(
+        transform, raw, tuple(dataset.column_names)
+    )
 
 
 def _validate_dataset(dataset: Dataset) -> None:
