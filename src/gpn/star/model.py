@@ -379,6 +379,11 @@ class GPNStarSourceModule(nn.Module):
                         in_clade_time_bias[..., species_indices],
                     )
                 )
+        if not out:
+            # every clade is a singleton: no pooled clades, zero columns
+            return self.attn_pool.value.weight.new_empty(
+                source_ids.shape[:2] + (0, self.attn_pool.all_head_size)
+            )
         return torch.stack(out, dim=-2)
 
     def split_info(
