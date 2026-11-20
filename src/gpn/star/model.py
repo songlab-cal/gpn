@@ -134,89 +134,93 @@ _HI_MASK = -8192  # int32 0xFFFFE000: keeps sign, exponent and 10 mantissa bits
 
 
 def _split_hi_lo(t: Tensor) -> tuple[Tensor, Tensor]:
-	hi = (t.contiguous().view(torch.int32) & _HI_MASK).view(torch.float32)
-	return hi, t - hi
+    hi = (t.contiguous().view(torch.int32) & _HI_MASK).view(torch.float32)
+    return hi, t - hi
 
 
 def _split_weight(linear: nn.Linear) -> tuple[Tensor, Tensor]:
-	"""hi/lo halves of linear.weight, cached while the weight is unchanged."""
-	w = linear.weight
-	stamp = (w._version, w.data_ptr(), w.device)
-	hit = linear.__dict__.get("_split_cache")
-	if hit is None or hit[0] != stamp:
-		with torch.no_grad():
-			hit = (stamp, _split_hi_lo(w))
-		linear.__dict__["_split_cache"] = hit
-	return hit[1]
+    """hi/lo halves of linear.weight, cached while the weight is unchanged."""
+    w = linear.weight
+    stamp = (w._version, w.data_ptr(), w.device)
+    hit = linear.__dict__.get("_split_cache")
+    if hit is None or hit[0] != stamp:
+        with torch.no_grad():
+            hit = (stamp, _split_hi_lo(w))
+        linear.__dict__["_split_cache"] = hit
+    return hit[1]
 
 
 def _compensated_ok(linear: nn.Linear, x: Tensor) -> bool:
-	return not (
-		x.dtype != torch.float32
-		or not x.is_cuda
-		or torch.is_grad_enabled()
-		or linear.weight.dtype != torch.float32
-		or torch.cuda.get_device_capability(x.device)[0] < 8
-	)
+    return not (
+        x.dtype != torch.float32
+        or not x.is_cuda
+        or torch.is_grad_enabled()
+        or linear.weight.dtype != torch.float32
+        or torch.cuda.get_device_capability(x.device)[0] < 8
+    )
 
 
 def compensated_linear_cat(owner: nn.Module, linears: tuple, x: Tensor):
-	"""Outputs of several same-input Linears from one compensated GEMM.
+    """Outputs of several same-input Linears from one compensated GEMM.
 
-	The concatenated hi/lo weight is cached in owner's _composed_cache, which
-	GPNStarModel._drop_stale_weight_caches pops. Returns None when the plain
-	path applies.
-	"""
-	if not all(_compensated_ok(l, x) for l in linears):
-		return None
-	weights = [l.weight for l in linears]
-	stamp = tuple((w._version, w.data_ptr(), w.device) for w in weights)
-	cache = owner.__dict__.setdefault("_composed_cache", {})
-	hit = cache.get("qkv")
-	if hit is None or hit[0] != stamp:
-		with torch.no_grad():
-			hi, lo = _split_hi_lo(torch.cat(weights, dim=0))
-			bias = torch.cat([l.bias for l in linears]) if linears[0].bias is not None else None
-		hit = cache["qkv"] = (stamp, hi, lo, bias)
-	_, w_hi, w_lo, bias = hit
-	x_hi, x_lo = _split_hi_lo(x)
-	prev = torch.backends.cuda.matmul.allow_tf32
-	torch.backends.cuda.matmul.allow_tf32 = True
-	try:
-		out = F.linear(x_hi, w_hi, bias)
-		out = out + F.linear(x_hi, w_lo)
-		out = out + F.linear(x_lo, w_hi)
-	finally:
-		torch.backends.cuda.matmul.allow_tf32 = prev
-	return out.split([l.out_features for l in linears], dim=-1)
+    The concatenated hi/lo weight is cached in owner's _composed_cache, which
+    GPNStarModel._drop_stale_weight_caches pops. Returns None when the plain
+    path applies.
+    """
+    if not all(_compensated_ok(lin, x) for lin in linears):
+        return None
+    weights = [lin.weight for lin in linears]
+    stamp = tuple((w._version, w.data_ptr(), w.device) for w in weights)
+    cache = owner.__dict__.setdefault("_composed_cache", {})
+    hit = cache.get("qkv")
+    if hit is None or hit[0] != stamp:
+        with torch.no_grad():
+            hi, lo = _split_hi_lo(torch.cat(weights, dim=0))
+            bias = (
+                torch.cat([lin.bias for lin in linears])
+                if linears[0].bias is not None
+                else None
+            )
+        hit = cache["qkv"] = (stamp, hi, lo, bias)
+    _, w_hi, w_lo, bias = hit
+    x_hi, x_lo = _split_hi_lo(x)
+    prev = torch.backends.cuda.matmul.allow_tf32
+    torch.backends.cuda.matmul.allow_tf32 = True
+    try:
+        out = F.linear(x_hi, w_hi, bias)
+        out = out + F.linear(x_hi, w_lo)
+        out = out + F.linear(x_lo, w_hi)
+    finally:
+        torch.backends.cuda.matmul.allow_tf32 = prev
+    return out.split([lin.out_features for lin in linears], dim=-1)
 
 
 def compensated_linear(linear: nn.Linear, x: Tensor) -> Tensor:
-	"""linear(x) as three TF32 tensor-core GEMMs (hi*hi + hi*lo + lo*hi).
+    """linear(x) as three TF32 tensor-core GEMMs (hi*hi + hi*lo + lo*hi).
 
-	Each operand is split into a 10-bit-mantissa part and the remainder, so the
-	result is within about 1e-6 relative of fp32. Plain fp32 on CPU, below
-	compute capability 8, with grad, or for non-fp32 inputs.
-	"""
-	if (
-		x.dtype != torch.float32
-		or not x.is_cuda
-		or torch.is_grad_enabled()
-		or linear.weight.dtype != torch.float32
-		or torch.cuda.get_device_capability(x.device)[0] < 8
-	):
-		return linear(x)
-	w_hi, w_lo = _split_weight(linear)
-	x_hi, x_lo = _split_hi_lo(x)
-	prev = torch.backends.cuda.matmul.allow_tf32
-	torch.backends.cuda.matmul.allow_tf32 = True
-	try:
-		out = F.linear(x_hi, w_hi, linear.bias)
-		out = out + F.linear(x_hi, w_lo)
-		out = out + F.linear(x_lo, w_hi)
-	finally:
-		torch.backends.cuda.matmul.allow_tf32 = prev
-	return out
+    Each operand is split into a 10-bit-mantissa part and the remainder, so the
+    result is within about 1e-6 relative of fp32. Plain fp32 on CPU, below
+    compute capability 8, with grad, or for non-fp32 inputs.
+    """
+    if (
+        x.dtype != torch.float32
+        or not x.is_cuda
+        or torch.is_grad_enabled()
+        or linear.weight.dtype != torch.float32
+        or torch.cuda.get_device_capability(x.device)[0] < 8
+    ):
+        return linear(x)
+    w_hi, w_lo = _split_weight(linear)
+    x_hi, x_lo = _split_hi_lo(x)
+    prev = torch.backends.cuda.matmul.allow_tf32
+    torch.backends.cuda.matmul.allow_tf32 = True
+    try:
+        out = F.linear(x_hi, w_hi, linear.bias)
+        out = out + F.linear(x_hi, w_lo)
+        out = out + F.linear(x_lo, w_hi)
+    finally:
+        torch.backends.cuda.matmul.allow_tf32 = prev
+    return out
 
 
 class FIRETimeBias(nn.Module):
@@ -437,7 +441,8 @@ class GPNStarSourceModule(nn.Module):
         sids = single_ids.gather(1, pos[..., 0].expand(-1, 1, single_ids.shape[-1]))
         singles = F.embedding(sids, embed_weight)
         out = pooled.new_empty(
-            pooled.shape[:2] + (multi_idx.numel() + single_idx.numel(), pooled.shape[-1])
+            pooled.shape[:2]
+            + (multi_idx.numel() + single_idx.numel(), pooled.shape[-1])
         )
         out.index_copy_(2, multi_idx, pooled)
         out.index_copy_(2, single_idx, singles.to(out.dtype))
@@ -514,7 +519,8 @@ class GPNStarColCrossAttention(nn.Module):
             pooled = linear(source_embeddings.index_select(2, multi_idx))
         singles = F.embedding(single_ids, linear(embed_weight))
         out = pooled.new_empty(
-            single_ids.shape[:2] + (multi_idx.numel() + single_idx.numel(), pooled.shape[-1])
+            single_ids.shape[:2]
+            + (multi_idx.numel() + single_idx.numel(), pooled.shape[-1])
         )
         out.index_copy_(2, multi_idx, pooled)
         out.index_copy_(2, single_idx, singles.to(out.dtype))
@@ -557,13 +563,19 @@ class GPNStarColCrossAttention(nn.Module):
         if reassociate:
             q_pre = torch.einsum("blatd,adk->blatk", query_layer, wk)
             score_multi = torch.einsum("blatk,blck->blatc", q_pre, pre)
-            score_multi = score_multi + torch.einsum("blatd,ad->blat", query_layer, bk)[..., None]
+            score_multi = (
+                score_multi + torch.einsum("blatd,ad->blat", query_layer, bk)[..., None]
+            )
         else:
             score_multi = torch.einsum("blatd,blcad->blatc", query_layer, pooled_k)
         score_tab = torch.einsum("blatd,vad->blatv", query_layer, k_tab)
-        index = single_ids[:, :, None, None, :].expand(-1, -1, heads, score_tab.shape[3], -1)
+        index = single_ids[:, :, None, None, :].expand(
+            -1, -1, heads, score_tab.shape[3], -1
+        )
         score_single = score_tab.gather(-1, index)
-        scores = score_multi.new_empty(score_multi.shape[:-1] + (n_multi + single_idx.numel(),))
+        scores = score_multi.new_empty(
+            score_multi.shape[:-1] + (n_multi + single_idx.numel(),)
+        )
         scores.index_copy_(-1, multi_idx, score_multi)
         scores.index_copy_(-1, single_idx, score_single)
         attention_mask = attention_mask + evol_time_bias.to(query_layer.dtype)
@@ -578,7 +590,9 @@ class GPNStarColCrossAttention(nn.Module):
         else:
             context = torch.einsum("blatc,blcad->blatd", probs_multi, pooled_v)
         onehot = F.one_hot(single_ids, vocab).to(probs.dtype)
-        mass = torch.einsum("blatc,blcv->blatv", probs.index_select(-1, single_idx), onehot)
+        mass = torch.einsum(
+            "blatc,blcv->blatv", probs.index_select(-1, single_idx), onehot
+        )
         context = context + torch.einsum("blatv,vad->blatd", mass, v_tab)
         context = context.transpose(-2, -3).contiguous()
         return (context.view(context.size()[:-2] + (self.all_head_size,)),)
@@ -601,7 +615,9 @@ class GPNStarColCrossAttention(nn.Module):
             and not output_attentions
             and not self.training
         ):
-            return self._forward_split(query_layer, attention_mask, evol_time_bias, source_split)
+            return self._forward_split(
+                query_layer, attention_mask, evol_time_bias, source_split
+            )
         key_proj = self._project(self.key, source_embeddings, source_split)
         value_proj = self._project(self.value, source_embeddings, source_split)
         fused = not output_attentions and not self.training
@@ -791,9 +807,7 @@ class GPNStarRowSelfAttention(nn.Module):
             key_layer = self.transpose_for_scores(
                 F.embedding(ids[:, :1], self.key(table))
             )
-            value_layer = self.transpose_for_scores(
-                F.embedding(ids, self.value(table))
-            )
+            value_layer = self.transpose_for_scores(F.embedding(ids, self.value(table)))
             hidden_states = None
         # attention scores are only calculated wrt the human genome
         elif query_positions is not None:
@@ -806,7 +820,11 @@ class GPNStarRowSelfAttention(nn.Module):
         else:
             query_input = hidden_states[:, :1, ...]
         qkv = None
-        if hidden_states is not None and query_positions is None and hidden_states.shape[1] == 1:
+        if (
+            hidden_states is not None
+            and query_positions is None
+            and hidden_states.shape[1] == 1
+        ):
             qkv = compensated_linear_cat(
                 self, (self.query, self.key, self.value), hidden_states
             )
@@ -817,7 +835,9 @@ class GPNStarRowSelfAttention(nn.Module):
         elif hidden_states is not None:
             query_layer = self.transpose_for_scores(self.query(query_input))
             key_layer = self.transpose_for_scores(self.key(hidden_states[:, :1, ...]))
-            value_layer = self.transpose_for_scores(compensated_linear(self.value, hidden_states))
+            value_layer = self.transpose_for_scores(
+                compensated_linear(self.value, hidden_states)
+            )
 
         if sinusoidal_pos is not None and query_positions is not None:
             sin_q = sinusoidal_pos[0, 0][query_positions][:, None, None, None, :]
@@ -1556,7 +1576,9 @@ class GPNStarModel(GPNStarPreTrainedModel):
         # Embed source sequences
         source_split = None
         source_embeddings = None
-        if not (self.training and getattr(self.encoder, "gradient_checkpointing", False)):
+        if not (
+            self.training and getattr(self.encoder, "gradient_checkpointing", False)
+        ):
             if self.training or torch.is_grad_enabled() or output_attentions:
                 source_split = self.source_embedding.split_info(source_ids, clade_dict)
             else:
