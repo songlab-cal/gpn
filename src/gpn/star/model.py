@@ -3,7 +3,8 @@ from __future__ import annotations
 import math
 import os
 import shutil
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterator, Mapping
+from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any, Self, cast, overload
 
@@ -138,6 +139,30 @@ def _split_hi_lo(t: Tensor) -> tuple[Tensor, Tensor]:
     return hi, t - hi
 
 
+_MATMUL = torch.backends.cuda.matmul
+# torch >= 2.9 has fp32_precision; reading allow_tf32 raises once TF32 was set
+# through it (transformers does for TrainingArguments(tf32=True))
+_NEW_TF32_API = hasattr(_MATMUL, "fp32_precision")
+
+
+@contextmanager
+def _tf32_matmul() -> Iterator[None]:
+    """Allow TF32 in cuBLAS matmuls inside the block, then restore the setting."""
+    if _NEW_TF32_API:
+        prev: Any = _MATMUL.fp32_precision
+        _MATMUL.fp32_precision = "tf32"
+    else:
+        prev = _MATMUL.allow_tf32
+        _MATMUL.allow_tf32 = True
+    try:
+        yield
+    finally:
+        if _NEW_TF32_API:
+            _MATMUL.fp32_precision = prev
+        else:
+            _MATMUL.allow_tf32 = prev
+
+
 def _split_weight(linear: nn.Linear) -> tuple[Tensor, Tensor]:
     """hi/lo halves of linear.weight, cached while the weight is unchanged."""
     w = linear.weight
@@ -186,14 +211,10 @@ def compensated_linear_cat(
         hit = cache["qkv"] = (stamp, hi, lo, bias)
     _, w_hi, w_lo, bias = hit
     x_hi, x_lo = _split_hi_lo(x)
-    prev = torch.backends.cuda.matmul.allow_tf32
-    torch.backends.cuda.matmul.allow_tf32 = True
-    try:
+    with _tf32_matmul():
         out = F.linear(x_hi, w_hi, bias)
         out = out + F.linear(x_hi, w_lo)
         out = out + F.linear(x_lo, w_hi)
-    finally:
-        torch.backends.cuda.matmul.allow_tf32 = prev
     return out.split([lin.out_features for lin in linears], dim=-1)
 
 
@@ -214,14 +235,10 @@ def compensated_linear(linear: nn.Linear, x: Tensor) -> Tensor:
         return linear(x)
     w_hi, w_lo = _split_weight(linear)
     x_hi, x_lo = _split_hi_lo(x)
-    prev = torch.backends.cuda.matmul.allow_tf32
-    torch.backends.cuda.matmul.allow_tf32 = True
-    try:
+    with _tf32_matmul():
         out = F.linear(x_hi, w_hi, linear.bias)
         out = out + F.linear(x_hi, w_lo)
         out = out + F.linear(x_lo, w_hi)
-    finally:
-        torch.backends.cuda.matmul.allow_tf32 = prev
     return out
 
 
