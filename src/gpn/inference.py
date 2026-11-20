@@ -8,7 +8,7 @@ import json
 import os
 import tempfile
 from collections.abc import Callable
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Protocol
@@ -170,7 +170,7 @@ def create_inference_runner(
     )
 
 
-def _noop_transform(batch):
+def _noop_transform(batch: Any) -> Any:
     return batch
 
 
@@ -182,19 +182,21 @@ class _Lookahead:
     rows differ from the submitted ones is built inline.
     """
 
-    def __init__(self, transform: Callable, raw: Dataset, columns: tuple[str, ...]):
+    def __init__(
+        self, transform: Callable[..., Any], raw: Dataset, columns: tuple[str, ...]
+    ):
         self.transform = transform
         self.raw = raw
         self.columns = columns
         self.executor = ThreadPoolExecutor(max_workers=1)
         self.cursor = 0
-        self.pending = None
+        self.pending: tuple[int, Future[Any]] | None = None
 
-    def _build(self, start: int, stop: int):
+    def _build(self, start: int, stop: int) -> tuple[Any, Any]:
         rows = self.raw[start:stop]
         return rows, self.transform(rows)
 
-    def __call__(self, batch):
+    def __call__(self, batch: Any) -> Any:
         size = len(batch[self.columns[0]])
         result = None
         if self.pending is not None:
@@ -222,7 +224,7 @@ class _Lookahead:
         return result
 
 
-def _set_transform(dataset: Dataset, transform: Callable) -> None:
+def _set_transform(dataset: Dataset, transform: Callable[..., Any]) -> None:
     """Install a custom format transform without dill-hashing it.
 
     Dataset.set_transform fingerprints the transform by pickling it, which

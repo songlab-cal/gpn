@@ -5,7 +5,7 @@ import os
 import shutil
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from typing import Any, Self, overload
+from typing import Any, Self, cast, overload
 
 import networkx as nx
 import numpy as np
@@ -160,7 +160,9 @@ def _compensated_ok(linear: nn.Linear, x: Tensor) -> bool:
     )
 
 
-def compensated_linear_cat(owner: nn.Module, linears: tuple, x: Tensor):
+def compensated_linear_cat(
+    owner: nn.Module, linears: tuple[nn.Linear, ...], x: Tensor
+) -> tuple[Tensor, ...] | None:
     """Outputs of several same-input Linears from one compensated GEMM.
 
     The concatenated hi/lo weight is cached in owner's _composed_cache, which
@@ -516,7 +518,7 @@ class GPNStarColCrossAttention(nn.Module):
             pre, ffn = source_split[4:]
             pooled = F.linear(pre, *self._composed(linear, ffn))
         else:
-            pooled = linear(source_embeddings.index_select(2, multi_idx))
+            pooled = linear(cast(Tensor, source_embeddings).index_select(2, multi_idx))
         singles = F.embedding(single_ids, linear(embed_weight))
         out = pooled.new_empty(
             single_ids.shape[:2]
@@ -1059,7 +1061,7 @@ class GPNStarAttention(nn.Module):
         if query_positions is not None:
             if source_embeddings is None:
                 source_embeddings = GPNStarSourceModule.materialize(
-                    source_split, query_positions
+                    cast("tuple[Any, ...]", source_split), query_positions
                 )
             else:
                 idx = query_positions.view(-1, 1, 1, 1).expand(

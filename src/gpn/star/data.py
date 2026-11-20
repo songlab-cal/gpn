@@ -20,7 +20,7 @@ class GenomeMSA:
         self.tokenizer = Tokenizer()
         # Token-id complement permutation (A<->T, C<->G, others fixed).
         vocab = self.tokenizer.vocab
-        complement_ids = np.arange(len(vocab), dtype=np.uint8)
+        complement_ids: np.ndarray = np.arange(len(vocab), dtype=np.uint8)
         for a, b in (("A", "T"), ("C", "G")):
             complement_ids[vocab.index(a)] = vocab.index(b)
             complement_ids[vocab.index(b)] = vocab.index(a)
