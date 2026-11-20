@@ -193,11 +193,11 @@ class GPNStarAttentionPool(nn.Module):
         x = x.view(*new_x_shape)
         return x.transpose(-2, -3)
 
-    def forward(
+    def pool(
         self,
         source_ids: Int[Tensor, "batch position species"],
         in_clade_time_bias: Float[Tensor, "batch 1 head 1 species"],
-    ) -> Float[Tensor, "batch position hidden"]:
+    ) -> Float[Tensor, "batch position half_hidden"]:
         attention_scores = (
             self.attention_weights(source_ids).transpose(-1, -2).unsqueeze(-2)
         )  # (B, L, A, 1, N_c)
@@ -215,9 +215,14 @@ class GPNStarAttentionPool(nn.Module):
             self.all_head_size,
         )  # (B, L, A*D) A*D = H // 2
         pooled_layer = pooled_layer.view(*new_pooled_layer_shape)
-        pooled_layer = self.ffn(pooled_layer)
-
         return pooled_layer
+
+    def forward(
+        self,
+        source_ids: Int[Tensor, "batch position species"],
+        in_clade_time_bias: Float[Tensor, "batch 1 head 1 species"],
+    ) -> Float[Tensor, "batch position hidden"]:
+        return self.ffn(self.pool(source_ids, in_clade_time_bias))
 
 
 class GPNStarSourceModule(nn.Module):
@@ -265,6 +270,28 @@ class GPNStarSourceModule(nn.Module):
 
         return clade_pooled_source_ids
 
+    def pooled_pre(
+        self,
+        source_ids: Int[Tensor, "batch position species"],
+        clade_dict: Mapping[int, set[int]],
+        in_clade_phylo_dist: Float[Tensor, "... species"],
+    ) -> Tensor:
+        """Pooled clades before attn_pool.ffn, stacked: (B, L, n_pooled, H // 2)."""
+        in_clade_time_bias = self.embed_positions(
+            in_clade_phylo_dist[None, None, :] * self.time_scale
+        )
+        out = []
+        for species in clade_dict.values():
+            if len(species) > 1:
+                species_indices = list(species)
+                out.append(
+                    self.attn_pool.pool(
+                        source_ids[..., species_indices].to(torch.int),
+                        in_clade_time_bias[..., species_indices],
+                    )
+                )
+        return torch.stack(out, dim=-2)
+
     def split_info(
         self,
         source_ids: Int[Tensor, "batch position species"],
@@ -295,6 +322,32 @@ class GPNStarSourceModule(nn.Module):
         _, multi_idx, single_idx, species_idx = hit
         single_ids = source_ids.index_select(-1, species_idx).to(torch.long)
         return multi_idx, single_idx, single_ids, self.embed.weight
+
+    def deferred_split(
+        self,
+        source_ids: Int[Tensor, "batch position species"],
+        clade_dict: Mapping[int, set[int]],
+        in_clade_phylo_dist: Float[Tensor, "... species"],
+    ) -> tuple[Any, ...]:
+        """split_info plus the pre-ffn pooled clades and the ffn module."""
+        split = self.split_info(source_ids, clade_dict)
+        pre = self.pooled_pre(source_ids, clade_dict, in_clade_phylo_dist)
+        return split + (pre, self.attn_pool.ffn)
+
+    @staticmethod
+    def materialize(split: tuple[Any, ...], positions: Tensor) -> Tensor:
+        """Full source embeddings (B, 1, C, H) at one position per batch row."""
+        multi_idx, single_idx, single_ids, embed_weight, pre, ffn = split
+        pos = positions.view(-1, 1, 1, 1)
+        pooled = ffn(pre.gather(1, pos.expand(-1, 1, pre.shape[-2], pre.shape[-1])))
+        sids = single_ids.gather(1, pos[..., 0].expand(-1, 1, single_ids.shape[-1]))
+        singles = F.embedding(sids, embed_weight)
+        out = pooled.new_empty(
+            pooled.shape[:2] + (multi_idx.numel() + single_idx.numel(), pooled.shape[-1])
+        )
+        out.index_copy_(2, multi_idx, pooled)
+        out.index_copy_(2, single_idx, singles.to(out.dtype))
+        return out
 
 
 class GPNStarColCrossAttention(nn.Module):
@@ -329,11 +382,28 @@ class GPNStarColCrossAttention(nn.Module):
         x = x.view(*new_x_shape)
         return x.transpose(-2, -3)
 
-    @staticmethod
+    def _composed(self, linear: nn.Linear, ffn: nn.Linear) -> tuple[Tensor, Tensor]:
+        """Weight and bias of linear(ffn(x)); cached while no weight changes."""
+        if torch.is_grad_enabled():
+            w = linear.weight @ ffn.weight
+            return w, linear(ffn.bias[None]).squeeze(0)
+        cache = self.__dict__.setdefault("_composed_cache", {})
+        tensors = (linear.weight, linear.bias, ffn.weight, ffn.bias)
+        stamp = tuple((id(t), t._version, t.device, t.dtype) for t in tensors)
+        hit = cache.get(id(linear))
+        if hit is None or hit[0] != stamp:
+            with torch.no_grad():
+                w = linear.weight @ ffn.weight
+                b = linear(ffn.bias[None]).squeeze(0)
+            hit = (stamp, (w, b))
+            cache[id(linear)] = hit
+        return hit[1]
+
     def _project(
+        self,
         linear: nn.Linear,
-        source_embeddings: Tensor,
-        source_split: tuple[Tensor, Tensor, Tensor, Tensor] | None,
+        source_embeddings: Tensor | None,
+        source_split: tuple[Any, ...] | None,
     ) -> Tensor:
         """linear(source_embeddings), running the GEMM on pooled clades only.
 
@@ -342,11 +412,15 @@ class GPNStarColCrossAttention(nn.Module):
         """
         if source_split is None:
             return linear(source_embeddings)
-        multi_idx, single_idx, single_ids, embed_weight = source_split
-        pooled = linear(source_embeddings.index_select(2, multi_idx))
+        multi_idx, single_idx, single_ids, embed_weight = source_split[:4]
+        if len(source_split) > 4:
+            pre, ffn = source_split[4:]
+            pooled = F.linear(pre, *self._composed(linear, ffn))
+        else:
+            pooled = linear(source_embeddings.index_select(2, multi_idx))
         singles = F.embedding(single_ids, linear(embed_weight))
         out = pooled.new_empty(
-            source_embeddings.shape[:-1] + (pooled.shape[-1],)
+            single_ids.shape[:2] + (multi_idx.numel() + single_idx.numel(), pooled.shape[-1])
         )
         out.index_copy_(2, multi_idx, pooled)
         out.index_copy_(2, single_idx, singles.to(out.dtype))
@@ -751,10 +825,15 @@ class GPNStarAttention(nn.Module):
             query_positions=query_positions,
         )
         if query_positions is not None:
-            idx = query_positions.view(-1, 1, 1, 1).expand(
-                -1, 1, source_embeddings.shape[-2], source_embeddings.shape[-1]
-            )
-            source_embeddings = source_embeddings.gather(1, idx)
+            if source_embeddings is None:
+                source_embeddings = GPNStarSourceModule.materialize(
+                    source_split, query_positions
+                )
+            else:
+                idx = query_positions.view(-1, 1, 1, 1).expand(
+                    -1, 1, source_embeddings.shape[-2], source_embeddings.shape[-1]
+                )
+                source_embeddings = source_embeddings.gather(1, idx)
             source_split = None
         col_output = self.col_attention(
             hidden_states=row_output[0].transpose(-2, -3),
@@ -938,6 +1017,7 @@ class GPNStarEncoder(RoFormerEncoder):
                     past_key_value,
                     output_attentions,
                     query_positions=query_positions,
+                    source_split=source_split,
                 )
             elif self.gradient_checkpointing and self.training:
 
@@ -1223,12 +1303,19 @@ class GPNStarModel(GPNStarPreTrainedModel):
         clade_labels = self.phylo_info.clade_labels.to(hidden_states.device)
 
         # Embed source sequences
-        source_embeddings = self.source_embedding(
-            source_ids, clade_dict, in_clade_phylo_dist
-        )  # (B, L, C, H)
         source_split = None
+        source_embeddings = None
         if not (self.training and getattr(self.encoder, "gradient_checkpointing", False)):
-            source_split = self.source_embedding.split_info(source_ids, clade_dict)
+            if self.training or torch.is_grad_enabled() or output_attentions:
+                source_split = self.source_embedding.split_info(source_ids, clade_dict)
+            else:
+                source_split = self.source_embedding.deferred_split(
+                    source_ids, clade_dict, in_clade_phylo_dist
+                )
+        if source_split is None or len(source_split) == 4:
+            source_embeddings = self.source_embedding(
+                source_ids, clade_dict, in_clade_phylo_dist
+            )  # (B, L, C, H)
 
         # Source-target phylo distance
         phylo_dist = phylo_dist_pairwise[target_species]  # (B, T, N)
