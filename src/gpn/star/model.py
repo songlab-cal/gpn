@@ -426,6 +426,48 @@ class GPNStarColCrossAttention(nn.Module):
         out.index_copy_(2, single_idx, singles.to(out.dtype))
         return out
 
+    def _forward_split(
+        self,
+        query_layer: Tensor,
+        attention_mask: Tensor,
+        evol_time_bias: Tensor,
+        source_split: tuple[Any, ...],
+    ) -> tuple[Tensor, ...]:
+        """Eval attention without K and V rows for the singleton clades.
+
+        Singleton keys and values are rows of a vocab_size table, so their
+        scores are q.K_tab gathered by token and their context is the softmax
+        mass per token times V_tab.
+        """
+        multi_idx, single_idx, single_ids, embed_weight, pre, ffn = source_split
+        heads, size = self.num_attention_heads, self.attention_head_size
+        pooled_k = F.linear(pre, *self._composed(self.key, ffn))
+        pooled_v = F.linear(pre, *self._composed(self.value, ffn))
+        batch, length, n_multi = pooled_k.shape[:3]
+        pooled_k = pooled_k.view(batch, length, n_multi, heads, size)
+        pooled_v = pooled_v.view(batch, length, n_multi, heads, size)
+        k_tab = self.key(embed_weight).view(-1, heads, size)
+        v_tab = self.value(embed_weight).view(-1, heads, size)
+        vocab = k_tab.shape[0]
+
+        score_multi = torch.einsum("blatd,blcad->blatc", query_layer, pooled_k)
+        score_tab = torch.einsum("blatd,vad->blatv", query_layer, k_tab)
+        index = single_ids[:, :, None, None, :].expand(-1, -1, heads, score_tab.shape[3], -1)
+        score_single = score_tab.gather(-1, index)
+        scores = score_multi.new_empty(score_multi.shape[:-1] + (n_multi + single_idx.numel(),))
+        scores.index_copy_(-1, multi_idx, score_multi)
+        scores.index_copy_(-1, single_idx, score_single)
+        attention_mask = attention_mask + evol_time_bias.to(query_layer.dtype)
+        scores = scores * (1 / math.sqrt(size)) + attention_mask
+        probs = torch.softmax(scores, dim=-1)
+
+        context = torch.einsum("blatc,blcad->blatd", probs.index_select(-1, multi_idx), pooled_v)
+        onehot = F.one_hot(single_ids, vocab).to(probs.dtype)
+        mass = torch.einsum("blatc,blcv->blatv", probs.index_select(-1, single_idx), onehot)
+        context = context + torch.einsum("blatv,vad->blatd", mass, v_tab)
+        context = context.transpose(-2, -3).contiguous()
+        return (context.view(context.size()[:-2] + (self.all_head_size,)),)
+
     def forward(
         self,
         hidden_states: Float[Tensor, "batch position target hidden"],
@@ -438,6 +480,13 @@ class GPNStarColCrossAttention(nn.Module):
         if attention_mask is None or evol_time_bias is None:
             raise ValueError("attention_mask and evol_time_bias are required")
         query_layer = self.transpose_for_scores(self.query(hidden_states))
+        if (
+            source_split is not None
+            and len(source_split) > 4
+            and not output_attentions
+            and not self.training
+        ):
+            return self._forward_split(query_layer, attention_mask, evol_time_bias, source_split)
         key_proj = self._project(self.key, source_embeddings, source_split)
         value_proj = self._project(self.value, source_embeddings, source_split)
         fused = not output_attentions and not self.training
