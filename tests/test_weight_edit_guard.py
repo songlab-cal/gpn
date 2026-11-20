@@ -6,7 +6,7 @@ import torch
 from gpn.star.model import GPNStarConfig, GPNStarForMaskedLM
 
 
-def _tiny_model(tmp_path, species=24):
+def _tiny_model(tmp_path, species=24, layers=2):
 	rng = np.random.default_rng(0)
 	# two groups of close species so some clades hold several species
 	group = np.arange(species) // 6
@@ -18,7 +18,7 @@ def _tiny_model(tmp_path, species=24):
 	torch.manual_seed(0)
 	config = GPNStarConfig(
 		phylo_dist_path=str(tmp_path),
-		num_hidden_layers=2,
+		num_hidden_layers=layers,
 		num_attention_heads=2,
 		hidden_size=16,
 		intermediate_size=32,
@@ -77,3 +77,33 @@ def test_in_place_and_data_assignment_edits_are_seen(tmp_path):
 			parameter.data = parameter.data * 0.9
 	third = _logits(model, source_ids, input_ids)
 	assert not torch.allclose(second, third, atol=1e-6)
+
+
+def test_fused_qkv_cache_is_dropped_after_param_data_edit(tmp_path):
+	# three layers: layer 1 is neither first nor last, so row q/k/v share one GEMM on CUDA
+	device = "cuda" if torch.cuda.is_available() else "cpu"
+	# an earlier test can leave the legacy and new TF32 flags disagreeing
+	torch.set_float32_matmul_precision("highest")
+	model, species = _tiny_model(tmp_path, layers=3)
+	model = model.to(device)
+	source_ids = torch.randint(0, 5, (2, 8, species), device=device)
+	input_ids = source_ids[:, :, :1].clone()
+
+	def logits(m):
+		with torch.no_grad():
+			return m(
+				input_ids=input_ids,
+				source_ids=source_ids,
+				target_species=torch.zeros(2, 1, dtype=torch.long, device=device),
+			).logits
+
+	logits(model)
+	with torch.no_grad():
+		for name, parameter in model.named_parameters():
+			if parameter.ndim == 2 and ("query" in name or "key" in name or "value" in name):
+				parameter.data.add_(0.05)
+	fresh = copy.deepcopy(model)
+	for module in fresh.modules():
+		module.__dict__.pop("_composed_cache", None)
+		module.__dict__.pop("_split_cache", None)
+	torch.testing.assert_close(logits(model), logits(fresh), rtol=0, atol=1e-5)

@@ -150,6 +150,47 @@ def _split_weight(linear: nn.Linear) -> tuple[Tensor, Tensor]:
 	return hit[1]
 
 
+def _compensated_ok(linear: nn.Linear, x: Tensor) -> bool:
+	return not (
+		x.dtype != torch.float32
+		or not x.is_cuda
+		or torch.is_grad_enabled()
+		or linear.weight.dtype != torch.float32
+		or torch.cuda.get_device_capability(x.device)[0] < 8
+	)
+
+
+def compensated_linear_cat(owner: nn.Module, linears: tuple, x: Tensor):
+	"""Outputs of several same-input Linears from one compensated GEMM.
+
+	The concatenated hi/lo weight is cached in owner's _composed_cache, which
+	GPNStarModel._drop_stale_weight_caches pops. Returns None when the plain
+	path applies.
+	"""
+	if not all(_compensated_ok(l, x) for l in linears):
+		return None
+	weights = [l.weight for l in linears]
+	stamp = tuple((w._version, w.data_ptr(), w.device) for w in weights)
+	cache = owner.__dict__.setdefault("_composed_cache", {})
+	hit = cache.get("qkv")
+	if hit is None or hit[0] != stamp:
+		with torch.no_grad():
+			hi, lo = _split_hi_lo(torch.cat(weights, dim=0))
+			bias = torch.cat([l.bias for l in linears]) if linears[0].bias is not None else None
+		hit = cache["qkv"] = (stamp, hi, lo, bias)
+	_, w_hi, w_lo, bias = hit
+	x_hi, x_lo = _split_hi_lo(x)
+	prev = torch.backends.cuda.matmul.allow_tf32
+	torch.backends.cuda.matmul.allow_tf32 = True
+	try:
+		out = F.linear(x_hi, w_hi, bias)
+		out = out + F.linear(x_hi, w_lo)
+		out = out + F.linear(x_lo, w_hi)
+	finally:
+		torch.backends.cuda.matmul.allow_tf32 = prev
+	return out.split([l.out_features for l in linears], dim=-1)
+
+
 def compensated_linear(linear: nn.Linear, x: Tensor) -> Tensor:
 	"""linear(x) as three TF32 tensor-core GEMMs (hi*hi + hi*lo + lo*hi).
 
@@ -759,7 +800,16 @@ class GPNStarRowSelfAttention(nn.Module):
             query_input = hidden_states[:, :1, ...].gather(2, idx)
         else:
             query_input = hidden_states[:, :1, ...]
-        if hidden_states is not None:
+        qkv = None
+        if hidden_states is not None and query_positions is None and hidden_states.shape[1] == 1:
+            qkv = compensated_linear_cat(
+                self, (self.query, self.key, self.value), hidden_states
+            )
+        if qkv is not None:
+            query_layer, key_layer, value_layer = (
+                self.transpose_for_scores(t) for t in qkv
+            )
+        elif hidden_states is not None:
             query_layer = self.transpose_for_scores(self.query(query_input))
             key_layer = self.transpose_for_scores(self.key(hidden_states[:, :1, ...]))
             value_layer = self.transpose_for_scores(compensated_linear(self.value, hidden_states))
