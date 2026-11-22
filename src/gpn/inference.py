@@ -8,15 +8,18 @@ import json
 import os
 import tempfile
 from collections.abc import Callable
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Protocol
 
 import pandas as pd
+import torch
 from accelerate.utils import broadcast_object_list
 from datasets import Dataset
 from torch import nn
 from transformers import Trainer, TrainingArguments
+from transformers.trainer_pt_utils import AcceleratorConfig
 
 from gpn.arguments import CheckpointArguments
 from gpn.checkpoint import (
@@ -65,8 +68,7 @@ def inference_training_arguments(
     output_dir = arguments.output_dir or temporary_output_dir
     if output_dir is None:
         raise ValueError("An inference output directory could not be determined")
-    return replace(
-        arguments,
+    changes = dict(
         output_dir=output_dir,
         do_train=False,
         do_eval=False,
@@ -76,6 +78,16 @@ def inference_training_arguments(
         remove_unused_columns=False,
         prediction_loss_only=False,
     )
+    config = arguments.accelerator_config
+    if (
+        isinstance(config, AcceleratorConfig)
+        and config == AcceleratorConfig()
+        and arguments.dataloader_pin_memory
+        and torch.cuda.is_available()
+    ):
+        # Default config only: an explicit user config stays untouched.
+        changes["accelerator_config"] = AcceleratorConfig(non_blocking=True)
+    return replace(arguments, **changes)
 
 
 def prediction_arguments_signature(arguments: TrainingArguments) -> dict[str, Any]:
@@ -103,6 +115,37 @@ def prediction_arguments_signature(arguments: TrainingArguments) -> dict[str, An
     return values
 
 
+_P2P_PATCHED = False
+
+
+def _skip_single_gpu_p2p_probe() -> None:
+    """Answer accelerate's P2P/IB probe in process when at most one GPU is visible.
+
+    The probe spawns nvidia-smi on every Trainer creation but only matters with
+    several GPUs; with several visible, the original function still decides.
+    """
+    global _P2P_PATCHED
+    if _P2P_PATCHED:
+        return
+    try:
+        import accelerate.state as accelerate_state
+
+        original = accelerate_state.check_cuda_p2p_ib_support
+    except (ImportError, AttributeError):
+        return
+
+    def check_cuda_p2p_ib_support() -> bool:
+        try:
+            if torch.cuda.device_count() <= 1:
+                return True
+        except Exception:
+            pass
+        return original()
+
+    accelerate_state.check_cuda_p2p_ib_support = check_cuda_p2p_ib_support
+    _P2P_PATCHED = True
+
+
 def create_inference_runner(
     model: nn.Module,
     arguments: TrainingArguments,
@@ -120,9 +163,85 @@ def create_inference_runner(
         arguments,
         temporary_output_dir=output_dir,
     )
+    _skip_single_gpu_p2p_probe()
     return InferenceRunner(
         trainer=Trainer(model=model, args=prediction_arguments),
         temporary_output_dir=temporary_output_dir,
+    )
+
+
+def _noop_transform(batch: Any) -> Any:
+    return batch
+
+
+class _Lookahead:
+    """Build the next consecutive batch on one worker thread.
+
+    Sits below the Trainer's dataloader, in the dataset transform, so the CPU
+    tokenization of batch i + 1 overlaps the forward of batch i. A call whose
+    rows differ from the submitted ones is built inline.
+    """
+
+    def __init__(
+        self, transform: Callable[..., Any], raw: Dataset, columns: tuple[str, ...]
+    ):
+        self.transform = transform
+        self.raw = raw
+        self.columns = columns
+        self.executor = ThreadPoolExecutor(max_workers=1)
+        self.cursor = 0
+        self.pending: tuple[int, Future[Any]] | None = None
+
+    def _build(self, start: int, stop: int) -> tuple[Any, Any]:
+        rows = self.raw[start:stop]
+        return rows, self.transform(rows)
+
+    def __call__(self, batch: Any) -> Any:
+        size = len(batch[self.columns[0]])
+        result = None
+        if self.pending is not None:
+            _, future = self.pending
+            self.pending = None
+            try:
+                rows, built = future.result()
+            except BaseException:
+                rows = None
+            if rows is not None and all(
+                list(rows[c]) == list(batch[c]) for c in self.columns
+            ):
+                result = built
+        if result is None:
+            result = self.transform(batch)
+        self.cursor += size
+        stop = min(self.cursor + size, len(self.raw))
+        if self.cursor < stop:
+            self.pending = (
+                self.cursor,
+                self.executor.submit(self._build, self.cursor, stop),
+            )
+        else:
+            self.executor.shutdown(wait=False)
+        return result
+
+
+def _set_transform(dataset: Dataset, transform: Callable[..., Any]) -> None:
+    """Install a custom format transform without dill-hashing it.
+
+    Dataset.set_transform fingerprints the transform by pickling it, which
+    serialises the bound inference object (model, MSA handles). The fingerprint
+    is unused here, so hash a stub and swap the real callable in afterwards.
+    """
+    kwargs = getattr(dataset, "_format_kwargs", None)
+    if not isinstance(dataset, Dataset) or not isinstance(kwargs, dict):
+        dataset.set_transform(transform)
+        return
+    raw = dataset.with_format(None)
+    dataset.set_transform(_noop_transform)
+    if dataset._format_kwargs.get("transform") is not _noop_transform:
+        dataset.set_transform(transform)
+        return
+    dataset._format_kwargs["transform"] = _Lookahead(
+        transform, raw, tuple(dataset.column_names)
     )
 
 
@@ -141,7 +260,7 @@ def run_inference(
     """Run one prediction pass and return a frame on the main process."""
 
     _validate_dataset(dataset)
-    dataset.set_transform(inference.tokenize_function)
+    _set_transform(dataset, inference.tokenize_function)
     runner = create_inference_runner(
         inference.model,
         training_arguments,
@@ -226,7 +345,7 @@ def run_inference_with_checkpoints(
     )
     store = CheckpointStore(checkpoint_dir, manifest)
 
-    dataset.set_transform(inference.tokenize_function)
+    _set_transform(dataset, inference.tokenize_function)
     runner = create_inference_runner(
         inference.model,
         training_arguments,

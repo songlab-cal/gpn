@@ -3,9 +3,10 @@ from __future__ import annotations
 import math
 import os
 import shutil
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterator, Mapping
+from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Any, Self, overload
+from typing import Any, Self, cast, overload
 
 import networkx as nx
 import numpy as np
@@ -130,6 +131,117 @@ def _resolve_phylo_dist_path(
     return hub_fallback
 
 
+_HI_MASK = -8192  # int32 0xFFFFE000: keeps sign, exponent and 10 mantissa bits
+
+
+def _split_hi_lo(t: Tensor) -> tuple[Tensor, Tensor]:
+    hi = (t.contiguous().view(torch.int32) & _HI_MASK).view(torch.float32)
+    return hi, t - hi
+
+
+_MATMUL = torch.backends.cuda.matmul
+# torch >= 2.9 has fp32_precision; reading allow_tf32 raises once TF32 was set
+# through it (transformers does for TrainingArguments(tf32=True))
+_NEW_TF32_API = hasattr(_MATMUL, "fp32_precision")
+
+
+@contextmanager
+def _tf32_matmul() -> Iterator[None]:
+    """Allow TF32 in cuBLAS matmuls inside the block, then restore the setting."""
+    if _NEW_TF32_API:
+        prev: Any = _MATMUL.fp32_precision
+        _MATMUL.fp32_precision = "tf32"
+    else:
+        prev = _MATMUL.allow_tf32
+        _MATMUL.allow_tf32 = True
+    try:
+        yield
+    finally:
+        if _NEW_TF32_API:
+            _MATMUL.fp32_precision = prev
+        else:
+            _MATMUL.allow_tf32 = prev
+
+
+def _split_weight(linear: nn.Linear) -> tuple[Tensor, Tensor]:
+    """hi/lo halves of linear.weight, cached while the weight is unchanged."""
+    w = linear.weight
+    stamp = (w._version, w.data_ptr(), w.device)
+    hit = linear.__dict__.get("_split_cache")
+    if hit is None or hit[0] != stamp:
+        with torch.no_grad():
+            hit = (stamp, _split_hi_lo(w))
+        linear.__dict__["_split_cache"] = hit
+    return hit[1]
+
+
+def _compensated_ok(linear: nn.Linear, x: Tensor) -> bool:
+    return not (
+        x.dtype != torch.float32
+        or not x.is_cuda
+        or torch.is_grad_enabled()
+        or linear.weight.dtype != torch.float32
+        or torch.cuda.get_device_capability(x.device)[0] < 8
+    )
+
+
+def compensated_linear_cat(
+    owner: nn.Module, linears: tuple[nn.Linear, ...], x: Tensor
+) -> tuple[Tensor, ...] | None:
+    """Outputs of several same-input Linears from one compensated GEMM.
+
+    The concatenated hi/lo weight is cached in owner's _composed_cache, which
+    GPNStarModel._drop_stale_weight_caches pops. Returns None when the plain
+    path applies.
+    """
+    if not all(_compensated_ok(lin, x) for lin in linears):
+        return None
+    weights = [lin.weight for lin in linears]
+    stamp = tuple((w._version, w.data_ptr(), w.device) for w in weights)
+    cache = owner.__dict__.setdefault("_composed_cache", {})
+    hit = cache.get("qkv")
+    if hit is None or hit[0] != stamp:
+        with torch.no_grad():
+            hi, lo = _split_hi_lo(torch.cat(weights, dim=0))
+            bias = (
+                torch.cat([lin.bias for lin in linears])
+                if linears[0].bias is not None
+                else None
+            )
+        hit = cache["qkv"] = (stamp, hi, lo, bias)
+    _, w_hi, w_lo, bias = hit
+    x_hi, x_lo = _split_hi_lo(x)
+    with _tf32_matmul():
+        out = F.linear(x_hi, w_hi, bias)
+        out = out + F.linear(x_hi, w_lo)
+        out = out + F.linear(x_lo, w_hi)
+    return out.split([lin.out_features for lin in linears], dim=-1)
+
+
+def compensated_linear(linear: nn.Linear, x: Tensor) -> Tensor:
+    """linear(x) as three TF32 tensor-core GEMMs (hi*hi + hi*lo + lo*hi).
+
+    Each operand is split into a 10-bit-mantissa part and the remainder, so the
+    result is within about 1e-6 relative of fp32. Plain fp32 on CPU, below
+    compute capability 8, with grad, or for non-fp32 inputs.
+    """
+    if (
+        x.dtype != torch.float32
+        or not x.is_cuda
+        or torch.is_grad_enabled()
+        or linear.weight.dtype != torch.float32
+        or torch.cuda.get_device_capability(x.device)[0] < 8
+    ):
+        return linear(x)
+    w_hi, w_lo = _split_weight(linear)
+    x_hi, x_lo = _split_hi_lo(x)
+    with _tf32_matmul():
+        out = F.linear(x_hi, w_hi, linear.bias)
+        out = out + F.linear(x_hi, w_lo)
+        out = out + F.linear(x_lo, w_hi)
+    return out
+
+
 class FIRETimeBias(nn.Module):
     def __init__(self, max_dist: float, fire_hidden_size: int = 32) -> None:
         super().__init__()
@@ -193,11 +305,11 @@ class GPNStarAttentionPool(nn.Module):
         x = x.view(*new_x_shape)
         return x.transpose(-2, -3)
 
-    def forward(
+    def pool(
         self,
         source_ids: Int[Tensor, "batch position species"],
         in_clade_time_bias: Float[Tensor, "batch 1 head 1 species"],
-    ) -> Float[Tensor, "batch position hidden"]:
+    ) -> Float[Tensor, "batch position half_hidden"]:
         attention_scores = (
             self.attention_weights(source_ids).transpose(-1, -2).unsqueeze(-2)
         )  # (B, L, A, 1, N_c)
@@ -215,9 +327,14 @@ class GPNStarAttentionPool(nn.Module):
             self.all_head_size,
         )  # (B, L, A*D) A*D = H // 2
         pooled_layer = pooled_layer.view(*new_pooled_layer_shape)
-        pooled_layer = self.ffn(pooled_layer)
-
         return pooled_layer
+
+    def forward(
+        self,
+        source_ids: Int[Tensor, "batch position species"],
+        in_clade_time_bias: Float[Tensor, "batch 1 head 1 species"],
+    ) -> Float[Tensor, "batch position hidden"]:
+        return self.ffn(self.pool(source_ids, in_clade_time_bias))
 
 
 class GPNStarSourceModule(nn.Module):
@@ -265,6 +382,96 @@ class GPNStarSourceModule(nn.Module):
 
         return clade_pooled_source_ids
 
+    def pooled_pre(
+        self,
+        source_ids: Int[Tensor, "batch position species"],
+        clade_dict: Mapping[int, set[int]],
+        in_clade_phylo_dist: Float[Tensor, "... species"],
+    ) -> Tensor:
+        """Pooled clades before attn_pool.ffn, stacked: (B, L, n_pooled, H // 2)."""
+        in_clade_time_bias = self.embed_positions(
+            in_clade_phylo_dist[None, None, :] * self.time_scale
+        )
+        out = []
+        for species in clade_dict.values():
+            if len(species) > 1:
+                species_indices = list(species)
+                out.append(
+                    self.attn_pool.pool(
+                        source_ids[..., species_indices].to(torch.int),
+                        in_clade_time_bias[..., species_indices],
+                    )
+                )
+        if not out:
+            # every clade is a singleton: no pooled clades, zero columns
+            return self.attn_pool.value.weight.new_empty(
+                source_ids.shape[:2] + (0, self.attn_pool.all_head_size)
+            )
+        return torch.stack(out, dim=-2)
+
+    def split_info(
+        self,
+        source_ids: Int[Tensor, "batch position species"],
+        clade_dict: Mapping[int, set[int]],
+    ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+        """Singleton clades embed to embed[token], one of vocab_size rows.
+
+        Returns (multi_idx, single_idx, single_ids, embed_weight): the clade
+        positions that are pooled, the clade positions that are singletons,
+        the token ids of the singletons (B, L, n_single) and the table (detached
+        when there are no singletons).
+        """
+        device = source_ids.device
+        key = (device.type, device.index)
+        cache = self.__dict__.setdefault("_split_cache", {})
+        sizes = [len(v) for v in clade_dict.values()]
+        hit = cache.get(key)
+        if hit is None or hit[0] != sizes:
+            multi = [i for i, n in enumerate(sizes) if n > 1]
+            single = [i for i, n in enumerate(sizes) if n == 1]
+            species = [list(v)[0] for v in clade_dict.values() if len(v) == 1]
+            hit = (
+                sizes,
+                torch.tensor(multi, dtype=torch.long, device=device),
+                torch.tensor(single, dtype=torch.long, device=device),
+                torch.tensor(species, dtype=torch.long, device=device),
+            )
+            cache[key] = hit
+        _, multi_idx, single_idx, species_idx = hit
+        single_ids = source_ids.index_select(-1, species_idx).to(torch.long)
+        table = self.embed.weight
+        if species_idx.numel() == 0:
+            # no singleton reads the table: keep it out of the autograd graph
+            table = table.detach()
+        return multi_idx, single_idx, single_ids, table
+
+    def deferred_split(
+        self,
+        source_ids: Int[Tensor, "batch position species"],
+        clade_dict: Mapping[int, set[int]],
+        in_clade_phylo_dist: Float[Tensor, "... species"],
+    ) -> tuple[Any, ...]:
+        """split_info plus the pre-ffn pooled clades and the ffn module."""
+        split = self.split_info(source_ids, clade_dict)
+        pre = self.pooled_pre(source_ids, clade_dict, in_clade_phylo_dist)
+        return split + (pre, self.attn_pool.ffn)
+
+    @staticmethod
+    def materialize(split: tuple[Any, ...], positions: Tensor) -> Tensor:
+        """Full source embeddings (B, 1, C, H) at one position per batch row."""
+        multi_idx, single_idx, single_ids, embed_weight, pre, ffn = split
+        pos = positions.view(-1, 1, 1, 1)
+        pooled = ffn(pre.gather(1, pos.expand(-1, 1, pre.shape[-2], pre.shape[-1])))
+        sids = single_ids.gather(1, pos[..., 0].expand(-1, 1, single_ids.shape[-1]))
+        singles = F.embedding(sids, embed_weight)
+        out = pooled.new_empty(
+            pooled.shape[:2]
+            + (multi_idx.numel() + single_idx.numel(), pooled.shape[-1])
+        )
+        out.index_copy_(2, multi_idx, pooled)
+        out.index_copy_(2, single_idx, singles.to(out.dtype))
+        return out
+
 
 class GPNStarColCrossAttention(nn.Module):
     def __init__(self, config: GPNStarConfig) -> None:
@@ -298,6 +505,122 @@ class GPNStarColCrossAttention(nn.Module):
         x = x.view(*new_x_shape)
         return x.transpose(-2, -3)
 
+    def _composed(self, linear: nn.Linear, ffn: nn.Linear) -> tuple[Tensor, Tensor]:
+        """Weight and bias of linear(ffn(x)); cached while no weight changes."""
+        if torch.is_grad_enabled():
+            w = linear.weight @ ffn.weight
+            return w, linear(ffn.bias[None]).squeeze(0)
+        cache = self.__dict__.setdefault("_composed_cache", {})
+        tensors = (linear.weight, linear.bias, ffn.weight, ffn.bias)
+        stamp = tuple((id(t), t._version, t.device, t.dtype) for t in tensors)
+        hit = cache.get(id(linear))
+        if hit is None or hit[0] != stamp:
+            with torch.no_grad():
+                w = linear.weight @ ffn.weight
+                b = linear(ffn.bias[None]).squeeze(0)
+            hit = (stamp, (w, b))
+            cache[id(linear)] = hit
+        return hit[1]
+
+    def _project(
+        self,
+        linear: nn.Linear,
+        source_embeddings: Tensor | None,
+        source_split: tuple[Any, ...] | None,
+    ) -> Tensor:
+        """linear(source_embeddings), running the GEMM on pooled clades only.
+
+        Singleton-clade rows are one of vocab_size vectors, so their output is
+        a gather from linear(embedding table).
+        """
+        if source_split is None:
+            return linear(source_embeddings)
+        multi_idx, single_idx, single_ids, embed_weight = source_split[:4]
+        if len(source_split) > 4:
+            pre, ffn = source_split[4:]
+            pooled = F.linear(pre, *self._composed(linear, ffn))
+        else:
+            pooled = linear(cast(Tensor, source_embeddings).index_select(2, multi_idx))
+        singles = F.embedding(single_ids, linear(embed_weight))
+        out = pooled.new_empty(
+            single_ids.shape[:2]
+            + (multi_idx.numel() + single_idx.numel(), pooled.shape[-1])
+        )
+        out.index_copy_(2, multi_idx, pooled)
+        out.index_copy_(2, single_idx, singles.to(out.dtype))
+        return out
+
+    def _forward_split(
+        self,
+        query_layer: Tensor,
+        attention_mask: Tensor,
+        evol_time_bias: Tensor,
+        source_split: tuple[Any, ...],
+    ) -> tuple[Tensor, ...]:
+        """Eval attention without K and V rows for the singleton clades.
+
+        Singleton keys and values are rows of a vocab_size table, so their
+        scores are q.K_tab gathered by token and their context is the softmax
+        mass per token times V_tab.
+        """
+        multi_idx, single_idx, single_ids, embed_weight, pre, ffn = source_split
+        heads, size = self.num_attention_heads, self.attention_head_size
+        reassociate = not torch.is_grad_enabled()
+        if reassociate:
+            wk, bk = self._composed(self.key, ffn)
+            wv, bv = self._composed(self.value, ffn)
+            n_multi = pre.shape[2]
+            wk = wk.view(heads, size, -1)
+            wv = wv.view(heads, size, -1)
+            bk = bk.view(heads, size)
+            bv = bv.view(heads, size)
+        else:
+            pooled_k = F.linear(pre, *self._composed(self.key, ffn))
+            pooled_v = F.linear(pre, *self._composed(self.value, ffn))
+            batch, length, n_multi = pooled_k.shape[:3]
+            pooled_k = pooled_k.view(batch, length, n_multi, heads, size)
+            pooled_v = pooled_v.view(batch, length, n_multi, heads, size)
+        k_tab = self.key(embed_weight).view(-1, heads, size)
+        v_tab = self.value(embed_weight).view(-1, heads, size)
+        vocab = k_tab.shape[0]
+
+        if reassociate:
+            q_pre = torch.einsum("blatd,adk->blatk", query_layer, wk)
+            score_multi = torch.einsum("blatk,blck->blatc", q_pre, pre)
+            score_multi = (
+                score_multi + torch.einsum("blatd,ad->blat", query_layer, bk)[..., None]
+            )
+        else:
+            score_multi = torch.einsum("blatd,blcad->blatc", query_layer, pooled_k)
+        score_tab = torch.einsum("blatd,vad->blatv", query_layer, k_tab)
+        index = single_ids[:, :, None, None, :].expand(
+            -1, -1, heads, score_tab.shape[3], -1
+        )
+        score_single = score_tab.gather(-1, index)
+        scores = score_multi.new_empty(
+            score_multi.shape[:-1] + (n_multi + single_idx.numel(),)
+        )
+        scores.index_copy_(-1, multi_idx, score_multi)
+        scores.index_copy_(-1, single_idx, score_single)
+        attention_mask = attention_mask + evol_time_bias.to(query_layer.dtype)
+        scores = scores * (1 / math.sqrt(size)) + attention_mask
+        probs = torch.softmax(scores, dim=-1)
+
+        probs_multi = probs.index_select(-1, multi_idx)
+        if reassociate:
+            pooled = torch.einsum("blatc,blck->blatk", probs_multi, pre)
+            context = torch.einsum("blatk,adk->blatd", pooled, wv)
+            context = context + probs_multi.sum(-1, keepdim=True) * bv[:, None, :]
+        else:
+            context = torch.einsum("blatc,blcad->blatd", probs_multi, pooled_v)
+        onehot = F.one_hot(single_ids, vocab).to(probs.dtype)
+        mass = torch.einsum(
+            "blatc,blcv->blatv", probs.index_select(-1, single_idx), onehot
+        )
+        context = context + torch.einsum("blatv,vad->blatd", mass, v_tab)
+        context = context.transpose(-2, -3).contiguous()
+        return (context.view(context.size()[:-2] + (self.all_head_size,)),)
+
     def forward(
         self,
         hidden_states: Float[Tensor, "batch position target hidden"],
@@ -305,12 +628,34 @@ class GPNStarColCrossAttention(nn.Module):
         attention_mask: Float[Tensor, "batch 1 1 target clade"] | None = None,
         evol_time_bias: Float[Tensor, "batch 1 head target clade"] | None = None,
         output_attentions: bool = False,
+        source_split: tuple[Tensor, Tensor, Tensor, Tensor] | None = None,
     ) -> tuple[Tensor, ...]:
         if attention_mask is None or evol_time_bias is None:
             raise ValueError("attention_mask and evol_time_bias are required")
         query_layer = self.transpose_for_scores(self.query(hidden_states))
-        key_layer = self.transpose_for_scores(self.key(source_embeddings))
-        value_layer = self.transpose_for_scores(self.value(source_embeddings))
+        if (
+            source_split is not None
+            and len(source_split) > 4
+            and not output_attentions
+            and not self.training
+        ):
+            return self._forward_split(
+                query_layer, attention_mask, evol_time_bias, source_split
+            )
+        key_proj = self._project(self.key, source_embeddings, source_split)
+        value_proj = self._project(self.value, source_embeddings, source_split)
+        fused = not output_attentions and not self.training
+        if fused:
+            # (B, L, C, A, D): contracted in place, no transpose copy
+            kv_shape = key_proj.shape[:-1] + (
+                self.num_attention_heads,
+                self.attention_head_size,
+            )
+            key_layer = key_proj.view(kv_shape)
+            value_layer = value_proj.view(kv_shape)
+        else:
+            key_layer = self.transpose_for_scores(key_proj)
+            value_layer = self.transpose_for_scores(value_proj)
 
         attention_mask = attention_mask + evol_time_bias.to(query_layer.dtype)
         # shape (B, L, A, T, D) x (B, L, A, D, C) -> (B, L, A, T, C)
@@ -334,6 +679,17 @@ class GPNStarColCrossAttention(nn.Module):
                 if output_attentions
                 else (context_layer,)
             )
+
+        elif fused:
+            scores = torch.einsum("blatd,blcad->blatc", query_layer, key_layer)
+            scores = scores * (1 / math.sqrt(self.attention_head_size)) + attention_mask
+            probs = torch.softmax(scores, dim=-1)
+            context_layer = torch.einsum("blatc,blcad->blatd", probs, value_layer)
+            context_layer = context_layer.transpose(-2, -3).contiguous()
+            new_context_layer_shape = context_layer.size()[:-2] + (self.all_head_size,)
+            context_layer = context_layer.view(*new_context_layer_shape)
+
+            outputs = (context_layer,)
 
         else:
             with torch.backends.cuda.sdp_kernel(
@@ -401,6 +757,7 @@ class GPNStarColAttention(nn.Module):
         attention_mask: Float[Tensor, "batch 1 1 target clade"] | None = None,
         phylo_dist: Float[Tensor, "batch target clade"] | None = None,
         output_attentions: bool = False,
+        source_split: tuple[Tensor, Tensor, Tensor, Tensor] | None = None,
     ) -> tuple[Tensor, ...]:
         if phylo_dist is None:
             raise ValueError("phylo_dist is required")
@@ -412,6 +769,7 @@ class GPNStarColAttention(nn.Module):
             attention_mask=attention_mask,
             evol_time_bias=evol_time_bias,
             output_attentions=output_attentions,
+            source_split=source_split,
         )
         output: tuple[Tensor, ...] = (self.out(self_outputs[0], hidden_states),)
         if output_attentions:
@@ -460,13 +818,65 @@ class GPNStarRowSelfAttention(nn.Module):
         | None = None,
         sinusoidal_pos: Float[Tensor, "1 1 position head_dimension"] | None = None,
         output_attentions: bool = False,
+        query_positions: Tensor | None = None,
+        embed_lookup: tuple[Tensor, Tensor] | None = None,
     ) -> tuple[Tensor, ...]:
+        if embed_lookup is not None and query_positions is None:
+            # hidden_states are rows of the embedding table: project the table once
+            ids, table = embed_lookup  # (B, T, L), (V, H)
+            ids = ids.to(torch.int)
+            query_layer = self.transpose_for_scores(
+                F.embedding(ids[:, :1], self.query(table))
+            )
+            key_layer = self.transpose_for_scores(
+                F.embedding(ids[:, :1], self.key(table))
+            )
+            value_layer = self.transpose_for_scores(F.embedding(ids, self.value(table)))
+            hidden_states = None
         # attention scores are only calculated wrt the human genome
-        query_layer = self.transpose_for_scores(self.query(hidden_states[:, :1, ...]))
-        key_layer = self.transpose_for_scores(self.key(hidden_states[:, :1, ...]))
-        value_layer = self.transpose_for_scores(self.value(hidden_states))
+        elif query_positions is not None:
+            # queries only at one position per batch element; keys and values
+            # still cover every position
+            idx = query_positions.view(-1, 1, 1, 1).expand(
+                -1, 1, 1, hidden_states.shape[-1]
+            )
+            query_input = hidden_states[:, :1, ...].gather(2, idx)
+        else:
+            query_input = hidden_states[:, :1, ...]
+        qkv = None
+        if (
+            hidden_states is not None
+            and query_positions is None
+            and hidden_states.shape[1] == 1
+        ):
+            qkv = compensated_linear_cat(
+                self, (self.query, self.key, self.value), hidden_states
+            )
+        if qkv is not None:
+            query_layer, key_layer, value_layer = (
+                self.transpose_for_scores(t) for t in qkv
+            )
+        elif hidden_states is not None:
+            query_layer = self.transpose_for_scores(self.query(query_input))
+            key_layer = self.transpose_for_scores(self.key(hidden_states[:, :1, ...]))
+            value_layer = self.transpose_for_scores(
+                compensated_linear(self.value, hidden_states)
+            )
 
-        if sinusoidal_pos is not None:
+        if sinusoidal_pos is not None and query_positions is not None:
+            sin_q = sinusoidal_pos[0, 0][query_positions][:, None, None, None, :]
+            query_layer = self.apply_rotary_position_embeddings(
+                sin_q, query_layer, query_layer
+            )[0]
+            if self.rotary_value:
+                _, key_layer, value_layer = self.apply_rotary_position_embeddings(
+                    sinusoidal_pos, key_layer, key_layer, value_layer
+                )
+            else:
+                _, key_layer = self.apply_rotary_position_embeddings(
+                    sinusoidal_pos, key_layer, key_layer
+                )
+        elif sinusoidal_pos is not None:
             if self.rotary_value:
                 query_layer, key_layer, value_layer = (
                     self.apply_rotary_position_embeddings(
@@ -599,7 +1009,7 @@ class GPNStarRowSelfOutput(nn.Module):
     ) -> Float[Tensor, "batch target position hidden"]:
         if input_tensor is None:
             raise ValueError("input_tensor is required")
-        hidden_states = self.dense(hidden_states)
+        hidden_states = compensated_linear(self.dense, hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
         return hidden_states
@@ -617,14 +1027,24 @@ class GPNStarRowAttention(nn.Module):
         attention_mask: Tensor | None = None,
         sinusoidal_pos: Tensor | None = None,
         output_attentions: bool = False,
+        query_positions: Tensor | None = None,
+        embed_lookup: tuple[Tensor, Tensor] | None = None,
     ) -> tuple[Tensor, ...]:
         self_outputs = self.self(
             hidden_states=hidden_states,
             attention_mask=attention_mask,
             sinusoidal_pos=sinusoidal_pos,
             output_attentions=output_attentions,
+            query_positions=query_positions,
+            embed_lookup=embed_lookup,
         )
-        output: tuple[Tensor, ...] = (self.out(self_outputs[0], hidden_states),)
+        residual = hidden_states
+        if query_positions is not None:
+            idx = query_positions.view(-1, 1, 1, 1).expand(
+                -1, hidden_states.shape[1], 1, hidden_states.shape[-1]
+            )
+            residual = hidden_states.gather(2, idx)
+        output: tuple[Tensor, ...] = (self.out(self_outputs[0], residual),)
         if output_attentions:
             output = output + (self_outputs[1],)
         return output
@@ -648,19 +1068,36 @@ class GPNStarAttention(nn.Module):
         encoder_attention_mask: Tensor | None = None,
         past_key_value: tuple[Tensor, ...] | None = None,
         output_attentions: bool = False,
+        query_positions: Tensor | None = None,
+        source_split: tuple[Tensor, Tensor, Tensor, Tensor] | None = None,
+        embed_lookup: tuple[Tensor, Tensor] | None = None,
     ) -> tuple[Tensor, ...]:
         row_output = self.row_attention(
             hidden_states=hidden_states.transpose(-2, -3),
             attention_mask=None,
             sinusoidal_pos=sinusoidal_pos,
             output_attentions=output_attentions,
+            query_positions=query_positions,
+            embed_lookup=embed_lookup,
         )
+        if query_positions is not None:
+            if source_embeddings is None:
+                source_embeddings = GPNStarSourceModule.materialize(
+                    cast("tuple[Any, ...]", source_split), query_positions
+                )
+            else:
+                idx = query_positions.view(-1, 1, 1, 1).expand(
+                    -1, 1, source_embeddings.shape[-2], source_embeddings.shape[-1]
+                )
+                source_embeddings = source_embeddings.gather(1, idx)
+            source_split = None
         col_output = self.col_attention(
             hidden_states=row_output[0].transpose(-2, -3),
             source_embeddings=source_embeddings,
             attention_mask=attention_mask,
             phylo_dist=phylo_dist,
             output_attentions=output_attentions,
+            source_split=source_split,
         )
         out: tuple[Tensor, ...] = (col_output[0],)
         if output_attentions:
@@ -676,6 +1113,13 @@ class GPNStarLayer(RoFormerLayer):
         super().__init__(config)
         self.attention = GPNStarAttention(config)
 
+    def feed_forward_chunk(self, attention_output: Tensor) -> Tensor:
+        inter = self.intermediate
+        h = inter.intermediate_act_fn(compensated_linear(inter.dense, attention_output))
+        out = self.output
+        h = out.dropout(compensated_linear(out.dense, h))
+        return out.LayerNorm(h + attention_output)
+
     def forward(
         self,
         hidden_states: Tensor,
@@ -688,6 +1132,9 @@ class GPNStarLayer(RoFormerLayer):
         encoder_attention_mask: Tensor | None = None,
         past_key_value: tuple[Tensor, ...] | None = None,
         output_attentions: bool = False,
+        query_positions: Tensor | None = None,
+        source_split: tuple[Tensor, Tensor, Tensor, Tensor] | None = None,
+        embed_lookup: tuple[Tensor, Tensor] | None = None,
     ) -> tuple[Any, ...]:
         # decoder uni-directional self-attention cached key/values tuple is at positions 1,2
         self_attn_past_key_value = (
@@ -702,6 +1149,9 @@ class GPNStarLayer(RoFormerLayer):
             head_mask,
             output_attentions=output_attentions,
             past_key_value=self_attn_past_key_value,
+            query_positions=query_positions,
+            source_split=source_split,
+            embed_lookup=embed_lookup,
         )
         attention_output = self_attention_outputs[0]
 
@@ -782,8 +1232,13 @@ class GPNStarEncoder(RoFormerEncoder):
         output_hidden_states: bool = False,
         return_dict: bool = True,
         phylo_dist: Tensor | None = None,
+        query_positions: Tensor | None = None,
+        source_split: tuple[Tensor, Tensor, Tensor, Tensor] | None = None,
+        embed_lookup: tuple[Tensor, Tensor] | None = None,
         **kwargs: Any,
     ) -> BaseModelOutputWithRowAndColAttentions | tuple[Any, ...]:
+        if output_attentions:
+            query_positions = None
         if self.gradient_checkpointing and self.training:
             use_cache = False
         all_hidden_states: tuple[Tensor, ...] | None = (
@@ -814,7 +1269,23 @@ class GPNStarEncoder(RoFormerEncoder):
             layer_head_mask = head_mask[i] if head_mask is not None else None
             past_key_value = past_key_values[i] if past_key_values is not None else None
 
-            if self.gradient_checkpointing and self.training:
+            if query_positions is not None and i == len(self.layer) - 1:
+                # last layer: only the requested position is computed
+                layer_outputs = layer_module(
+                    hidden_states,
+                    source_embeddings,
+                    attention_mask,
+                    sinusoidal_pos,
+                    phylo_dist,
+                    layer_head_mask,
+                    encoder_hidden_states,
+                    encoder_attention_mask,
+                    past_key_value,
+                    output_attentions,
+                    query_positions=query_positions,
+                    source_split=source_split,
+                )
+            elif self.gradient_checkpointing and self.training:
 
                 def create_custom_forward(module: nn.Module) -> Callable[..., Any]:
                     def custom_forward(*inputs: Any) -> Any:
@@ -845,6 +1316,8 @@ class GPNStarEncoder(RoFormerEncoder):
                     encoder_attention_mask,
                     past_key_value,
                     output_attentions,
+                    source_split=source_split,
+                    embed_lookup=embed_lookup if i == 0 else None,
                 )
 
             hidden_states = layer_outputs[0]
@@ -1072,16 +1545,45 @@ class GPNStarModel(GPNStarPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
+    def _drop_stale_weight_caches(self) -> None:
+        """Drop weight-derived caches when any parameter's values changed.
+
+        The caches key on tensor _version, which param.data edits do not bump;
+        a per-tensor L1 fingerprint of all parameters catches those edits.
+        """
+        params = self.__dict__.get("_fp_params")
+        if params is None:
+            params = list(self.parameters())
+            if params:
+                self.__dict__["_fp_params"] = params
+        if params:
+            with torch.no_grad():
+                fp = torch.stack(torch._foreach_norm(params, 1)).cpu()
+            old = self.__dict__.get("_fp_value")
+            self.__dict__["_fp_value"] = fp
+            if old is None or torch.equal(old, fp):
+                return
+        # A DataParallel replica holds its weights as plain tensor attributes, so it has
+        # nothing to fingerprint; it is rebuilt every forward, and the caches it copied
+        # from the original module are dropped instead.
+        for module in self.modules():
+            module.__dict__.pop("_composed_cache", None)
+            if isinstance(module, nn.Linear):
+                module.__dict__.pop("_split_cache", None)
+
     def forward(
         self,
         input_ids: Int[Tensor, "batch position target"] | None = None,
         source_ids: Int[Tensor, "batch position species"] | None = None,
         target_species: Int[Tensor, "batch target"] | None = None,
         output_attentions: bool = False,
+        query_positions: Tensor | None = None,
         **kwargs: Any,
     ) -> BaseModelOutputWithRowAndColAttentions | tuple[Any, ...]:
         if input_ids is None or source_ids is None or target_species is None:
             raise ValueError("input_ids, source_ids, and target_species are required")
+        if not self.training and not torch.is_grad_enabled():
+            self._drop_stale_weight_caches()
         hidden_states = self.target_embedding(
             input_ids=input_ids,
         )  # (B, L, T, H)
@@ -1096,9 +1598,21 @@ class GPNStarModel(GPNStarPreTrainedModel):
         clade_labels = self.phylo_info.clade_labels.to(hidden_states.device)
 
         # Embed source sequences
-        source_embeddings = self.source_embedding(
-            source_ids, clade_dict, in_clade_phylo_dist
-        )  # (B, L, C, H)
+        source_split = None
+        source_embeddings = None
+        if not (
+            self.training and getattr(self.encoder, "gradient_checkpointing", False)
+        ):
+            if self.training or torch.is_grad_enabled() or output_attentions:
+                source_split = self.source_embedding.split_info(source_ids, clade_dict)
+            else:
+                source_split = self.source_embedding.deferred_split(
+                    source_ids, clade_dict, in_clade_phylo_dist
+                )
+        if source_split is None or len(source_split) == 4:
+            source_embeddings = self.source_embedding(
+                source_ids, clade_dict, in_clade_phylo_dist
+            )  # (B, L, C, H)
 
         # Source-target phylo distance
         phylo_dist = phylo_dist_pairwise[target_species]  # (B, T, N)
@@ -1115,12 +1629,26 @@ class GPNStarModel(GPNStarPreTrainedModel):
         )  # (B, T, C)
         attention_mask = attention_mask[:, None, None, :, :]
 
+        embed_lookup = None
+        embed = self.target_embedding.input_embed
+        if (
+            not self.training
+            and not torch.is_grad_enabled()
+            and not output_attentions
+            and input_ids.shape[-1] == hidden_states.shape[-2]
+        ):
+            # layer 0's row Q/K/V read rows of the embedding table
+            embed_lookup = (input_ids.transpose(-1, -2), embed.weight)
+
         x = self.encoder(
             hidden_states,
             source_embeddings,
             phylo_dist=phylo_dist,
             attention_mask=attention_mask,
             output_attentions=output_attentions,
+            query_positions=query_positions,
+            source_split=source_split,
+            embed_lookup=embed_lookup,
             **kwargs,
         )
         return x
